@@ -1,0 +1,52 @@
+
+-------------
+Analytic part
+-------------
+- morphometry
+
+-------------
+Visualization part
+------------------
+- dendogram
+- neurolucida
+- mesh
+- mesh mapped onto segments
+- volume rendering
+- volume rendering of the mesh model 
+
+-------------
+Interface
+----------
+Directory selection :
+- command line with morphololgy and optionally mesh 
+Target selection :
+- python console for target creation
+Neuron selection :
+- easy with mouse over
+- multiple views in the browsing
+Tagging : possibility to tag a morphology :
+- nice mesh
+- comment
+
+----------
+Questions ?? 
+----------
+- distiller/target related to circuit => how to access this only with directory ?
+=> use neuron.dat file in the morphology folder
+- would that make sense to do it in Paraview ?
+  ++ could integrate all the data + use of RTNeuron
+  -- time consuming : why not starting with a small prototype
+     harder to give to a student
+
+----------
+Use cases ??
+----------
+=> command lines
+----------
+morphology_browser.py morphology_dir
+morphology_browser.py morphology_dir mesh_dir
+----------
+if the morphology directory contains a neuronDB.dat file, the interface provides a way to select neurons depending on the layer and/or morphotype
+if not, the interface list all the neurons
+----------
+the mesh display is optional
