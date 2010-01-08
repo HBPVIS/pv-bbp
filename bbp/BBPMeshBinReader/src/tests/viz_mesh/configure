@@ -1,0 +1,1 @@
+ccmake -DVTK_DIR=/home/lasserre/local/ParaView3/build/VTK/

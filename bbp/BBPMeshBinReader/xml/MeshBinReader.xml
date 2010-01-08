@@ -1,0 +1,23 @@
+<ServerManagerConfiguration>
+ <ProxyGroup name="sources">
+    <SourceProxy name="MeshBinReader" 
+                class="vtkMeshBinReader"
+                label="Blue Brain Mesh Bin Reader using directly the file.">
+     <Documentation
+       short_help="Read the neuron mesh stored in binary format."
+       long_help="Read the neuron mesh stored in binary format.">
+       This reader read a neuron mesh from a binary file. The output of this reader is unstructured grid.
+     </Documentation>
+     <StringVectorProperty
+        name="FileName"
+        command="SetFileName"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the file name for the binary mesh reader.
+        </Documentation>
+     </StringVectorProperty>
+   <!-- End MeshBinReader -->
+   </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>
