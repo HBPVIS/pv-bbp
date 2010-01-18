@@ -1,0 +1,1016 @@
+object "1" array
+
+object "2" class array type float rank 1 shape 3 items 7 lsb binary data follows
+ßá@Û„ı?˙UÙ@dùÑ@ﬁÖ@åÓ¯@üh¶@:WÒ?Èã‰@tHá@ÖÔ?>çÒ@÷ë@Ä%¯?cÏ@à¢ù@˜◊@ﬂKÍ@JÜ@Ù¬@Nÿ˘@
+#
+object "3" array
+
+object "4" array
+
+object "5" array
+
+object "6" array
+
+object "7" array
+
+object "8" array
+
+object "9" array
+
+object "10" array
+
+object "11" array
+
+object "12" array
+
+object "13" array
+
+object "14" array
+
+object "15" array
+
+object "16" array
+
+object "17" array
+
+object "18" array
+
+object "19" array
+
+object "20" array
+
+object "21" array
+
+object "22" array
+
+object "23" array
+
+object "24" array
+
+object "25" array
+
+object "26" array
+
+object "27" array
+
+object "28" array
+
+object "29" array
+
+object "30" array
+
+object "31" array
+
+object "32" array
+
+object "33" array
+
+object "34" array
+
+object "35" array
+
+object "36" array
+
+object "37" array
+
+object "38" array
+
+object "39" array
+
+object "40" array
+
+object "41" array
+
+object "42" array
+
+object "43" array
+
+object "44" array
+
+object "45" array
+
+object "46" array
+
+object "47" array
+
+object "48" array
+
+object "49" array
+
+object "50" array
+
+object "51" array
+
+object "52" array
+
+object "53" array
+
+object "54" array
+
+object "55" array
+
+object "56" array
+
+object "57" array
+
+object "58" array
+
+object "59" array
+
+object "60" array
+
+object "61" array
+
+object "62" array
+
+object "63" array
+
+object "64" array
+
+object "65" array
+
+object "66" array
+
+object "67" array
+
+object "68" array
+
+object "69" array
+
+object "70" array
+
+object "71" array
+
+object "72" array
+
+object "73" array
+
+object "74" array
+
+object "75" array
+
+object "76" array
+
+object "77" array
+
+object "78" array
+
+object "79" array
+
+object "80" array
+
+object "81" array
+
+object "82" array
+
+object "83" array
+
+object "84" array
+
+object "85" array
+
+object "86" array
+
+object "87" array
+
+object "88" array
+
+object "89" array
+
+object "90" array
+
+object "91" array
+
+object "92" array
+
+object "93" array
+
+object "94" array
+
+object "95" array
+
+object "96" array
+
+object "97" array
+
+object "98" array
+
+object "99" array
+
+object "100" array
+
+object "101" array
+
+object "102" array
+
+object "103" array
+
+object "104" array
+
+object "105" array
+
+object "106" array
+
+object "107" array
+
+object "108" array
+
+object "109" array
+
+object "110" array
+
+object "111" array
+
+object "112" array
+
+object "113" array
+
+object "114" array
+
+object "115" array
+
+object "116" array
+
+object "117" array
+
+object "118" array
+
+object "119" array
+
+object "120" array
+
+object "121" array
+
+object "122" array
+
+object "123" array
+
+object "124" array
+
+object "125" array
+
+object "126" array
+
+object "127" array
+
+object "128" array
+
+object "129" array
+
+object "130" array
+
+object "131" array
+
+object "132" array
+
+object "133" array
+
+object "134" array
+
+object "135" array
+
+object "136" array
+
+object "137" array
+
+object "138" array
+
+object "139" array
+
+object "140" array
+
+object "141" array
+
+object "142" array
+
+object "143" array
+
+object "144" array
+
+object "145" array
+
+object "146" array
+
+object "147" array
+
+object "148" array
+
+object "149" array
+
+object "150" array
+
+object "151" array
+
+object "152" array
+
+object "153" array
+
+object "154" array
+
+object "155" array
+
+object "156" array
+
+object "157" array
+
+object "158" array
+
+object "159" array
+
+object "160" array
+
+object "161" array
+
+object "162" array
+
+object "163" array
+
+object "164" array
+
+object "165" array
+
+object "166" array
+
+object "167" array
+
+object "168" array
+
+object "169" field
+  component "positions" "1"
+
+object "170" field
+  component "positions" "2"
+
+object "171" field
+  component "positions" "3"
+
+object "172" field
+  component "positions" "4"
+
+object "173" field
+  component "positions" "5"
+
+object "174" field
+  component "positions" "6"
+
+object "175" field
+  component "positions" "7"
+
+object "176" field
+  component "positions" "8"
+
+object "177" field
+  component "positions" "9"
+
+object "178" field
+  component "positions" "10"
+
+object "179" field
+  component "positions" "11"
+
+object "180" field
+  component "positions" "12"
+
+object "181" field
+  component "positions" "13"
+
+object "182" field
+  component "positions" "14"
+
+object "183" field
+  component "positions" "15"
+
+object "184" field
+  component "positions" "16"
+
+object "185" field
+  component "positions" "17"
+
+object "186" field
+  component "positions" "18"
+
+object "187" field
+  component "positions" "19"
+
+object "188" field
+  component "positions" "20"
+
+object "189" field
+  component "positions" "21"
+
+object "190" field
+  component "positions" "22"
+
+object "191" field
+  component "positions" "23"
+
+object "192" field
+  component "positions" "24"
+
+object "193" field
+  component "positions" "25"
+
+object "194" field
+  component "positions" "26"
+
+object "195" field
+  component "positions" "27"
+
+object "196" field
+  component "positions" "28"
+
+object "197" field
+  component "positions" "29"
+
+object "198" field
+  component "positions" "30"
+
+object "199" field
+  component "positions" "31"
+
+object "200" field
+  component "positions" "32"
+
+object "201" field
+  component "positions" "33"
+
+object "202" field
+  component "positions" "34"
+
+object "203" field
+  component "positions" "35"
+
+object "204" field
+  component "positions" "36"
+
+object "205" field
+  component "positions" "37"
+
+object "206" field
+  component "positions" "38"
+
+object "207" field
+  component "positions" "39"
+
+object "208" field
+  component "positions" "40"
+
+object "209" field
+  component "positions" "41"
+
+object "210" field
+  component "positions" "42"
+
+object "211" field
+  component "positions" "43"
+
+object "212" field
+  component "positions" "44"
+
+object "213" field
+  component "positions" "45"
+
+object "214" field
+  component "positions" "46"
+
+object "215" field
+  component "positions" "47"
+
+object "216" field
+  component "positions" "48"
+
+object "217" field
+  component "positions" "49"
+
+object "218" field
+  component "positions" "50"
+
+object "219" field
+  component "positions" "51"
+
+object "220" field
+  component "positions" "52"
+
+object "221" field
+  component "positions" "53"
+
+object "222" field
+  component "positions" "54"
+
+object "223" field
+  component "positions" "55"
+
+object "224" field
+  component "positions" "56"
+
+object "225" field
+  component "positions" "57"
+
+object "226" field
+  component "positions" "58"
+
+object "227" field
+  component "positions" "59"
+
+object "228" field
+  component "positions" "60"
+
+object "229" field
+  component "positions" "61"
+
+object "230" field
+  component "positions" "62"
+
+object "231" field
+  component "positions" "63"
+
+object "232" field
+  component "positions" "64"
+
+object "233" field
+  component "positions" "65"
+
+object "234" field
+  component "positions" "66"
+
+object "235" field
+  component "positions" "67"
+
+object "236" field
+  component "positions" "68"
+
+object "237" field
+  component "positions" "69"
+
+object "238" field
+  component "positions" "70"
+
+object "239" field
+  component "positions" "71"
+
+object "240" field
+  component "positions" "72"
+
+object "241" field
+  component "positions" "73"
+
+object "242" field
+  component "positions" "74"
+
+object "243" field
+  component "positions" "75"
+
+object "244" field
+  component "positions" "76"
+
+object "245" field
+  component "positions" "77"
+
+object "246" field
+  component "positions" "78"
+
+object "247" field
+  component "positions" "79"
+
+object "248" field
+  component "positions" "80"
+
+object "249" field
+  component "positions" "81"
+
+object "250" field
+  component "positions" "82"
+
+object "251" field
+  component "positions" "83"
+
+object "252" field
+  component "positions" "84"
+
+object "253" field
+  component "positions" "85"
+
+object "254" field
+  component "positions" "86"
+
+object "255" field
+  component "positions" "87"
+
+object "256" field
+  component "positions" "88"
+
+object "257" field
+  component "positions" "89"
+
+object "258" field
+  component "positions" "90"
+
+object "259" field
+  component "positions" "91"
+
+object "260" field
+  component "positions" "92"
+
+object "261" field
+  component "positions" "93"
+
+object "262" field
+  component "positions" "94"
+
+object "263" field
+  component "positions" "95"
+
+object "264" field
+  component "positions" "96"
+
+object "265" field
+  component "positions" "97"
+
+object "266" field
+  component "positions" "98"
+
+object "267" field
+  component "positions" "99"
+
+object "268" field
+  component "positions" "100"
+
+object "269" field
+  component "positions" "101"
+
+object "270" field
+  component "positions" "102"
+
+object "271" field
+  component "positions" "103"
+
+object "272" field
+  component "positions" "104"
+
+object "273" field
+  component "positions" "105"
+
+object "274" field
+  component "positions" "106"
+
+object "275" field
+  component "positions" "107"
+
+object "276" field
+  component "positions" "108"
+
+object "277" field
+  component "positions" "109"
+
+object "278" field
+  component "positions" "110"
+
+object "279" field
+  component "positions" "111"
+
+object "280" field
+  component "positions" "112"
+
+object "281" field
+  component "positions" "113"
+
+object "282" field
+  component "positions" "114"
+
+object "283" field
+  component "positions" "115"
+
+object "284" field
+  component "positions" "116"
+
+object "285" field
+  component "positions" "117"
+
+object "286" field
+  component "positions" "118"
+
+object "287" field
+  component "positions" "119"
+
+object "288" field
+  component "positions" "120"
+
+object "289" field
+  component "positions" "121"
+
+object "290" field
+  component "positions" "122"
+
+object "291" field
+  component "positions" "123"
+
+object "292" field
+  component "positions" "124"
+
+object "293" field
+  component "positions" "125"
+
+object "294" field
+  component "positions" "126"
+
+object "295" field
+  component "positions" "127"
+
+object "296" field
+  component "positions" "128"
+
+object "297" field
+  component "positions" "129"
+
+object "298" field
+  component "positions" "130"
+
+object "299" field
+  component "positions" "131"
+
+object "300" field
+  component "positions" "132"
+
+object "301" field
+  component "positions" "133"
+
+object "302" field
+  component "positions" "134"
+
+object "303" field
+  component "positions" "135"
+
+object "304" field
+  component "positions" "136"
+
+object "305" field
+  component "positions" "137"
+
+object "306" field
+  component "positions" "138"
+
+object "307" field
+  component "positions" "139"
+
+object "308" field
+  component "positions" "140"
+
+object "309" field
+  component "positions" "141"
+
+object "310" field
+  component "positions" "142"
+
+object "311" field
+  component "positions" "143"
+
+object "312" field
+  component "positions" "144"
+
+object "313" field
+  component "positions" "145"
+
+object "314" field
+  component "positions" "146"
+
+object "315" field
+  component "positions" "147"
+
+object "316" field
+  component "positions" "148"
+
+object "317" field
+  component "positions" "149"
+
+object "318" field
+  component "positions" "150"
+
+object "319" field
+  component "positions" "151"
+
+object "320" field
+  component "positions" "152"
+
+object "321" field
+  component "positions" "153"
+
+object "322" field
+  component "positions" "154"
+
+object "323" field
+  component "positions" "155"
+
+object "324" field
+  component "positions" "156"
+
+object "325" field
+  component "positions" "157"
+
+object "326" field
+  component "positions" "158"
+
+object "327" field
+  component "positions" "159"
+
+object "328" field
+  component "positions" "160"
+
+object "329" field
+  component "positions" "161"
+
+object "330" field
+  component "positions" "162"
+
+object "331" field
+  component "positions" "163"
+
+object "332" field
+  component "positions" "164"
+
+object "333" field
+  component "positions" "165"
+
+object "334" field
+  component "positions" "166"
+
+object "335" field
+  component "positions" "167"
+
+object "336" field
+  component "positions" "168"
+
+object "null_positions" array
+
+object "null_object" field
+  component "positions" "null_positions"
+
+object "337" group
+  member "null_object (default)" "null_object"
+  member "GproteinGOalphasubunit2" "169"
+  member "Ca" "170"
+  member "GproteinGialpha1subunit" "171"
+  member "rab1Crab35" "172"
+  member "NFL" "173"
+  member "calbindin.high0medium1" "174"
+  member "AP2Mu2subunit" "175"
+  member "EGTA.B" "176"
+  member "caremover" "177"
+  member "DRP1" "178"
+  member "tmp21Ip23precursor" "179"
+  member "GFAP" "180"
+  member "calmodulin.B3" "181"
+  member "calmodulin_immobile.B1" "182"
+  member "rab1B" "183"
+  member "septin3beta" "184"
+  member "fluo_four_sp.U" "185"
+  member "vAChT" "186"
+  member "tubulinbeta4" "187"
+  member "rab5A" "188"
+  member "VAMPIIB" "189"
+  member "rab7" "190"
+  member "calbindin.high0medium2" "191"
+  member "plectin1" "192"
+  member "synaptophysinp38" "193"
+  member "calbindin.high2medium0" "194"
+  member "Gproteinbeta1" "195"
+  member "spectrinalphachainbrain" "196"
+  member "GproteinGialpha2subunit" "197"
+  member "rab2" "198"
+  member "vATPaseV1subunitB2brainisoform" "199"
+  member "SNAPalpha" "200"
+  member "DRP3" "201"
+  member "ARPC4actinrelatedprotein23complex" "202"
+  member "calmodulin.B1" "203"
+  member "septin7CDC10" "204"
+  member "Nethylmaleimidesensitivefactor" "205"
+  member "heatshockprotein5" "206"
+  member "annexinA6" "207"
+  member "GproteinGolfalphasubunit" "208"
+  member "septin3alphaneuronalspecific" "209"
+  member "tubulinbetachain15" "210"
+  member "synapsinIIb" "211"
+  member "calbindin.high2medium2" "212"
+  member "calmodulin_immobile.B0" "213"
+  member "DRP2" "214"
+  member "OG_B_5_sp.B" "215"
+  member "CKIIalphasubunit" "216"
+  member "synaptotagminIp65" "217"
+  member "heatschockprotein84" "218"
+  member "AP2beta1subunit" "219"
+  member "tubulinbeta2chain" "220"
+  member "heatshockprotein8" "221"
+  member "rab14" "222"
+  member "slow_sp.B" "223"
+  member "synapsinIb" "224"
+  member "fluo_four_ff.10xmobile.B" "225"
+  member "clathrinheavychain" "226"
+  member "rab3D" "227"
+  member "NDRG2a2" "228"
+  member "GproteinGOalphasubunit1" "229"
+  member "OG_B_1_sp.U" "230"
+  member "septin5CDCrel1" "231"
+  member "heatshockproteinHSP90alphaHSP86" "232"
+  member "fluo_four_sp.B" "233"
+  member "cal_green_sp.B" "234"
+  member "EGTA.U" "235"
+  member "OG_B_1_sp.10xmobile.B" "236"
+  member "GENERIC_MOLECULE" "237"
+  member "ADPribosylationfactor1ARF1" "238"
+  member "fluo_four_ff.B" "239"
+  member "VAMPII" "240"
+  member "calmodulin_immobile.B4" "241"
+  member "SNAPbeta" "242"
+  member "NIPSNAP2" "243"
+  member "rab3A" "244"
+  member "GproteinGqalpha11subunit" "245"
+  member "fluo_four_ff.10xmobile.U" "246"
+  member "BAPTA.B" "247"
+  member "vGLUT1" "248"
+  member "tubulinalpha2" "249"
+  member "v_slow_sp.U" "250"
+  member "ves" "251"
+  member "ARPC3actinrelatedprotein23complexa" "252"
+  member "vATPaseV0subunita1" "253"
+  member "OG_B_1_sp.10xmobile.U" "254"
+  member "VAMPI" "255"
+  member "cysteinestringprotein" "256"
+  member "dynamin1" "257"
+  member "spectrinbetachainbrain1" "258"
+  member "internexinNF66" "259"
+  member "synaptogyrin" "260"
+  member "roteintau1433" "261"
+  member "rab3C" "262"
+  member "calbindin.high1medium2" "263"
+  member "fast_sp.U" "264"
+  member "medium_sp.U" "265"
+  member "synapsinI" "266"
+  member "tubulinbeta3" "267"
+  member "vATPaseV1subunitB1" "268"
+  member "calmodulin_immobile.B2" "269"
+  member "Gproteinalphazpolypeptide" "270"
+  member "Gproteingamma3subunit" "271"
+  member "vATPaseV1subunitC" "272"
+  member "fast_sp.B" "273"
+  member "vATPaseV0subunitd1" "274"
+  member "calbindin.high1medium1" "275"
+  member "roteineta1433" "276"
+  member "calmodulin_immobile.B3" "277"
+  member "similartoFKSG30" "278"
+  member "v_slow_sp.B" "279"
+  member "calbindin.high2medium1" "280"
+  member "GproteinGqalphasubunit" "281"
+  member "calbindin.high1medium0" "282"
+  member "Gproteinbeta2subunit" "283"
+  member "proteinEpsilon1433" "284"
+  member "rab6B" "285"
+  member "SV2" "286"
+  member "tubulinalphafragment" "287"
+  member "piccolo" "288"
+  member "vATPaseV1subunitA1" "289"
+  member "dynamin2" "290"
+  member "heatshockcognate71kDaprotein" "291"
+  member "Glu" "292"
+  member "rab1A" "293"
+  member "dummy" "294"
+  member "septin3gamma" "295"
+  member "cal_green_sp.U" "296"
+  member "rabphilin3A" "297"
+  member "calbindin.high0medium0" "298"
+  member "rab11A" "299"
+  member "SNAPgamma" "300"
+  member "cKras" "301"
+  member "vATPaseV1subunit" "302"
+  member "calmodulin.B0" "303"
+  member "BAPTA.U" "304"
+  member "bassoon" "305"
+  member "vGAT" "306"
+  member "annexinVa" "307"
+  member "tubulinalpha6chain" "308"
+  member "medium_sp.B" "309"
+  member "proteinzeta1433" "310"
+  member "tubulinalpha1chain" "311"
+  member "synapsinII" "312"
+  member "cyclophilinA" "313"
+  member "SCAMP1" "314"
+  member "fluo_four_ff.U" "315"
+  member "actingamma" "316"
+  member "AP2Mu1subunit" "317"
+  member "calmodulin.B2" "318"
+  member "OG_B_5_sp.U" "319"
+  member "synaptoporin" "320"
+  member "OG_B_1_sp.B" "321"
+  member "ARFlikeprotein8B" "322"
+  member "munc181" "323"
+  member "munc13" "324"
+  member "cdc42" "325"
+  member "actinalpha1" "326"
+  member "rac1" "327"
+  member "vATPaseV1subunitD" "328"
+  member "slow_sp.U" "329"
+  member "CNPasea" "330"
+  member "complexin" "331"
+  member "actinbeta" "332"
+  member "similartoZnT3" "333"
+  member "calmodulin.B4" "334"
+  member "cHras" "335"
+  member "septin2Nedd5" "336"

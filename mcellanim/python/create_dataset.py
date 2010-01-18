@@ -5,62 +5,87 @@ import os
 import numpy
 import h5py
 
-# Get the input directory with the ascii files for each time step
+from Numeric import *
+
+import read_dx_position
+
+#---------------- Helpfull functions ------------------------------
+
+ERROR_STR= """Error removing %(path)s, %(error)s """
+
+def rmgeneric(path, __func__):
+    try:
+        __func__(path)
+    except OSError, (errno, strerror):
+        print ERROR_STR % {'path' : path, 'error': strerror }
+
+def removeall(path):
+    if not os.path.isdir(path):
+        return
+    files=os.listdir(path)
+    for x in files:
+        fullpath=os.path.join(path, x)
+        if os.path.isfile(fullpath):
+            f=os.remove
+            rmgeneric(fullpath, f)
+        elif os.path.isdir(fullpath):
+            removeall(fullpath)
+            f=os.rmdir
+            rmgeneric(fullpath, f)
+
+def create_dir(dir_path):
+    if os.path.exists(dir_path):
+        removeall(dir_path)
+        os.rmdir(dir_path)
+    os.mkdir(dir_path)
+
+#---------------- Main ------------------------------
+
+# Get the input directory with the dx files for each time step
 if len(sys.argv) < 3:
     print "usage : ./"+sys.argv[0]+" input/my_data_directory output/out_file.h5part"
     sys.exit()
-ascii_dir_path = sys.argv[1]
+dx_dir_path = sys.argv[1]
 h5part_path = sys.argv[2]
 
-# Get the list of ascii files
-#ascii_files = sorted([f in os.listdir(ascii_dir_path) if os.path.isfile(f)])
-ascii_files = sorted([ascii_dir_path+'/'+f for f in os.listdir(ascii_dir_path)])
+# Create the output directory or overwrite the existing one.
+create_dir(h5part_path)
 
-# Set three name of the variables and the indice in the ascii data files
-labels = [['Coords_0',1],['Coords_1',2],['Coords_2',3],['Type',0]]
-
-# Set the separator between the values
-separator = ' '
-
-# Check that all the files are consistent
-f = open(ascii_files[0])
-lines = f.readlines()
-particule_count = len(lines)
-field_count = len(labels)
-#field_count = len(lines[0])
-f.close()
-for path in ascii_files:
-    f = open(path)
-    lines = f.readlines()
-    if not len(lines) == particule_count:
-        print("File "+path+" : particule count = "+str(len(lines))+\
-              " instead of "+str(particule_count))
-        f.close()
-        exit()
-    if not len(lines[0].split()) == field_count:
-        print("File "+path+" : field count = "+str(len(lines[0].split()))+\
-              " instead of "+str(field_count))
-        f.close()
-        exit()
-    f.close()
+# Get the list of dx files
+#dx_files = sorted([f in os.listdir(dx_dir_path) if os.path.isfile(f)])
+dx_files = sorted([dx_dir_path+'/'+f for f in os.listdir(dx_dir_path)])
+for f in dx_files :
+    if not os.path.isfile(f):
+        dx_files.remove(f)
+#print dx_files 
 
 # Create the data structure for all the variables (types, positions)
-frames = []
-for path in ascii_files:
+molecules = {}
+for path in dx_files:
     print(path)
-    frame = numpy.loadtxt(path, unpack=True)
-    frames.append(frame)     
-    f.close()
+    objects   = read_dx_position.extract_molecules(path)
+    positions = read_dx_position.extract_molecule_positions(path, objects)
+    names = read_dx_position.extract_molecule_names(path, objects)
+    for i in range(len(names)):
+        name = names[i]
+        frame_position = positions[i]
+        if not molecules.has_key(name):
+            molecules[name] = []
+        molecules[name].append(frame_position)
+
+#print molecules
 
 # Write the HDF5
 print("Writing the output file "+h5part_path)
-f=h5py.File(h5part_path,'w')
-#root_grp = f.create_group('/')
-for frame_id in range(len(frames)):
-    #step_grp = root_grp.create_group("Step#"+str(frame_id))
-    step_grp = f.create_group("Step#"+str(frame_id))
-    step_grp.attrs["TimeValue"]=[float(frame_id)]
-    for label in labels:
-        index = label[1]
-        label_frame_data = [float(val) for val in frames[frame_id][index,:]]
-        step_grp.create_dataset(label[0],data=label_frame_data)
+for molecule in molecules:
+    path = h5part_path + "/" + molecule + ".h5part"
+    frames = molecules[molecule]
+    print path
+    f=h5py.File(path,'w')
+    for frame_id in range(len(frames)):
+        step_grp = f.create_group("Step#"+str(frame_id))
+        step_grp.attrs["TimeValue"]=[float(frame_id)]
+        for i in range(3):
+            label = 'Coords_' + str(i) 
+            step_grp.create_dataset(label,data=[float(val) for val in frames[frame_id][i]])
+        step_grp.create_dataset('Type',data=zeros(7, Float)) 
