@@ -1,0 +1,23 @@
+<ServerManagerConfiguration>
+ <ProxyGroup name="sources">
+    <SourceProxy name="MorphologyReader" 
+                class="vtkMorphologyReader"
+                label="Blue Brain Morphology Reader using directly HDF5 file.">
+     <Documentation
+       short_help="Read the HDF5 morphology."
+       long_help="Read the HDF5 morphology.">
+       This reader read a neuron morphology from a HDF5 file. The output of this reader is currently unknown :-).
+     </Documentation>
+     <StringVectorProperty
+        name="FileName"
+        command="SetFileName"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the file name for the morphology reader.
+        </Documentation>
+     </StringVectorProperty>
+   <!-- End MorphologyReader -->
+   </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

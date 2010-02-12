@@ -1,0 +1,6 @@
+<ParaViewReaders>
+  <Reader name="MorphologyReader"
+          extensions="h5"
+          file_description="Blue Brain HDF5 Morphology">
+  </Reader>
+</ParaViewReaders>
