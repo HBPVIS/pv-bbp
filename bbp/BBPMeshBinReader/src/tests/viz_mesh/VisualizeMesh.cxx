@@ -6,6 +6,7 @@
 #include <vtkPolyData.h>
 #include <vtkSphereSource.h>
 #include <vtkSmartPointer.h>
+#include <vtkInteractorStyleTrackballCamera.h>
 
 #include "vtkMeshBinReader.h"
 
@@ -45,10 +46,15 @@ int main (int argc, char *argv[])
   vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = 
     vtkSmartPointer<vtkRenderWindowInteractor>::New();
   renderWindowInteractor->SetRenderWindow(renderWindow);
- 
+
+  // Change the interactor style
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+      vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle(style);
+
   // add the actors to the scene
   renderer->AddActor(actor);
-  renderer->SetBackground(1,0.8,0.8); // Background color white
+  renderer->SetBackground(0.2,0.2,0.2); // Background color white
  
   // render an image (lights and cameras are created automatically)
   renderWindow->Render();
