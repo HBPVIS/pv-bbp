@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/BBPVolumeDensityReader/ParaViewResources">
+    <file alias="GUIVolumeDensityReader.xml">../../xml/GUIVolumeDensityReader.xml</file>
+  </qresource>
+</RCC>

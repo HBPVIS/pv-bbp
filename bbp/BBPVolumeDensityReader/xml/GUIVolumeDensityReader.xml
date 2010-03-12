@@ -1,0 +1,6 @@
+<ParaViewReaders>
+  <Reader name="VolumeDensityReader"
+          extensions="cfg"
+          file_description="Blue Brain Experiment for Volume Density Rendering">
+  </Reader>
+</ParaViewReaders>
