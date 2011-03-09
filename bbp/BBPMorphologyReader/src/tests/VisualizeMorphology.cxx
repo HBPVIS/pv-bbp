@@ -10,6 +10,7 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkPointData.h>
 #include <vtkCellData.h>
+#include <vtkProperty.h>
 
 #include "vtkMorphologyReader.h"
 
@@ -45,6 +46,11 @@ int main (int argc, char *argv[])
 
   // create an actor
   vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->GetProperty()->SetInterpolationToFlat();
+  actor->GetProperty()->SetAmbient(1);
+  actor->GetProperty()->SetDiffuse(0);
+  actor->GetProperty()->SetSpecular(0);
+
   actor->SetMapper(mapper);
  
   // a renderer and render window
@@ -59,7 +65,8 @@ int main (int argc, char *argv[])
  
   // add the actors to the scene
   renderer->AddActor(actor);
-  renderer->SetBackground(.2, .3, .4); 
+  renderer->RemoveAllLights();
+  renderer->SetBackground(.9, .9, .9); 
  
   // render an image (lights and cameras are created automatically)
   renderWindow->Render();

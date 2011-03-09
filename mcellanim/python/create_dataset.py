@@ -39,6 +39,18 @@ def create_dir(dir_path):
         os.rmdir(dir_path)
     os.mkdir(dir_path)
 
+def add_padding(path, padding):
+    files=os.listdir(path)
+    for x in files:
+        fullpath=os.path.join(path, x)
+        if os.path.isfile(fullpath):
+            num1 = fullpath.split('.')[-2]
+            if len(num1) >= padding:
+                continue
+            num2 = num1.zfill(padding)
+            new_filepath = fullpath.replace('.'+num1+'.', '.'+num2+'.')
+            os.system("mv "+fullpath+" "+new_filepath)
+
 #---------------- Main ------------------------------
 
 # Get the input directory with the dx files for each time step
@@ -50,6 +62,9 @@ h5part_path = sys.argv[2]
 
 # Create the output directory or overwrite the existing one.
 create_dir(h5part_path)
+
+# Add some padding to the file name
+add_padding(dx_dir_path, 4)
 
 # Get the list of dx files
 #dx_files = sorted([f in os.listdir(dx_dir_path) if os.path.isfile(f)])
