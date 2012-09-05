@@ -12,8 +12,8 @@
 # manager classes to build
 # this plugin can be loaded on the server side
 
-cmake_minimum_required(VERSION 2.6)
 project(BBPVolumeDensityReader)
+cmake_minimum_required(VERSION 2.8)
 
 # Policy issue with cmake 
 # FIXME : there are still some warnings during the cmake process
@@ -22,8 +22,7 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # plugin path and CMake module path
-get_filename_component(PLUGIN_PATH ${CMAKE_SOURCE_DIR}/../.. ABSOLUTE)
-set(CMAKE_MODULE_PATH   "${CMAKE_SOURCE_DIR}/Modules")
+get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 
 # Locate ParaView build and then import CMake configuration, 
 # macros etc. from it.
@@ -33,7 +32,7 @@ FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 
 # BBP-SDK
-FIND_PACKAGE(BBP-SDK REQUIRED)
+#FIND_PACKAGE(BBP-SDK REQUIRED)
 
 # PLUGIN PATHS
 set(XML_PATH   "${PLUGIN_PATH}/xml")
