@@ -31,9 +31,6 @@ get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 
-# BBP-SDK
-#FIND_PACKAGE(BBP-SDK REQUIRED)
-
 # PLUGIN PATHS
 set(XML_PATH   "${PLUGIN_PATH}/xml")
 set(SRC_PATH   "${PLUGIN_PATH}/src")
@@ -44,7 +41,7 @@ set(LIBRARY_OUTPUT_PATH ${PLUGIN_PATH}/lib)
 # INCLUDES
 include_directories(
     ${PLUGIN_PATH}/src
-    ${BBP-SDK_INCLUDE_DIRS})
+    ${BBP_SDK_INCLUDE_DIRS})
 
 # Use the ADD_PARAVIEW_PLUGIN macro to build a plugin
 ADD_PARAVIEW_PLUGIN(
@@ -55,9 +52,39 @@ ADD_PARAVIEW_PLUGIN(
   GUI_RESOURCE_FILES     ${XML_PATH}/GUIVolumeDensityReader.xml
   )
 
-message(STATUS ${BBP-SDK_LIB})
-
-
 # LINK
-TARGET_LINK_LIBRARIES(BBPVolumeDensityReader ${BBP-SDK_LIB})
+TARGET_LINK_LIBRARIES(BBPVolumeDensityReader 
+    ${BBP_SDK_LIBRARIES}
+    ${HDF5_C_LIBRARY} 
+    ${HDF5_CXX_LIBRARY} 
+    ${Boost_SERIALIZATION_LIBRARY} 
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_SERIALIZATION_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
+)
+
+MESSAGE("BBPVolumeDensityReader 
+    ${BBP_SDK_LIBRARIES}
+    ${HDF5_C_LIBRARY} 
+    ${HDF5_CXX_LIBRARY} 
+    ${Boost_SERIALIZATION_LIBRARY} 
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_SERIALIZATION_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
+")
+
+ADD_EXECUTABLE( VisualizeVolumeDensity
+  ${PLUGIN_PATH}/src/tests/VisualizeVolumeDensity.cxx
+)
+
+TARGET_LINK_LIBRARIES(VisualizeVolumeDensity BBPVolumeDensityReader)
+TARGET_LINK_LIBRARIES(BBPVolumeDensityReader ${BBP_SDK_ROOT}/lib/VolumeTools.lib)
 

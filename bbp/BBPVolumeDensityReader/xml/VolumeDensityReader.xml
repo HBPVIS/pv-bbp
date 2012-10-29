@@ -19,6 +19,7 @@
      <StringVectorProperty
         name="Target"
         command="SetTarget"
+        default_values="viz1"
         number_of_elements="1">
         <Documentation>
           This property specifies the target name for the volume density visualization.

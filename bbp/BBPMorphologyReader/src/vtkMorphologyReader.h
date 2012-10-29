@@ -13,7 +13,7 @@
  
 #include "vtkPolyDataAlgorithm.h"
  
-class VTK_IO_EXPORT vtkMorphologyReader : public vtkPolyDataAlgorithm 
+class VTK_EXPORT vtkMorphologyReader : public vtkPolyDataAlgorithm 
 {
 public:
   static vtkMorphologyReader *New();

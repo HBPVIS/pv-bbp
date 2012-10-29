@@ -9,7 +9,7 @@
 #include "vtkSmartPointer.h"
 
 // BBP-SDK Mesh Reader
-#include "BBP/Model/Microcircuit/File/Parsers/Mesh_Binary_File_Parser.h"
+#include "BBP/IO/File/Parsers/Mesh_Binary_File_Parser.h"
 
 // Header of the Reader
 #include "vtkMeshBinReader.h"

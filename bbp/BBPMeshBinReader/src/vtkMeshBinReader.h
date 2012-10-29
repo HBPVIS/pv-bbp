@@ -13,7 +13,7 @@
  
 #include "vtkPolyDataAlgorithm.h"
  
-class VTK_IO_EXPORT vtkMeshBinReader : public vtkPolyDataAlgorithm 
+class VTK_EXPORT vtkMeshBinReader : public vtkPolyDataAlgorithm 
 {
 public:
   static vtkMeshBinReader *New();

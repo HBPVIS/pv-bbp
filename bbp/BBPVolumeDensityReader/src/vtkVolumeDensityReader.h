@@ -13,7 +13,7 @@
  
 #include "vtkImageAlgorithm.h"
 
-class VTK_IMAGING_EXPORT vtkVolumeDensityReader : public vtkImageAlgorithm 
+class VTK_EXPORT vtkVolumeDensityReader : public vtkImageAlgorithm 
 {
 public:
     static vtkVolumeDensityReader *New();

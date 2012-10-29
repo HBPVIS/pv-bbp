@@ -15,7 +15,7 @@
 #include <vtkCellData.h>
 
 // BBP-SDK Morphology Reader
-#include "BBP/Model/Microcircuit/File/Parsers/Morphology_HDF5_File_Parser.h"
+#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
 
 // Header of the Reader
 #include "vtkMorphologyReader.h"

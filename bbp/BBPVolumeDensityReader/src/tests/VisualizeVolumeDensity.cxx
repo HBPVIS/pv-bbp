@@ -39,15 +39,14 @@ int main (int argc, char *argv[])
     reader->SetFileName(filename.c_str());
     //reader->SetSegmentVoxelMapper(275.0,600.0,275.0,500.0,1200.0,500.0,2.0);
     reader->SetSectionType("all");
-    reader->SetTarget("Layer5");
-    reader->SetTarget("MiniColum_0");
+    reader->SetTarget("jb_test");
     reader->Update();
 
     vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
     imageData = reader->GetOutput();
     dims = imageData->GetDimensions();
 
-    imageData->SetScalarTypeToUnsignedChar();
+//    imageData->SetScalarTypeToUnsignedChar();
 
     //cout << "Dims: " << " x: " << dims[0] << " y: " << dims[1] << " z: " << dims[2] << endl;
     //cout << "Number of points: " << imageData->GetNumberOfPoints() << endl;

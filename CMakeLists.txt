@@ -2,12 +2,51 @@ project(ParaBBP)
 
 cmake_minimum_required(VERSION 2.8)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
-FIND_PACKAGE(BBP-SDK REQUIRED)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
+# --------------------------------------------------------------
+# Find BBP-SDK
+# --------------------------------------------------------------
+SET(BBP_SDK_USE_STATIC_LIBS ON)
+find_package(BBP-SDK 0.14 REQUIRED common io model)
+include_directories(${BBP_SDK_INCLUDE_DIRS}  ${BBP_SDK_PATH}/include)
+
+message("BBP_SDK_INCLUDE_DIRS are ${BBP_SDK_INCLUDE_DIRS}")
+
+
+# --------------------------------------------------------------
+# Find Boost
+# --------------------------------------------------------------
+find_package(Boost COMPONENTS
+  thread filesystem system serialization unit_test_framework program_options
+  regex python)
+link_directories(${Boost_LIBRARY_DIRS})
+include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
+
+# --------------------------------------------------------------
+# Find HDF5
+# --------------------------------------------------------------
+find_package(HDF5 COMPONENTS C CXX REQUIRED)
+include_directories(${HDF5_INCLUDE_DIRS}
+                    ${HDF5_INCLUDE_DIRS}/cpp)
+
+#--------------------------------------------------
+# If (paraview) using system H5FDdsm
+#--------------------------------------------------
+IF (NOT TARGET "H5FDdsm")
+  FIND_PACKAGE(H5FDdsm REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/H5FDdsm")
+  INCLUDE_DIRECTORIES(${H5FDdsm_INCLUDE_DIR} ${H5FD_DSM_INCLUDE_DIR})
+ENDIF (NOT TARGET "H5FDdsm")
+
+# CMake 2.6+ specific
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/proj/cmake)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMeshBinReader/proj/cmake)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/proj/cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMeshBinReader/proj/cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/proj/cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPCircuitReader)
 
 
 #add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMeshBinReader/src/tests/viz_mesh/CMakeLists.txt

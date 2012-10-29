@@ -12,8 +12,8 @@
 # manager classes to build
 # this plugin can be loaded on the server side
 
-cmake_minimum_required(VERSION 2.6)
 project(BBPMorphologyReader)
+cmake_minimum_required(VERSION 2.8)
 
 # Policy issue with cmake 
 # FIXME : there are still some warnings during the cmake process
@@ -22,8 +22,7 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 # plugin path and CMake module path
-get_filename_component(PLUGIN_PATH ${CMAKE_SOURCE_DIR}/../.. ABSOLUTE)
-set(CMAKE_MODULE_PATH   "${CMAKE_SOURCE_DIR}/Modules")
+get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 
 # Locate ParaView build and then import CMake configuration, 
 # macros etc. from it.
@@ -31,21 +30,16 @@ set(CMAKE_MODULE_PATH   "${CMAKE_SOURCE_DIR}/Modules")
 # ccmake -DVTK_DIR=/home/lasserre/local/ParaView3/build/VTK/
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
-
-# BBP-SDK
-FIND_PACKAGE(BBP-SDK REQUIRED)
+INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
 
 # PLUGIN PATHS
 set(XML_PATH   "${PLUGIN_PATH}/xml")
 set(SRC_PATH   "${PLUGIN_PATH}/src")
 
-# OUTPUT PATHS
-set(LIBRARY_OUTPUT_PATH ${PLUGIN_PATH}/lib)
-
 # INCLUDES
 include_directories(
     ${PLUGIN_PATH}/src
-    ${BBP-SDK_INCLUDE_DIRS})
+    ${BBP_SDK_INCLUDE_DIRS})
 
 # Use the ADD_PARAVIEW_PLUGIN macro to build a plugin
 ADD_PARAVIEW_PLUGIN(
@@ -57,5 +51,18 @@ ADD_PARAVIEW_PLUGIN(
   )
 
 # LINK
-TARGET_LINK_LIBRARIES(BBPMorphologyReader ${BBP-SDK_LIB})
+TARGET_LINK_LIBRARIES(BBPMorphologyReader 
+    ${BBP_SDK_LIBRARIES}
+    ${HDF5_C_LIBRARY} 
+    ${HDF5_CXX_LIBRARY} 
+    ${Boost_SERIALIZATION_LIBRARY} 
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_SERIALIZATION_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
+)
+
 
