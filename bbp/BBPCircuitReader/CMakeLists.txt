@@ -57,7 +57,7 @@ IF(PARAVIEW_BUILD_QT_GUI)
     CLASS_NAME 
       pqCircuitReaderPanel
     XML_NAME 
-      BBP 
+      CircuitReader 
     XML_GROUP 
       sources
   )

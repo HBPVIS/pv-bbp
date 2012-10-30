@@ -57,18 +57,11 @@ public:
 
 protected slots:
 
-
-  // When the "Refresh" button is pressed, call a method on the reader
-  // which will cause the reader's TIME_STEPS() and TIME_RANGE() output
-  // information keys to update. Then "pull" their values from the server
-  // in order to update the pqTimeKeeper.
-  void onRefresh();
-
   /// Gets the SIL from the reader and updates the GUI.
   void updateSIL();
 
-//  void blockItemChanged(const QModelIndex &index);
-  void blockItemChanged(const QModelIndex &current, const QModelIndex &previous);
+//  void targetItemChanged(const QModelIndex &index);
+  void targetItemChanged(const QModelIndex &current, const QModelIndex &previous);
 protected:
   
   /// populate widgets with properties from the server manager

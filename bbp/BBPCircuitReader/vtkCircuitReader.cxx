@@ -18,6 +18,7 @@
 #include <vtkPolyLine.h>
 #include <vtkLine.h>
 #include <vtkCellData.h>
+#include "vtkTransform.h"
 
 //
 #include "vtkInformation.h"
@@ -42,14 +43,17 @@
 #include "vtkUnsignedIntArray.h"
 #include "vtkFloatArray.h"
 #include "vtkDoubleArray.h"
+#include "vtkVariantArray.h"
+#include "vtkStringArray.h"
 #include "vtkCellArray.h"
 #include "vtkOutlineSource.h"
 #include "vtkAppendPolyData.h"
-#include "vtkBoundingBox.h"
+#include "vtkPolyDataNormals.h"
 //
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/RegularExpression.hxx>
-#include <vtkstd/vector>
+#include <vector>
+#include <deque>
 //
 #include "vtkCharArray.h"
 #include "vtkUnsignedCharArray.h"
@@ -113,17 +117,27 @@ vtkCircuitReader::vtkCircuitReader()
   this->UpdatePiece                     = 0;
   this->UpdateNumPieces                 = 0;
   this->IntegerTimeStepValues           = 0;
+  this->GenerateNormalVectors           = 0;
+  this->Random                          = 1;
+  this->MaximumNumberOfNeurons          = 25;
+  //
   this->PointDataArraySelection         = vtkDataArraySelection::New();
+  this->TargetsSelection                = vtkDataArraySelection::New();
   this->Controller = NULL;
   this->SetController(vtkMultiProcessController::GetGlobalController());
   if (this->Controller == NULL) {
     this->SetController(vtkSmartPointer<vtkDummyController>::New());
   }
+  this->SIL                      = vtkSmartPointer<vtkMutableDirectedGraph>::New();
+  this->SILUpdateStamp           = 0;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
 {
+  this->SIL      = NULL;
   delete []this->FileName;
+  this->PointDataArraySelection->Delete();
+  this->TargetsSelection->Delete();
   this->SetController(NULL);
 }
 //----------------------------------------------------------------------------
@@ -167,16 +181,12 @@ int vtkCircuitReader::RequestInformation(
     // ----------------------------------------------------------------------
 
     std::string                 blueconfig           = this->FileName;
-    std::string                 target_name          = "AllCompartments";
 
     // -------------------------------------------------------------------   
     // Create BBP-SDK Experiment and Microcircuit to access to the neurons.
     // -------------------------------------------------------------------   
     experiment.open(blueconfig);
     bbp::Microcircuit& microcircuit = experiment.microcircuit();
-    bbp::Target target = experiment.user_targets().get_target(target_name);
-    microcircuit.load(target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
-    bbp::Neurons & neurons = microcircuit.neurons(); 
 
 
     this->NumberOfTimeSteps = 1;
@@ -207,6 +217,11 @@ int vtkCircuitReader::RequestInformation(
       this->TimeStepTolerance = 1E-3;
     }
     outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
+
+    
+    this->BuildSIL();
+    outInfo->Set(vtkDataObject::SIL(), this->GetSIL());
+
   }
   return 1;
 }
@@ -230,113 +245,257 @@ int vtkCircuitReader::RequestData(
   // get the ouptut
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
+  //
+  std::string target_name = "AllCompartments";
+  //
+  int N = this->TargetsSelection->GetNumberOfArrays();
+  for (int i=0; i<N; i++) {
+    const char *name = this->TargetsSelection->GetArrayName(i);
+    if (this->TargetsSelection->ArrayIsEnabled(name)) {
+      target_name = name;
+      break;
+      //std::cout << "Target selected : " << name << std::endl;
+    }
+  }
+
   bbp::Microcircuit& microcircuit = experiment.microcircuit();
+  bbp::Target target;
+  try {
+    target = experiment.user_targets().get_target(target_name);
+  }
+  catch (...) {
+    target = experiment.targets().get_target(target_name);
+  }
+  microcircuit.load(target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
   bbp::Neurons & neurons = microcircuit.neurons(); 
+  //
+  std::cout << "Neuron count for target : " << target_name.c_str() << " is " << neurons.size() << std::endl;
 
-  // Set VTK points
-  vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-  vtkSmartPointer<vtkIntArray> neuronId = vtkSmartPointer<vtkIntArray>::New();
-  neuronId->SetName("NeuronId");
-  // Set VTK triangles
+  //
+  // Allocate VTK arrays
+  //
+  vtkSmartPointer<vtkPoints>       points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray> triangles = vtkSmartPointer<vtkCellArray>::New();
-
-  std::cout << "Neuron count : " << neurons.size() << std::endl;
+  vtkSmartPointer<vtkIntArray>   neuronId = vtkSmartPointer<vtkIntArray>::New();
+  vtkSmartPointer<vtkFloatArray> nvectors = vtkSmartPointer<vtkFloatArray>::New();
+  neuronId->SetName("NeuronId");
+  nvectors->SetName("Normals");
+  nvectors->SetNumberOfComponents(3);
+  vtkSmartPointer<vtkPolyData>       normpoly = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPoints>       normpoints = vtkSmartPointer<vtkPoints>::New();
+  vtkSmartPointer<vtkCellArray> normtriangles = vtkSmartPointer<vtkCellArray>::New();
+  vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+  normals->SetSplitting(0);
+  normals->SetComputeCellNormals(0);
+  normals->SetNonManifoldTraversal(0);
+  //
+  vtkSmartPointer<vtkTransform>     transform = vtkSmartPointer<vtkTransform>::New();
+  vtkSmartPointer<vtkMatrix4x4>        matrix = vtkSmartPointer<vtkMatrix4x4>::New();
 
   // -------------------------------------------------------------------   
   // iterate over neurons
   // -------------------------------------------------------------------   
-  int Ncount = 0;
-  for (bbp::Neurons::iterator i = neurons.begin(); i != neurons.end(); ++i,++Ncount)
-  {
-    if (Ncount>25) break;
-    //
-    const bbp::Morphology* sdk_morph    = &i->morphology();
-    const bbp::Sections    sdk_sections = i->neurites();
-    const bbp::Mesh*       sdk_mesh     = &i->morphology().mesh();
-    Degree_Angle           y_rotation   = i->orientation().rotation * (-1.0);
-    const Vector3 position( i->position().x(), i->position().y(), i->position().z( ));
 
+#define USE_BBP_TRANSFORM
+#undef  USE_VTK_TRANSFORM
+
+  vtkIdType Ncount = 0;
+  vtkIdType maxP = 0;
+  vtkIdType maxF = 0;
+  // count up the vertices and faces before allocating memory
+  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni,++Ncount) {
+    if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
+    //
+    const bbp::Mesh *sdk_mesh = &ni->morphology().mesh();
+    maxP += sdk_mesh->vertex_count();
+    maxF += sdk_mesh->triangle_count();
+  }
+  points->GetData()->Resize(maxP);
+  points->SetNumberOfPoints(maxP);
+  //    
+  neuronId->Resize(maxP);
+  neuronId->SetNumberOfTuples(maxP);
+  //
+  if (this->GenerateNormalVectors) {
+    nvectors->Resize(maxP);
+    nvectors->SetNumberOfTuples(maxP);
+  }
+  //
+  vtkIdType *cells = triangles->WritePointer(maxF, 4*(maxF));
+  //
+  //
+  //
+  // Track the current insertion position for vertices
+  vtkIdType insertN = 0;
+  // each new neuron counts vertices from 0, we must increment by a growing offset with each neuron
+  vtkIdType offsetN = 0;
+  // Track insertion location for Cell vertex index Ids
+  vtkIdType insertC = 0;
+  //
+
+  Ncount = 0;
+  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni,++Ncount) {
+    
+    // only load the maximum requested to save memory
+    if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
+    //
+    const bbp::Morphology* sdk_morph    = &ni->morphology();
+    const bbp::Mesh*       sdk_mesh     = &ni->morphology().mesh();
+    // const bbp::Sections    sdk_sections = ni->neurites();
+    //
     bbp::Vertex_Index vertexCount = sdk_mesh->vertex_count();
     bbp::Triangle_Index faceCount = sdk_mesh->triangle_count();
     bbp::Triangle_Index stripLength = sdk_mesh->triangle_strip_length();
-    //   Vector_3D_Micron_Array vertices;
-    //   Section_ID_Array vertex_sections;
-    //   Float_Array vertex_relative_distances;
-    //   Vertex_Index_Array faces;
-    //   Vertex_Index_Array strips;
-
-    const Vector_3D<bbp::Micron>* vertices2 = sdk_mesh->vertices().pointer(); 
-
-    std::cout << "Neuron : " << std::distance(neurons.begin(),i) << std::endl;
+    const Vector_3D<bbp::Micron> *vertices2 = sdk_mesh->vertices().pointer(); 
+    //
+    std::cout << "Neuron : " << std::distance(neurons.begin(),ni) << std::endl;
     std::cout << "vertex count : " << vertexCount << std::endl;
-    vtkIdType oldN =  points->GetNumberOfPoints();
-    vtkIdType newN =  oldN + vertexCount;
+    std::cout << "face count : " << faceCount << std::endl;
+
     //
-    points->GetData()->Resize(newN);
-    points->SetNumberOfPoints(newN);
+    // we must create a polydata object for the neuron in order to run the normal filter on it
+    // better to do one neuron at a time than all of them at the end.
     //
-    neuronId->Resize(newN);
-    neuronId->SetNumberOfTuples(newN);
-    //
-    vtkstd::cout  << faceCount << std::endl;
-    //
-    vtkIdType Ncell =  triangles->GetNumberOfCells();
-    vtkIdType *cells = triangles->WritePointer(Ncell+faceCount, 4*(Ncell+faceCount));
-    //
-    vtkIdType ip = oldN;
-    for ( bbp::Vertex_Index v = 0 ; v < vertexCount ; ++v )
-    {
-      points->SetPoint(ip, vertices2[v].x(), vertices2[v].y(), vertices2[v].z());
-      neuronId->SetValue(ip,Ncount);
-      ip++;
+    vtkIdType *ncells = NULL;
+    if (this->GenerateNormalVectors) {
+      normpoints->GetData()->Resize(vertexCount);
+      normpoints->SetNumberOfPoints(vertexCount);
+      // resizing cell array doesn't work when new size is smaller - so create a new one
+      normtriangles = vtkSmartPointer<vtkCellArray>::New();
+      ncells = normtriangles->WritePointer(faceCount, 4*(faceCount));
+      normpoly->SetPoints(normpoints);
+      normpoly->SetPolys(normtriangles);
     }
 
+#ifdef USE_VTK_TRANSFORM
+    Degree_Angle y_rotation = ni->orientation().rotation;
+    transform->PostMultiply();
+    transform->RotateY(y_rotation);
+    transform->Translate(ni->position().x(), ni->position().y(), ni->position().z());
+    transform->Update();
+    for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
+      float newPoint[3];
+      transform->TransformPoint(vertices2[v].vector(),newPoint); 
+      points->SetPoint(insertN, newPoint);
+      if (this->GenerateNormalVectors) {
+        normpoints->setPoint(v, newPoint);
+      }
+#else
+    const Transform_3D<bbp::Micron> &bbp_transform = ni->global_transform();
+    for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
+      bbp::Vector_3D<bbp::Micron> newPoint = bbp_transform*vertices2[v];
+      points->SetPoint(insertN, newPoint.vector());
+      if (this->GenerateNormalVectors) {
+        normpoints->SetPoint(v, newPoint.vector());
+      }
+#endif
+      neuronId->SetValue(insertN,Ncount);
+      insertN++;
+    }
+
+    //
+    // Generate triangles in cell array for each face
+    // 
     const bbp::Vertex_Index* faces2 = sdk_mesh->triangles().pointer();
-    for ( bbp::Triangle_Index t = 0 ; t < faceCount ; ++t )
+    for (bbp::Triangle_Index t=0; t<faceCount; ++t)
     {
-      cells[Ncell*4 + 0] = 3;
-      cells[Ncell*4 + 1] = oldN + faces2[t*3 + 0];
-      cells[Ncell*4 + 2] = oldN + faces2[t*3 + 1];
-      cells[Ncell*4 + 3] = oldN + faces2[t*3 + 2];
-      Ncell++;
-    }  
-  }
-  output->SetPolys(triangles);
-
-/*
-  vtkIdType Np =  points->GetNumberOfPoints();
-  {
-    vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
-    vtkIdType *cells = vertices->WritePointer(Np, 2*Np);
-    for (vtkIdType i=0; i<Np; ++i)
-    {
-      cells[2*i] = 1;
-      cells[2*i+1] = i;
+      cells[insertC*4 + 0] = 3;
+      cells[insertC*4 + 1] = offsetN + faces2[t*3 + 0];
+      cells[insertC*4 + 2] = offsetN + faces2[t*3 + 1];
+      cells[insertC*4 + 3] = offsetN + faces2[t*3 + 2];
+      if (this->GenerateNormalVectors) {
+        // no offset here as we only do one neuron at a time
+        ncells[t*4 + 0] = 3;
+        ncells[t*4 + 1] = faces2[t*3 + 0];
+        ncells[t*4 + 2] = faces2[t*3 + 1];
+        ncells[t*4 + 3] = faces2[t*3 + 2];
+      }
+      insertC++;
     }
-    output->SetVerts(vertices);
+
+    if (this->GenerateNormalVectors) {
+      normals->Modified();
+      normals->SetInput(normpoly);
+      normals->Update();
+      insertN = offsetN;
+      vtkFloatArray *nvecs = vtkFloatArray::SafeDownCast(normals->GetOutput()->GetPointData()->GetArray("Normals"));
+      if (nvecs->GetNumberOfTuples()!=vertexCount) {
+          std::cout << "These numbers don't add up " << std::endl;
+      }
+      for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
+        nvectors->SetTuple(insertN++, nvecs->GetTuple(v));
+      }
+    }
+    offsetN = insertN;
+
   }
-*/
-
-  // Set vtkPolyData
-  //  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  //
   output->SetPoints(points);
+  output->SetPolys(triangles);
   output->GetPointData()->AddArray(neuronId);
-  //  polydata->SetPolys(triangles);
-
-  //output = polydata; //doesn't work
-  //  output->ShallowCopy(polydata);
+  if (this->GenerateNormalVectors) {
+    output->GetPointData()->SetNormals(nvectors);
+  }
 
   return 1;
 }
 
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
+//-----------------------------------------------------------------------------
+void vtkCircuitReader::BuildSIL()
 {
-  this->Superclass::PrintSelf(os,indent);
+  // Initialize the SIL, dump all previous information.
+  this->SIL->Initialize();
 
-  os << indent << "File Name: " 
-    << (this->FileName ? this->FileName : "(none)") << "\n";  
+  vtkSmartPointer<vtkVariantArray> childEdge = vtkSmartPointer<vtkVariantArray>::New();
+  childEdge->InsertNextValue(0);
+
+  vtkSmartPointer<vtkVariantArray> crossEdge = vtkSmartPointer<vtkVariantArray>::New();
+  crossEdge->InsertNextValue(0);
+
+  // CrossEdge is an edge linking hierarchies.
+  vtkSmartPointer<vtkUnsignedCharArray> crossEdgesArray = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  crossEdgesArray->SetName("CrossEdges");
+  this->SIL->GetEdgeData()->AddArray(crossEdgesArray);
+
+  std::deque<std::string> names;
+  std::deque<vtkIdType> crossEdgeIds; // ids for edges between trees.
+  int cc;
+
+  // Now build the hierarchy.
+  vtkIdType rootId = this->SIL->AddVertex();
+  names.push_back("SIL");
+  
+  // Add the Heirarchy subtree.
+  vtkIdType targetsRoot = this->SIL->AddChild(rootId, childEdge);
+  names.push_back("Targets");
+
+  // Get default targets for the microcircuit.
+  const bbp::Targets &default_targets = this->experiment.targets();
+  for (bbp::Targets::const_iterator ti=default_targets.begin(); ti!=default_targets.end(); ++ti) {
+    std::string name = (*ti).name();
+    vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
+    names.push_back(name.c_str());
+  }
+
+  // Get user targets for the microcircuit.
+  const bbp::Targets &user_targets = this->experiment.user_targets();
+  for (bbp::Targets::const_iterator ti=user_targets.begin(); ti!=user_targets.end(); ++ti) {
+    std::string name = (*ti).name();
+    vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
+    names.push_back(name.c_str());
+  }
+
+  // This array is used to assign names to nodes.
+  vtkSmartPointer<vtkStringArray> namesArray = vtkSmartPointer<vtkStringArray>::New();
+  namesArray->SetName("Names");
+  namesArray->SetNumberOfTuples(this->SIL->GetNumberOfVertices());
+  this->SIL->GetVertexData()->AddArray(namesArray);
+
+  std::deque<std::string>::iterator iter;
+  for (cc=0, iter = names.begin(); iter != names.end(); ++iter, ++cc)
+  {
+    namesArray->SetValue(cc, (*iter).c_str());
+  }
 }
 //----------------------------------------------------------------------------
 void vtkCircuitReader::SetFileName(char *filename)
@@ -365,7 +524,16 @@ void vtkCircuitReader::SetFileModified()
   this->FileModifiedTime.Modified();
   this->Modified();
 }
-
+//-----------------------------------------------------------------------------
+vtkSmartPointer<vtkMutableDirectedGraph> vtkCircuitReader::GetSIL()
+{
+  return this->SIL;
+}
+//----------------------------------------------------------------------------
+int vtkCircuitReader::GetNumberOfPointArrays()
+{
+  return this->PointDataArraySelection->GetNumberOfArrays();
+}
 //----------------------------------------------------------------------------
 const char* vtkCircuitReader::GetPointArrayName(int index)
 {
@@ -393,28 +561,41 @@ void vtkCircuitReader::SetPointArrayStatus(const char* name, int status)
   }
 }
 //----------------------------------------------------------------------------
-void vtkCircuitReader::Enable(const char* name)
+int vtkCircuitReader::GetNumberOfTargets()
 {
-  this->SetPointArrayStatus(name, 1);
+  return this->TargetsSelection->GetNumberOfArrays();
+}
+
+//----------------------------------------------------------------------------
+const char* vtkCircuitReader::GetTargetsName(int index)
+{
+  return this->TargetsSelection->GetArrayName(index);
+}
+
+//----------------------------------------------------------------------------
+int vtkCircuitReader::GetTargetsStatus(const char* name)
+{
+  return this->TargetsSelection->ArrayIsEnabled(name);
+}
+
+//----------------------------------------------------------------------------
+void vtkCircuitReader::SetTargetsStatus(const char* name, int status)
+{
+  if(status)
+    {
+    this->TargetsSelection->EnableArray(name);
+    }
+  else
+    {
+    this->TargetsSelection->DisableArray(name);
+    }
 }
 //----------------------------------------------------------------------------
-void vtkCircuitReader::Disable(const char* name)
+void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
 {
-  this->SetPointArrayStatus(name, 0);
-}
-//----------------------------------------------------------------------------
-void vtkCircuitReader::EnableAll()
-{
-  this->PointDataArraySelection->EnableAllArrays();
-}
-//----------------------------------------------------------------------------
-void vtkCircuitReader::DisableAll()
-{
-  this->PointDataArraySelection->DisableAllArrays();
-}
-//----------------------------------------------------------------------------
-int vtkCircuitReader::GetNumberOfPointArrays()
-{
-  return this->PointDataArraySelection->GetNumberOfArrays();
+  this->Superclass::PrintSelf(os,indent);
+
+  os << indent << "File Name: " 
+    << (this->FileName ? this->FileName : "(none)") << "\n";  
 }
 //----------------------------------------------------------------------------

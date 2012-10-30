@@ -23,6 +23,57 @@
         </Documentation>
       </StringVectorProperty>
 
+      <IntVectorProperty name="SILUpdateStamp"
+         command="GetSILUpdateStamp"
+         information_only="1">
+        <SimpleIntInformationHelper />
+        <Documentation>
+          Information property indicating the update stamp of the SIL. Every
+          time the SIL is rebuild, this time stamp is changed.
+        </Documentation>
+      </IntVectorProperty>
+
+      <StringVectorProperty
+         name="TargetsStatus"
+         command="SetTargetsStatus"
+         number_of_elements="0"
+         repeat_command="1"
+         number_of_elements_per_command="2"
+         element_types="2 0">
+      </StringVectorProperty>
+
+      <IntVectorProperty
+         name="GenerateNormalVectors"
+         command="SetGenerateNormalVectors"
+         number_of_elements="1"
+         default_values="1" >
+        <BooleanDomain name="bool"/>
+        <Documentation>
+          When set, normal vectors are calculated for each mesh vertex
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="Random"
+         command="SetRandom"
+         number_of_elements="1"
+         default_values="1" >
+        <BooleanDomain name="bool"/>
+        <Documentation>
+          When MaximumNumberOfNeurons is set, this flag controls how the N loaded neurons are found,
+          either at random, or sequentially
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="MaximumNumberOfNeurons"
+         command="SetMaximumNumberOfNeurons"
+         number_of_elements="1"
+         default_values="0" >
+        <Documentation>
+          When nonzero, only a subset of neurons up to a count of N will be loaded to save time/memory
+        </Documentation>
+      </IntVectorProperty>
 
       <Hints>
         <Property name="FileName" show="1"/>

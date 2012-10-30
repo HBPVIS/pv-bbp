@@ -122,37 +122,28 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
     vtkCommand::UpdateInformationEvent,
     this, SLOT(updateSIL()));
 
-  pqProxySILModel* blockProxyModel = new pqProxySILModel("DataSet Types", &this->UI->SILModel);
-  blockProxyModel->setSourceModel(&this->UI->SILModel);
-  this->UI->Blocks->setModel(blockProxyModel);
-  this->UI->Blocks->header()->setClickable(true);
-  QObject::connect(this->UI->Blocks->header(), SIGNAL(sectionClicked(int)),
-    blockProxyModel, SLOT(toggleRootCheckState()), Qt::QueuedConnection);
+  pqProxySILModel* targetsProxyModel = new pqProxySILModel("Targets", &this->UI->SILModel);
+  targetsProxyModel->setSourceModel(&this->UI->SILModel);
+  this->UI->Targets->setModel(targetsProxyModel);
+  this->UI->Targets->header()->setClickable(true);
+  QObject::connect(this->UI->Targets->header(), SIGNAL(sectionClicked(int)),
+    targetsProxyModel, SLOT(toggleRootCheckState()), Qt::QueuedConnection);
   //
-  pqProxySILModel* dimsProxyModel = new pqProxySILModel("Dummy Name", &this->UI->SILModel);
-  dimsProxyModel->setSourceModel(&this->UI->SILModel);
-  QString title("Dimensions of DataSet");
-  dimsProxyModel->setHeaderTitle(title);
-  this->UI->Dimensions->setModel(dimsProxyModel);
-  this->UI->Dimensions->header()->setClickable(false);
-  this->UI->Dimensions->header()->setStretchLastSection(true);
-
   this->updateSIL();
   //
-  this->UI->Blocks->expandAll();
-  this->UI->Blocks->header()->setStretchLastSection(true);
-  blockProxyModel->setData(QModelIndex(), Qt::Unchecked, Qt::CheckStateRole);
+  this->UI->Targets->expandAll();
+  this->UI->Targets->header()->setStretchLastSection(true);
+  targetsProxyModel->setData(QModelIndex(), Qt::Unchecked, Qt::CheckStateRole);
   
   this->linkServerManagerProperties();
 
-
-//  QObject::connect(this->UI->Blocks,
+//  QObject::connect(this->UI->Targets,
 //    SIGNAL(clicked(const QModelIndex &)),
-//    this, SLOT(blockItemChanged(const QModelIndex &)));
+//    this, SLOT(targetItemChanged(const QModelIndex &)));
 
-  QObject::connect(this->UI->Blocks->selectionModel(),
+  QObject::connect(this->UI->Targets->selectionModel(),
     SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)),
-    this, SLOT(blockItemChanged(const QModelIndex &, const QModelIndex &)));
+    this, SLOT(targetItemChanged(const QModelIndex &, const QModelIndex &)));
 
   QList<pqTreeWidget*> treeWidgets = this->findChildren<pqTreeWidget*>();
   foreach (pqTreeWidget* tree, treeWidgets)
@@ -173,27 +164,21 @@ pqCircuitReaderPanel::~pqCircuitReaderPanel()
 //----------------------------------------------------------------------------
 void pqCircuitReaderPanel::updateSIL()
 {
-/*
   vtkSMProxy* reader = this->referenceProxy()->getProxy();
   reader->UpdatePropertyInformation(reader->GetProperty("SILUpdateStamp"));
 
   int stamp = vtkSMPropertyHelper(reader, "SILUpdateStamp").GetAsInt();
-  if (stamp != this->UI->SILUpdateStamp)
-    {
+  if (stamp != this->UI->SILUpdateStamp) {
     this->UI->SILUpdateStamp = stamp;
-    vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
     vtkPVSILInformation* info = vtkPVSILInformation::New();
-    pm->GatherInformation(reader->GetConnectionID(),
-      vtkProcessModule::DATA_SERVER, info,
-      reader->GetID());
+    reader->GatherInformation(info);
     this->UI->SILModel.update(info->GetSIL());
     info->Delete();
-    }
-*/
+  }
 }
+
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::addSelectionsToTreeWidget(const QString& prop, 
-                                      QTreeWidget* tree)
+void pqCircuitReaderPanel::addSelectionsToTreeWidget(const QString& prop, QTreeWidget* tree)
 {
   vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toAscii().data());
   QList<QVariant> SMPropertyDomain;
@@ -235,74 +220,19 @@ void pqCircuitReaderPanel::addSelectionToTreeWidget(const QString& name,
 void pqCircuitReaderPanel::linkServerManagerProperties()
 {
   this->propertyManager()->registerLink(
-    this->UI->Blocks->model(), "values", SIGNAL(valuesChanged()),
+    this->UI->Targets->model(), "values", SIGNAL(valuesChanged()),
     this->proxy(),
-    this->proxy()->GetProperty("VariablesArrayStatus"));
+    this->proxy()->GetProperty("TargetsStatus"));
 
   // parent class hooks up some of our widgets in the ui
   this->Superclass::linkServerManagerProperties();
 
-  QObject::connect(this->UI->Refresh,
-    SIGNAL(pressed()), this, SLOT(onRefresh()));
+  // on startup, we want to unselect everything
+  pqProxySILModel* targetsProxyModel = (pqProxySILModel*)(this->UI->Targets->model());
+  targetsProxyModel->setData(QModelIndex(), Qt::Unchecked, Qt::CheckStateRole);
 }
 //----------------------------------------------------------------------------
-QString pqCircuitReaderPanel::formatDataFor(vtkPVArrayInformation* ai)
-{
-  QString info;
-  if(ai)
-    {
-    int numComponents = ai->GetNumberOfComponents();
-    int dataType = ai->GetDataType();
-    double range[2];
-    for(int i=0; i<numComponents; i++)
-      {
-      ai->GetComponentRange(i, range);
-      QString s;
-      if(dataType != VTK_VOID && dataType != VTK_FLOAT && 
-         dataType != VTK_DOUBLE)
-        {
-        // display as integers (capable of 64 bit ids)
-        qlonglong min = qRound64(range[0]);
-        qlonglong max = qRound64(range[1]);
-        s = QString("%1 - %2").arg(min).arg(max);
-        }
-      else
-        {
-        // display as reals
-        double min = range[0];
-        double max = range[1];
-        s = QString("%1 - %2").arg(min,0,'f',6).arg(max,0,'f',6);
-        }
-      if(i > 0)
-        {
-        info += ", ";
-        }
-      info += s;
-      }
-    }
-  else
-    {
-    info = "Unavailable";
-    }
-  return info;
-}
-
-
-void pqCircuitReaderPanel::onRefresh()
-{
-  vtkSMSourceProxy* sp = vtkSMSourceProxy::SafeDownCast(this->proxy());
-  vtkSMProperty *prop = sp->GetProperty("Refresh");
-
-  // The "Refresh" property has no values, so force an update this way
-  prop->SetImmediateUpdate(1);
-  prop->Modified();
-
-  // "Pull" the values
-  sp->UpdatePropertyInformation(sp->GetProperty("TimeRange"));
-  sp->UpdatePropertyInformation(sp->GetProperty("TimestepValues")); 
-}
-//----------------------------------------------------------------------------
-void pqCircuitReaderPanel::blockItemChanged(const QModelIndex &current, const QModelIndex &previous)
+void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const QModelIndex &previous)
 {
   // a child leaf is a dataset, but we want the node name to fetch dimension information
   // so go up one if the user selected a leaf
@@ -313,13 +243,5 @@ void pqCircuitReaderPanel::blockItemChanged(const QModelIndex &current, const QM
   QVariant value = this->UI->SILModel.data(index , Qt::DisplayRole);
   QString sval = value.toString();
   //
-  pqProxySILModel* dimsProxyModel = new pqProxySILModel(sval, &this->UI->SILModel);
-  dimsProxyModel->setNoCheckBoxes(true);
-  dimsProxyModel->setSourceModel(&this->UI->SILModel);
-  sval = "Dimensions : " + value.toString();
-  dimsProxyModel->setHeaderTitle(sval);
-  this->UI->Dimensions->setModel(dimsProxyModel);
-  this->UI->Dimensions->header()->setClickable(false);
-  this->UI->Dimensions->header()->setStretchLastSection(true);
 }
 //----------------------------------------------------------------------------

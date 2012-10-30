@@ -13,12 +13,14 @@
  
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkBoundingBox.h"
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include "vtkMutableDirectedGraph.h"
+#include "vtkSmartPointer.h"
+#include <string>
+#include <vector>
+
 
 class vtkDataArraySelection;
 class vtkMultiProcessController;
-class vtkBoundsExtentTranslator;
 
 // BBP-SDK
 
@@ -38,6 +40,17 @@ public:
   void SetFileName(char *filename);
   vtkGetStringMacro(FileName);
 
+  vtkSetMacro(GenerateNormalVectors,int);
+  vtkGetMacro(GenerateNormalVectors,int);
+  vtkBooleanMacro(GenerateNormalVectors,int);
+
+  vtkSetMacro(Random,int);
+  vtkGetMacro(Random,int);
+  vtkBooleanMacro(Random,int);
+
+  vtkSetMacro(MaximumNumberOfNeurons,int);
+  vtkGetMacro(MaximumNumberOfNeurons,int);
+
   // Description:
   // Set/Get the timestep to be read
   vtkSetMacro(TimeStep,int);
@@ -54,27 +67,24 @@ public:
   vtkGetMacro(NumberOfTimeSteps,int);
 
   // Description:
-  // An file may contain multiple arrays
-  // a GUI (eg Paraview) can provide a mechanism for selecting which data arrays
-  // are to be read from the file. The PointArray variables and members can
-  // be used to query the names and number of arrays available
-  // and set the status (on/off) for each array, thereby controlling which
-  // should be read from the file. Paraview queries these point arrays after
-  // the (update) information part of the pipeline has been updated, and before the
-  // (update) data part is updated.
-  int         GetNumberOfPointArrays();
+  // Get the number of point or cell arrays available in the input.
+  int GetNumberOfPointArrays();
+  int GetNumberOfTargets();
+
+  // Description:
+  // Get the name of the point or cell array with the given index in
+  // the input.
   const char* GetPointArrayName(int index);
-  int         GetPointArrayStatus(const char* name);
-  void        SetPointArrayStatus(const char* name, int status);
-  void        DisableAll();
-  void        EnableAll();
-  void        Disable(const char* name);
-  void        Enable(const char* name);
-  //
-  int         GetNumberOfPointArrayStatusArrays() { return GetNumberOfPointArrays(); }
-  const char* GetPointArrayStatusArrayName(int index) { return GetPointArrayName(index); }
-  int         GetPointArrayStatusArrayStatus(const char* name) { return GetPointArrayStatus(name); }
-  void        SetPointArrayStatusArrayStatus(const char* name, int status) { SetPointArrayStatus(name, status); }
+  const char* GetTargetsName(int index);
+
+  // Description:
+  // Get/Set whether the point or cell array with the given name is to
+  // be read.
+  int GetPointArrayStatus(const char* name);
+  int GetTargetsStatus(const char* name);
+
+  void SetPointArrayStatus(const char* name, int status);
+  void SetTargetsStatus(const char* name, int status);
 
   // Description:
   // Set/Get the controller use in parallel operations 
@@ -86,6 +96,11 @@ public:
 
   void SetFileModified();
 
+  // Description:
+  // Every time the SIL is updated a this will return a different value.
+  vtkGetMacro(SILUpdateStamp, int);
+
+  vtkSmartPointer<vtkMutableDirectedGraph> GetSIL();
 
 protected:
   vtkCircuitReader();
@@ -108,18 +123,26 @@ protected:
   //
 //BTX
   vtkstd::vector<double>                  TimeStepValues;
-  typedef vtkstd::vector<vtkstd::string>  stringlist;
-  vtkstd::vector<stringlist>              FieldArrays;
   // For Bounding boxes if present
 //ETX
 
   // To allow paraview gui to enable/disable scalar reading
   vtkDataArraySelection* PointDataArraySelection;
+  // To allow paraview gui to enable/disable scalar reading
+  vtkDataArraySelection *TargetsSelection;
 
   vtkMultiProcessController* Controller;
 
-    bbp::Experiment experiment;
- 
+  bbp::Experiment experiment;
+
+  // 
+  vtkSmartPointer<vtkMutableDirectedGraph> SIL;
+  void BuildSIL();
+  int SILUpdateStamp;
+  int GenerateNormalVectors;
+  int Random;
+  int MaximumNumberOfNeurons;
+
 private:
   vtkCircuitReader(const vtkCircuitReader&); 
   void operator=(const vtkCircuitReader&); 
