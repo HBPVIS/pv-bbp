@@ -14,7 +14,7 @@
       <StringVectorProperty
          name="FileName"
          command="SetFileName"
-         label="BlueConfig filename"
+         label="BlueConfig FileName"
          default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple"
          number_of_elements="1">
         <FileListDomain name="files"/>
@@ -43,10 +43,25 @@
       </StringVectorProperty>
 
       <IntVectorProperty
+         name="MeshType"
+         command="SetMeshType"
+         number_of_elements="1"
+         default_values="0" >
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="Full Mesh"/>
+          <Entry value="1" text="Morphology Skeleton"/>
+          <Entry value="2" text="Unused"/>
+        </EnumerationDomain>
+        <Documentation>
+          Choose between the full mesh, or a skeleton of the Morphology
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty
          name="GenerateNormalVectors"
          command="SetGenerateNormalVectors"
          number_of_elements="1"
-         default_values="1" >
+         default_values="0" >
         <BooleanDomain name="bool"/>
         <Documentation>
           When set, normal vectors are calculated for each mesh vertex
@@ -69,7 +84,7 @@
          name="MaximumNumberOfNeurons"
          command="SetMaximumNumberOfNeurons"
          number_of_elements="1"
-         default_values="0" >
+         default_values="25" >
         <Documentation>
           When nonzero, only a subset of neurons up to a count of N will be loaded to save time/memory
         </Documentation>

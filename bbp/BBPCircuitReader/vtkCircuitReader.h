@@ -25,8 +25,10 @@ class vtkMultiProcessController;
 // BBP-SDK
 
 #include <BBP/common.h>
+#include "BBP/Microcircuit/Morphology.h"
 #include "BBP/Microcircuit/Experiment.h"
- 
+#include "BBP/Common/Math/Geometry/Rotation.h "
+
 class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm 
 {
 public:
@@ -39,6 +41,9 @@ public:
   // Specify file name of the morphology file.
   void SetFileName(char *filename);
   vtkGetStringMacro(FileName);
+  
+  vtkSetMacro(MeshType,int);
+  vtkGetMacro(MeshType,int);
 
   vtkSetMacro(GenerateNormalVectors,int);
   vtkGetMacro(GenerateNormalVectors,int);
@@ -102,6 +107,8 @@ public:
 
   vtkSmartPointer<vtkMutableDirectedGraph> GetSIL();
 
+  void CreateDatasetFromMorphology(const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
+
 protected:
   vtkCircuitReader();
   ~vtkCircuitReader();
@@ -139,6 +146,7 @@ protected:
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
   void BuildSIL();
   int SILUpdateStamp;
+  int MeshType;
   int GenerateNormalVectors;
   int Random;
   int MaximumNumberOfNeurons;
