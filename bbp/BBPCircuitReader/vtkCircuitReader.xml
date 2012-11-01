@@ -1,0 +1,34 @@
+<ServerManagerConfiguration>
+  
+  <ProxyGroup name="sources">
+    
+    <SourceProxy name="CircuitReader"
+                class="vtkCircuitReader"
+                label="BlueConfig circuit reader">
+      <Documentation
+        short_help="Read the BlueConfig file to obtain a circuit."
+        long_help="Read the BlueConfig file to obtain a circuit.">
+        This reader constructs circuits by reading targets from a BLueConfig and generating the meshes for each morphology.
+      </Documentation>
+
+      <StringVectorProperty
+         name="FileName"
+         command="SetFileName"
+         label="BlueConfig filename"
+         default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple"
+         number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the BlueConfig file.
+        </Documentation>
+      </StringVectorProperty>
+
+
+      <Hints>
+        <Property name="FileName" show="1"/>
+      </Hints>
+    </SourceProxy>
+    
+  </ProxyGroup>
+
+</ServerManagerConfiguration>

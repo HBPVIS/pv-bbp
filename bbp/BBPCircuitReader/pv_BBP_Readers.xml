@@ -1,0 +1,6 @@
+<ParaViewReaders>
+  <Reader name="CircuitReader"
+          extensions="BlueConfig"
+          file_description="Blue Brain Circuit (BlueConfig)">
+  </Reader>
+</ParaViewReaders>
