@@ -42,6 +42,11 @@ public:
   void SetFileName(char *filename);
   vtkGetStringMacro(FileName);
   
+  // Description:
+  // Specify the default target to load
+  vtkSetStringMacro(DefaultTarget);
+  vtkGetStringMacro(DefaultTarget);
+
   vtkSetMacro(MeshType,int);
   vtkGetMacro(MeshType,int);
 
@@ -118,6 +123,7 @@ protected:
   int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   //
   char         *FileName;
+  char         *DefaultTarget;
   int           NumberOfTimeSteps;
   int           TimeStep;
   int           ActualTimeStep;

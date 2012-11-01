@@ -115,6 +115,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->ActualTimeStep                  = 0;
   this->TimeStepTolerance               = 1E-6;
   this->FileName                        = NULL;
+  this->DefaultTarget                   = NULL;
   this->UpdatePiece                     = 0;
   this->UpdateNumPieces                 = 0;
   this->IntegerTimeStepValues           = 0;
@@ -247,7 +248,7 @@ int vtkCircuitReader::RequestData(
   vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
   // default target?
-  std::string target_name = "AllCompartments";
+  std::string target_name = this->DefaultTarget ? this->DefaultTarget : this->TargetsSelection->GetArrayName(0);
   //
   int N = this->TargetsSelection->GetNumberOfArrays();
   for (int i=0; i<N; i++) {
@@ -600,6 +601,7 @@ void vtkCircuitReader::BuildSIL()
     std::string name = (*ti).name();
     vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
     names.push_back(name.c_str());
+    this->TargetsSelection->AddArray(name.c_str());
   }
 
   // Get user targets for the microcircuit.
@@ -608,6 +610,7 @@ void vtkCircuitReader::BuildSIL()
     std::string name = (*ti).name();
     vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
     names.push_back(name.c_str());
+    this->TargetsSelection->AddArray(name.c_str());
   }
 
   // This array is used to assign names to nodes.
@@ -619,7 +622,8 @@ void vtkCircuitReader::BuildSIL()
   std::deque<std::string>::iterator iter;
   for (cc=0, iter = names.begin(); iter != names.end(); ++iter, ++cc)
   {
-    namesArray->SetValue(cc, (*iter).c_str());
+    const char *name = (*iter).c_str();
+    namesArray->SetValue(cc, name);
   }
 }
 //----------------------------------------------------------------------------

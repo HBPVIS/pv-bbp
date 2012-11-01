@@ -11,16 +11,26 @@
         This reader constructs circuits by reading targets from a BLueConfig and generating the meshes for each morphology.
       </Documentation>
 
+      <!--         default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple" -->
+
       <StringVectorProperty
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple"
+         default_values="D:/data/bbp/small/BlueConfig"
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>
           This property specifies the BlueConfig file.
         </Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+         name="DefaultTarget"
+         command="SetDefaultTarget"
+         label="Default Target"
+         default_values="viz1"
+         number_of_elements="1">
       </StringVectorProperty>
 
       <IntVectorProperty name="SILUpdateStamp"
@@ -92,6 +102,7 @@
 
       <Hints>
         <Property name="FileName" show="1"/>
+        <Property name="DefaultTarget" show="0"/>        
       </Hints>
     </SourceProxy>
     

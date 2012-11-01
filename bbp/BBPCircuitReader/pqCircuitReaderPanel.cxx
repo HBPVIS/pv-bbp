@@ -125,9 +125,9 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
   pqProxySILModel* targetsProxyModel = new pqProxySILModel("Targets", &this->UI->SILModel);
   targetsProxyModel->setSourceModel(&this->UI->SILModel);
   this->UI->Targets->setModel(targetsProxyModel);
-  this->UI->Targets->header()->setClickable(true);
-  QObject::connect(this->UI->Targets->header(), SIGNAL(sectionClicked(int)),
-    targetsProxyModel, SLOT(toggleRootCheckState()), Qt::QueuedConnection);
+//  this->UI->Targets->header()->setClickable(true);
+//  QObject::connect(this->UI->Targets->header(), SIGNAL(sectionClicked(int)),
+//    targetsProxyModel, SLOT(toggleRootCheckState()), Qt::QueuedConnection);
   //
   this->updateSIL();
   //
@@ -226,10 +226,16 @@ void pqCircuitReaderPanel::linkServerManagerProperties()
 
   // parent class hooks up some of our widgets in the ui
   this->Superclass::linkServerManagerProperties();
-
   // on startup, we want to unselect everything
   pqProxySILModel* targetsProxyModel = (pqProxySILModel*)(this->UI->Targets->model());
   targetsProxyModel->setData(QModelIndex(), Qt::Unchecked, Qt::CheckStateRole);
+
+  // and select the default target
+  vtkSMProxy* reader = this->referenceProxy()->getProxy();
+  std::string default = vtkSMPropertyHelper(reader, "DefaultTarget").GetAsString();
+
+  pqSILModel* silModel = qobject_cast<pqSILModel*>(targetsProxyModel->sourceModel());
+  targetsProxyModel->setData(silModel->makeIndex(silModel->findVertex(default.c_str())), Qt::Checked, Qt::CheckStateRole);
 }
 //----------------------------------------------------------------------------
 void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const QModelIndex &previous)
