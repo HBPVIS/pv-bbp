@@ -12,8 +12,6 @@
 #define __vtkCircuitReader_h 
  
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkBoundingBox.h"
-#include "vtkMutableDirectedGraph.h"
 #include "vtkSmartPointer.h"
 #include <string>
 #include <vector>
@@ -21,13 +19,21 @@
 
 class vtkDataArraySelection;
 class vtkMultiProcessController;
+class vtkFloatArray;
+class vtkMutableDirectedGraph;
 
 // BBP-SDK
 
 #include <BBP/common.h>
 #include "BBP/Microcircuit/Morphology.h"
 #include "BBP/Microcircuit/Experiment.h"
-#include "BBP/Common/Math/Geometry/Rotation.h "
+#include "BBP/Common/Math/Geometry/Rotation.h"
+#include "BBP/Microcircuit/Datasets/CompartmentReportFrame.h"
+#include "BBP/Microcircuit/Morphology.h"
+#include "BBP/Microcircuit/Experiment.h"
+#include "BBP/Microcircuit/Targets/Targets.h"
+#include "BBP/Microcircuit/Targets/Cell_Target.h"
+#include <BBP/Microcircuit/Containers/Neurons.h>
 
 class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm 
 {
@@ -58,7 +64,13 @@ public:
   vtkGetMacro(Random,int);
   vtkBooleanMacro(Random,int);
 
-  vtkSetMacro(MaximumNumberOfNeurons,int);
+  void SetMaximumNumberOfNeurons(int n) {
+    if (this->MaximumNumberOfNeurons != n) { 
+      this->MaximumNumberOfNeurons = n; 
+      this->MeshParamsModifiedTime.Modified();
+      this->Modified(); 
+    } 
+  }
   vtkGetMacro(MaximumNumberOfNeurons,int);
 
   // Description:
@@ -112,7 +124,6 @@ public:
 
   vtkSmartPointer<vtkMutableDirectedGraph> GetSIL();
 
-  void CreateDatasetFromMorphology(const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
 
 protected:
   vtkCircuitReader();
@@ -122,21 +133,36 @@ protected:
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   //
+  void GenerateNeuronMesh(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  void CreateReportScalars(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+
+  void      CreateDatasetFromMorphology(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
+  vtkIdType CreateReportScalarsFromMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
+  int  OpenReportFile();
+  //
+  //
+  //
+
   char         *FileName;
   char         *DefaultTarget;
   int           NumberOfTimeSteps;
   int           TimeStep;
   int           ActualTimeStep;
   double        TimeStepTolerance;
+  double        CurrentTime;
   vtkTimeStamp  FileModifiedTime;
   vtkTimeStamp  FileOpenedTime;
+  vtkTimeStamp  MeshParamsModifiedTime;
+  vtkTimeStamp  MeshGeneratedTime;
+  vtkTimeStamp  TimeModifiedTime;
   int           UpdatePiece;
   int           UpdateNumPieces;
   int           IntegerTimeStepValues;
   //
 //BTX
-  vtkstd::vector<double>                  TimeStepValues;
-  // For Bounding boxes if present
+  vtkstd::vector<double> TimeStepValues;
+  bbp::CompartmentReportFrame _currentFrame;
 //ETX
 
   // To allow paraview gui to enable/disable scalar reading
@@ -146,8 +172,16 @@ protected:
 
   vtkMultiProcessController* Controller;
 
-  bbp::Experiment experiment;
-
+  bbp::Experiment                           Experiment;
+  std::string                               TargetName;
+  bbp::Target                               Target;
+  bbp::Millisecond                          startTime;
+  bbp::Millisecond                          stopTime;
+  bbp::Millisecond                          timestep;
+  bbp::Microcircuit_Ptr                     Microcircuit;
+  bbp::CompartmentReportReaderPtr           ReportReader;
+  bbp::Compartment_Report_Mapping_Ptr       ReportMapping;
+  std::map<bbp::Cell_GID, bbp::Cell_Index>  OffsetMapping;
   // 
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
   void BuildSIL();
@@ -156,6 +190,9 @@ protected:
   int GenerateNormalVectors;
   int Random;
   int MaximumNumberOfNeurons;
+
+  vtkSmartPointer<vtkPolyData>             CachedNeuronMesh;
+  vtkSmartPointer<vtkPolyData>             CachedMorphologySkeleton;
 
 private:
   vtkCircuitReader(const vtkCircuitReader&); 
