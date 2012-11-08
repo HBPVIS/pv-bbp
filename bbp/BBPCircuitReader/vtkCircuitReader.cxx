@@ -66,7 +66,7 @@
 
 //----------------------------------------------------------------------------
 #define USE_BBP_TRANSFORM
-#undef  USE_VTK_TRANSFORM
+#define USE_VTK_TRANSFORM
 //----------------------------------------------------------------------------
 using namespace bbp;
 //----------------------------------------------------------------------------
@@ -84,6 +84,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->NumberOfTimeSteps               = 0;
   this->TimeStep                        = 0;
   this->ActualTimeStep                  = 0;
+  this->CurrentTime                     = std::numeric_limits<float>::min();
   this->TimeStepTolerance               = 1E-6;
   this->FileName                        = NULL;
   this->DefaultTarget                   = NULL;
@@ -216,7 +217,6 @@ int vtkCircuitReader::RequestInformation(
     this->OpenReportFile();
 
     this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
-    this->CurrentTime = this->startTime;
 
     this->TimeStepValues.assign(this->NumberOfTimeSteps, 0.0);
     for (int i=0; i<this->NumberOfTimeSteps; ++i) {
@@ -316,7 +316,11 @@ int vtkCircuitReader::RequestData(
         this->IntegerTimeStepValues ? 0.5 : this->TimeStepTolerance ), requestedTimeValue ))
     - this->TimeStepValues.begin();
   //
-  this->CurrentTime = requestedTimeValue;
+  bool NeedToRegernerateTime = false;
+  if (requestedTimeValue!=this->CurrentTime) {
+    this->CurrentTime = requestedTimeValue;
+    NeedToRegernerateTime = true;
+  }
   //
   output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &requestedTimeValue, 1);
   output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &requestedTimeValue, 1);
@@ -327,7 +331,10 @@ int vtkCircuitReader::RequestData(
     this->GenerateMorphologySkeleton(request, inputVector, outputVector);
     this->MeshGeneratedTime.Modified();
   }
-  this->CreateReportScalars(request, inputVector, outputVector);
+  if (NeedToRegenerateMesh || NeedToRegernerateTime) {
+    this->CreateReportScalars(request, inputVector, outputVector);
+    this->TimeModifiedTime.Modified();
+  }
   //
   output0->ShallowCopy(this->CachedNeuronMesh);
   output1->ShallowCopy(this->CachedMorphologySkeleton);
@@ -362,13 +369,6 @@ void vtkCircuitReader::GenerateNeuronMesh(
   sectionId->SetName("SectionIds");
   nvectors->SetName("Normals");
   nvectors->SetNumberOfComponents(3);
-  vtkSmartPointer<vtkPolyData>       normpoly = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPoints>       normpoints = vtkSmartPointer<vtkPoints>::New();
-  vtkSmartPointer<vtkCellArray> normtriangles = vtkSmartPointer<vtkCellArray>::New();
-  vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-  normals->SetSplitting(0);
-  normals->SetComputeCellNormals(0);
-  normals->SetNonManifoldTraversal(0);
   //
   vtkSmartPointer<vtkTransform>     transform = vtkSmartPointer<vtkTransform>::New();
   vtkSmartPointer<vtkMatrix4x4>        matrix = vtkSmartPointer<vtkMatrix4x4>::New();
@@ -424,38 +424,25 @@ void vtkCircuitReader::GenerateNeuronMesh(
     //
     const bbp::Morphology* sdk_morph    = &ni->morphology();
     const bbp::Mesh*       sdk_mesh     = &ni->morphology().mesh();
-    const bbp::Sections*   sdk_sections = &ni->neurites();
 
     //
-    bbp::Vertex_Index           vertexCount = sdk_mesh->vertex_count();
-    bbp::Triangle_Index           faceCount = sdk_mesh->triangle_count();
-    bbp::Triangle_Index         stripLength = sdk_mesh->triangle_strip_length();
-    const Array<Vector_3D<bbp::Micron>> &vertices2 = sdk_mesh->vertices();
-    const Array<Section_ID>           &section_ids = sdk_mesh->vertex_sections();
+    bbp::Vertex_Index         vertexCount = sdk_mesh->vertex_count();
+    bbp::Triangle_Index         faceCount = sdk_mesh->triangle_count();
+    bbp::Triangle_Index       stripLength = sdk_mesh->triangle_strip_length();
+    const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
+    const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
+    const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
+    const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
+
     //
     std::cout << "Neuron : " << std::distance(neurons.begin(),ni) << std::endl;
     std::cout << "vertex count : " << vertexCount << std::endl;
     std::cout << "face count : " << faceCount << std::endl;
 
-    //
-    // we must create a polydata object for the neuron in order to run the normal filter on it
-    // better to do one neuron at a time than all of them in one go at the end.
-    //
-    vtkIdType *ncells = NULL;
-    if (this->GenerateNormalVectors) {
-      normpoints->GetData()->Resize(vertexCount);
-      normpoints->SetNumberOfPoints(vertexCount);
-      // resizing cell array doesn't work when new size is smaller - so create a new one
-      normtriangles = vtkSmartPointer<vtkCellArray>::New();
-      ncells = normtriangles->WritePointer(faceCount, 4*(faceCount));
-      normpoly->SetPoints(normpoints);
-      normpoly->SetPolys(normtriangles);
-    }
-
 #ifdef USE_VTK_TRANSFORM
-    Degree_Angle y_rotation = ni->orientation().rotation;
+    transform->Identity();
     transform->PostMultiply();
-    transform->RotateY(y_rotation);
+    transform->RotateY(ni->orientation().rotation);
     transform->Translate(ni->position().x(), ni->position().y(), ni->position().z());
     transform->Update();
     for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
@@ -463,7 +450,8 @@ void vtkCircuitReader::GenerateNeuronMesh(
       transform->TransformPoint(vertices2[v].vector(),newPoint); 
       points->SetPoint(insertN, newPoint);
       if (this->GenerateNormalVectors) {
-        normpoints->setPoint(v, newPoint);
+        transform->TransformNormal(vertex_normals[v].vector(),newPoint); 
+        nvectors->SetTuple(insertN, newPoint); 
       }
 #else
     const Transform_3D<bbp::Micron> &bbp_transform = ni->global_transform();
@@ -471,7 +459,8 @@ void vtkCircuitReader::GenerateNeuronMesh(
       bbp::Vector_3D<bbp::Micron> newPoint = bbp_transform*vertices2[v];
       points->SetPoint(insertN, newPoint.vector());
       if (this->GenerateNormalVectors) {
-        normpoints->SetPoint(v, newPoint.vector());
+        // how to transform normal vector using sdk?
+        nvectors->SetTuple(insertN, vertex_normals[v].vector()); 
       }
 #endif
       neuronId->SetValue(insertN,Ncount);
@@ -489,29 +478,9 @@ void vtkCircuitReader::GenerateNeuronMesh(
       cells[insertC*4 + 1] = offsetN + faces2[t*3 + 0];
       cells[insertC*4 + 2] = offsetN + faces2[t*3 + 1];
       cells[insertC*4 + 3] = offsetN + faces2[t*3 + 2];
-      if (this->GenerateNormalVectors) {
-        // no offset here as we only do one neuron at a time
-        ncells[t*4 + 0] = 3;
-        ncells[t*4 + 1] = faces2[t*3 + 0];
-        ncells[t*4 + 2] = faces2[t*3 + 1];
-        ncells[t*4 + 3] = faces2[t*3 + 2];
-      }
       insertC++;
     }
 
-    if (this->GenerateNormalVectors) {
-      normals->Modified();
-      normals->SetInput(normpoly);
-      normals->Update();
-      insertN = offsetN;
-      vtkFloatArray *nvecs = vtkFloatArray::SafeDownCast(normals->GetOutput()->GetPointData()->GetArray("Normals"));
-      if (nvecs->GetNumberOfTuples()!=vertexCount) {
-        std::cout << "These numbers don't add up " << std::endl;
-      }
-      for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
-        nvectors->SetTuple(insertN++, nvecs->GetTuple(v));
-      }
-    }
     offsetN = insertN;
   }
   //
@@ -552,9 +521,9 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
     //
     const bbp::Morphology* sdk_morph    = &ni->morphology();
     const bbp::Mesh*       sdk_mesh     = &ni->morphology().mesh();
-
+    //
     const Transform_3D<bbp::Micron> &bbp_transform = ni->global_transform();
-    this->CreateDatasetFromMorphology(&*ni, sdk_morph, points, lines, pointdata, bbp_transform);
+    this->AddOneMorphologyToDataSet(&*ni, sdk_morph, points, lines, pointdata, bbp_transform);
   }
   //
   this->CachedMorphologySkeleton->SetPoints(points);
@@ -568,28 +537,38 @@ void vtkCircuitReader::CreateReportScalars(
   vtkInformationVector *outputVector)
 {
   this->ReportReader->loadFrame(this->CurrentTime, this->_currentFrame);
+  // bind the current frame to the microcircuit
+  this->Microcircuit->update( this->_currentFrame );
 
-  // Voltage level provided by simulation reports
-  vtkSmartPointer<vtkFloatArray> voltage = vtkSmartPointer<vtkFloatArray>::New();
-  voltage->SetName("Voltage");
-  this->CachedMorphologySkeleton->GetPointData()->AddArray(voltage);
-
+  // Voltage level provided by simulation reports (Morphology Skeleton)
+  vtkSmartPointer<vtkFloatArray> voltageM = vtkSmartPointer<vtkFloatArray>::New();
+  voltageM->SetName("Voltage");
+  this->CachedMorphologySkeleton->GetPointData()->AddArray(voltageM);
   vtkIdType maxPoints = this->CachedMorphologySkeleton->GetPoints()->GetNumberOfPoints();
-  voltage->Resize(maxPoints);
-  voltage->SetNumberOfTuples(maxPoints);
+  voltageM->Resize(maxPoints);
+  voltageM->SetNumberOfTuples(maxPoints);
+
+  // Voltage level provided by simulation reports (Neuron Mesh)
+  vtkSmartPointer<vtkFloatArray> voltageN = vtkSmartPointer<vtkFloatArray>::New();
+  voltageN->SetName("Voltage");
+  this->CachedNeuronMesh->GetPointData()->AddArray(voltageN);
+  vtkIdType maxPointsN = this->CachedNeuronMesh->GetPoints()->GetNumberOfPoints();
+  voltageN->Resize(maxPointsN);
+  voltageN->SetNumberOfTuples(maxPointsN);
 
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-  vtkIdType Ncount = 0, offsetN = 0;
-  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni,++Ncount) {
+  vtkIdType Ncount = 0, offsetN = 0, offsetM = 0;
+  for (bbp::Neurons::iterator ni=neurons.begin(); ni!=neurons.end(); ++ni,++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
-    offsetN = this->CreateReportScalarsFromMorphology(&*ni, voltage, offsetN);  
+    offsetM = this->AddReportScalarsToNeuronMorphology(&*ni, voltageM, offsetM);  
+    offsetN = this->AddReportScalarsToNeuronMesh(&*ni, voltageN, offsetN);  
   }
 }
 //-----------------------------------------------------------------------------
-vtkIdType vtkCircuitReader::CreateReportScalarsFromMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
+vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
 {
   const bbp::Morphology* morph                    = &neuron->morphology();
   const bbp::Transform_3D<bbp::Micron> &transform = neuron->global_transform();
@@ -609,7 +588,7 @@ vtkIdType vtkCircuitReader::CreateReportScalarsFromMorphology(bbp::Neuron *neuro
   // Finding the voltage value of the last compartment of the last axon section. 
   // This is not completely accurate but it's the best we can do to assign some color 
   // to axon sections with undefined simulation data.
-  Sections axon = morph->axon();
+  const Sections &axon = morph->axon();
   const Section_ID lastAxon = axon.size() == 0 || this->ReportMapping->number_of_compartments(index, axon.begin()->id()) == 0 ? axon.begin()->id() : morph->soma().id();
   float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportMapping->number_of_compartments(index, lastAxon)];
 
@@ -671,11 +650,75 @@ vtkIdType vtkCircuitReader::CreateReportScalarsFromMorphology(bbp::Neuron *neuro
   return offsetN + i;
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::CreateDatasetFromMorphology(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const Transform_3D<bbp::Micron> &transform)
+vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
 {
-  // get the ouptut
-  vtkSmartPointer<vtkPolyData> output = vtkSmartPointer<vtkPolyData>::New();
+  const bbp::Morphology *sdk_morph    = &neuron->morphology();
+  const bbp::Mesh       *sdk_mesh     = &sdk_morph->mesh();
+  //
+  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
+  const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
+  const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
+  const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
+  //
+  //  Morphology_Dataset dataset = std::move(sdk_morph->operator Morphology_Dataset());
+  //  const Section_Type                *section_types = dataset.section_types();
 
+  vtkIdType vertexCount = sdk_mesh->vertex_count();
+
+  // get the index 
+  Cell_Index cell_index = neuron->index();
+  if (cell_index==UNDEFINED_CELL_INDEX) {
+    for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
+      voltages->SetValue(offsetN + i, -70);
+    }
+    return offsetN + vertexCount;
+  }
+
+
+  const bbp::Count index = this->OffsetMapping[neuron->gid()];
+
+  // These are the buffer offsets for this neuron 
+  const std::vector<Report_Frame_Index> &offsets = this->ReportMapping->sections_offsets(index);
+
+  const float *buffer = this->_currentFrame.getData<bbp::Voltages>().get();
+  float somaVoltage = buffer[offsets[0]];
+  float rvoltage = -70;
+
+  // Finding the voltage value of the last compartment of the last axon section. 
+  // This is not completely accurate but it's the best we can do to assign some color 
+  // to axon sections with undefined simulation data.
+  const Sections &axon = sdk_morph->axon();
+  const Section_ID lastAxon = axon.size() == 0 || this->ReportMapping->number_of_compartments(cell_index, axon.begin()->id()) == 0 ? axon.begin()->id() : sdk_morph->soma().id();
+  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportMapping->number_of_compartments(cell_index, lastAxon)];
+
+  for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
+    Section_ID     sectionId = section_ids[i];
+    size_t num_sections = this->ReportMapping->number_of_sections(index);
+    Compartment_Count compartments = 0;
+    if (sectionId < num_sections) {
+      compartments = this->ReportMapping->number_of_compartments(index, sectionId);
+    }
+    float position = section_distances[i];
+    //
+    if (compartments) {
+      // Computing the relative length within section of the capsule midpoint
+      Compartment_Count compartment = std::min(compartments - 1, (int)floor(compartments * position));
+      unsigned long offset = offsets[sectionId];
+      rvoltage = buffer[offset + compartment];
+    } else {
+      //      if (sectionType == SOMA) {
+      rvoltage = somaVoltage;
+      //     } else if (sectionType == AXON) {
+      //       rvoltage = undefinedAxonVoltage;
+      //     }
+    }
+    voltages->SetValue(offsetN + i, rvoltage);
+  }
+  return offsetN + vertexCount;
+}
+//-----------------------------------------------------------------------------
+void vtkCircuitReader::AddOneMorphologyToDataSet(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const Transform_3D<bbp::Micron> &transform)
+{
   // Varying dendrite radius using the information of the morphology points
   vtkSmartPointer<vtkFloatArray> dendriteRadius = vtkFloatArray::SafeDownCast(field->GetArray("DendriteRadius"));
   if (!dendriteRadius) {

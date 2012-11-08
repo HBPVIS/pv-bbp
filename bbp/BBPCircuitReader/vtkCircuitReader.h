@@ -56,7 +56,13 @@ public:
   vtkSetMacro(MeshType,int);
   vtkGetMacro(MeshType,int);
 
-  vtkSetMacro(GenerateNormalVectors,int);
+  void SetGenerateNormalVectors(int n) {
+    if (this->GenerateNormalVectors != n) { 
+      this->GenerateNormalVectors = n; 
+      this->MeshParamsModifiedTime.Modified();
+      this->Modified(); 
+    } 
+  }
   vtkGetMacro(GenerateNormalVectors,int);
   vtkBooleanMacro(GenerateNormalVectors,int);
 
@@ -126,7 +132,7 @@ public:
 
 
 protected:
-  vtkCircuitReader();
+   vtkCircuitReader();
   ~vtkCircuitReader();
 
   int   FillOutputPortInformation( int port, vtkInformation* info );
@@ -137,9 +143,10 @@ protected:
   void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   void CreateReportScalars(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  void      CreateDatasetFromMorphology(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
-  vtkIdType CreateReportScalarsFromMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
-  int  OpenReportFile();
+  void      AddOneMorphologyToDataSet(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
+  vtkIdType AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
+  vtkIdType AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
+  int       OpenReportFile();
   //
   //
   //
