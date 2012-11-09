@@ -107,8 +107,8 @@
       </DoubleVectorProperty>
 
       <Hints>
-        <Property name="FileName" show="1"/>
-        <Property name="DefaultTarget" show="0"/>        
+        <Property name="DefaultTarget" show="0"/>
+        <Property name="TargetsStatus" show="0"/>
       </Hints>
     </SourceProxy>
     

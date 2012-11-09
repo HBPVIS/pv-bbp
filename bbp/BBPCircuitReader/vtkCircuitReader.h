@@ -40,7 +40,7 @@ class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm
 public:
   static vtkCircuitReader *New();
   //vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
-  vtkTypeRevisionMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
  
   // Description:
@@ -168,7 +168,7 @@ protected:
   int           IntegerTimeStepValues;
   //
 //BTX
-  vtkstd::vector<double> TimeStepValues;
+  std::vector<double> TimeStepValues;
   bbp::CompartmentReportFrame _currentFrame;
 //ETX
 

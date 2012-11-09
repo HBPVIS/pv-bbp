@@ -1,7 +1,9 @@
-// Visual studio debug settings for paths specifi to this module
+// Visual studio debug settings for paths specific to this module
 //
-// PATH=D:\build\paraview\bin\Debug;C:\Program Files\hdf5-vfd-1.8.9\bin;%PATH%
+// PATH=D:\build\paraview-3.98\bin\Debug;C:\Program Files\hdf5-vfd-1.8.9\bin;%PATH%
 // PV_PLUGIN_PATH=D:\build\buildyard\ParaBBP\bin\Debug
+// _NO_DEBUG_HEAP=1
+// working directory : D:\build\paraview-3.98\bin\Debug
 //
 
 #include "vtkObjectFactory.h"
@@ -70,7 +72,6 @@
 //----------------------------------------------------------------------------
 using namespace bbp;
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCircuitReader, "$Revision: 1.0 $");
 vtkStandardNewMacro(vtkCircuitReader);
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkCircuitReader, Controller, vtkMultiProcessController);
@@ -139,7 +140,7 @@ int vtkCircuitReader::FillOutputPortInformation( int port, vtkInformation* info 
   return 0;
 } 
 /*
-vtkstd::pair<double, double> GetClosest(vtkstd::vector<double> &sortedlist, const double& val) const
+std::pair<double, double> GetClosest(std::vector<double> &sortedlist, const double& val) const
 {
   std::vector<double>::const_iterator it = std::lower_bound(sortedlist.begin(), sortedlist.end(), val);
   if (it == sortedlist.end())        return std::make_pair(sortedlist.back(), sortedlist.back());
@@ -306,13 +307,13 @@ int vtkCircuitReader::RequestData(
   vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
   // Which time step has been requested
-  double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()) 
-    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS())[0] 
-    : outInfo1->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS())[0];
+  double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
+    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
+    : outInfo1->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
   //
-  this->ActualTimeStep = vtkstd::find_if(
+  this->ActualTimeStep = std::find_if(
     this->TimeStepValues.begin(), this->TimeStepValues.end(),
-    vtkstd::bind2nd( vtkCircuitReaderToleranceCheck( 
+    std::bind2nd( vtkCircuitReaderToleranceCheck( 
         this->IntegerTimeStepValues ? 0.5 : this->TimeStepTolerance ), requestedTimeValue ))
     - this->TimeStepValues.begin();
   //
@@ -322,8 +323,8 @@ int vtkCircuitReader::RequestData(
     NeedToRegernerateTime = true;
   }
   //
-  output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &requestedTimeValue, 1);
-  output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &requestedTimeValue, 1);
+  output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
+  output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
 
   bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime);
   if (NeedToRegenerateMesh) {
@@ -614,11 +615,14 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
         unsigned long offset = offsets[section->id()];
         rvoltage = buffer[offset + compartment];
       } else {
+        rvoltage = -100;
+/*
         if (section->type() == SOMA) {
           rvoltage = somaVoltage;
         } else if (section->type() == AXON) {
           rvoltage = undefinedAxonVoltage;
         }
+*/
       }
       voltages->SetValue(offsetN + i, rvoltage);
       i++;
@@ -636,11 +640,14 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
         unsigned long offset = offsets[section->id()];
         rvoltage = buffer[offset + compartment];
       } else {
+        rvoltage = -100;
+/*
         if (section->type() == SOMA) {
           rvoltage = somaVoltage;
         } else if (section->type() == AXON) {
           rvoltage = undefinedAxonVoltage;
         }
+*/
       }
 
       voltages->SetValue(offsetN + i, rvoltage);
@@ -669,7 +676,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   Cell_Index cell_index = neuron->index();
   if (cell_index==UNDEFINED_CELL_INDEX) {
     for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
-      voltages->SetValue(offsetN + i, -70);
+      voltages->SetValue(offsetN + i, -100);
     }
     return offsetN + vertexCount;
   }
@@ -706,11 +713,14 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
       unsigned long offset = offsets[sectionId];
       rvoltage = buffer[offset + compartment];
     } else {
-      //      if (sectionType == SOMA) {
-      rvoltage = somaVoltage;
-      //     } else if (sectionType == AXON) {
-      //       rvoltage = undefinedAxonVoltage;
-      //     }
+        rvoltage = -100;
+/*
+        if (section->type() == SOMA) {
+          rvoltage = somaVoltage;
+        } else if (section->type() == AXON) {
+          rvoltage = undefinedAxonVoltage;
+        }
+*/
     }
     voltages->SetValue(offsetN + i, rvoltage);
   }

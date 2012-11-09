@@ -30,7 +30,7 @@ get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 # ccmake -DVTK_DIR=/home/lasserre/local/ParaView3/build/VTK/
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
-INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
+#INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
 
 # PLUGIN PATHS
 set(XML_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -74,14 +74,16 @@ ENDIF(PARAVIEW_BUILD_QT_GUI)
 # Define Plugin
 #--------------------------------------------------
 
-SET(PLUGIN_NAME pv_echam)
+SET(PLUGIN_NAME pv_BBP)
 ADD_PARAVIEW_PLUGIN(
-  BBPCircuitReader 
+  ${PLUGIN_NAME}
   "1.0" 
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
+#   ${XML_PATH}/vtkTemporalDifferenceFilter.xml
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
+#   ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
   SERVER_SOURCES
   GUI_INTERFACES 
     ${BBP_IFACE}
@@ -93,19 +95,12 @@ ADD_PARAVIEW_PLUGIN(
   GUI_RESOURCE_FILES
     ${XML_PATH}/pv_BBP_Readers.xml
     ${XML_PATH}/pv_BBP_Sources.xml
+    ${XML_PATH}/pv_BBP_Filters.xml
 )
 
-
-# Use the ADD_PARAVIEW_PLUGIN macro to build a plugin
-ADD_PARAVIEW_PLUGIN(
-  "1.0"
- 
-  SERVER_MANAGER_SOURCES 
-  GUI_RESOURCE_FILES     
-  )
-
+       
 # LINK
-TARGET_LINK_LIBRARIES(BBPCircuitReader 
+TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
     ${BBP_SDK_LIBRARIES}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 
