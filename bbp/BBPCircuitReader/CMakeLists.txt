@@ -80,10 +80,10 @@ ADD_PARAVIEW_PLUGIN(
   "1.0" 
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
-#   ${XML_PATH}/vtkTemporalDifferenceFilter.xml
+    ${XML_PATH}/vtkTemporalDifferenceFilter.xml
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
-#   ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
   SERVER_SOURCES
   GUI_INTERFACES 
     ${BBP_IFACE}
