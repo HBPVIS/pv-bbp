@@ -166,6 +166,7 @@ int vtkCircuitReader::RequestInformation(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
+  int result = 0;
   // if there is no blue config supplied yet, exit quietly
   if (!this->FileName) {
     return 1;
@@ -179,12 +180,12 @@ int vtkCircuitReader::RequestInformation(
   outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
   bool NeedToReadInformation = (FileModifiedTime>FileOpenedTime);
 
+  if (!vtksys::SystemTools::FileExists(this->FileName)) {
+    vtkWarningMacro("File not found " << this->FileName);
+    NeedToReadInformation = 0;
+  }
+
   if (NeedToReadInformation) {
-
-    // ----------------------------------------------------------------------
-    // Set parameters
-    // ----------------------------------------------------------------------
-
     std::string blueconfig = this->FileName;
 
     // -------------------------------------------------------------------   
@@ -225,8 +226,7 @@ int vtkCircuitReader::RequestInformation(
     }
 
     if (this->NumberOfTimeSteps==0) {
-      vtkErrorMacro(<<"No time steps in data");
-      return 0;
+      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
     }
 
     outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
@@ -243,12 +243,14 @@ int vtkCircuitReader::RequestInformation(
     }
     outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
 
-    this->BuildSIL();
-    outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
-
     this->FileOpenedTime.Modified();
+    result = 1;
   }
-  return 1;
+  //
+  this->BuildSIL();
+  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
+  //
+  return result;
 }
 //----------------------------------------------------------------------------
 int vtkCircuitReader::OpenReportFile()
@@ -858,21 +860,23 @@ void vtkCircuitReader::BuildSIL()
   names.push_back("Targets");
 
   // Get default targets for the microcircuit.
-  const bbp::Targets &default_targets = this->Experiment.targets();
-  for (bbp::Targets::const_iterator ti=default_targets.begin(); ti!=default_targets.end(); ++ti) {
-    std::string name = (*ti).name();
-    vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
-    names.push_back(name.c_str());
-    this->TargetsSelection->AddArray(name.c_str());
-  }
+  if (this->Microcircuit) {
+    const bbp::Targets &default_targets = this->Experiment.targets();
+    for (bbp::Targets::const_iterator ti=default_targets.begin(); ti!=default_targets.end(); ++ti) {
+      std::string name = (*ti).name();
+      vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
+      names.push_back(name.c_str());
+      this->TargetsSelection->AddArray(name.c_str());
+    }
 
-  // Get user targets for the microcircuit.
-  const bbp::Targets &user_targets = this->Experiment.user_targets();
-  for (bbp::Targets::const_iterator ti=user_targets.begin(); ti!=user_targets.end(); ++ti) {
-    std::string name = (*ti).name();
-    vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
-    names.push_back(name.c_str());
-    this->TargetsSelection->AddArray(name.c_str());
+    // Get user targets for the microcircuit.
+    const bbp::Targets &user_targets = this->Experiment.user_targets();
+    for (bbp::Targets::const_iterator ti=user_targets.begin(); ti!=user_targets.end(); ++ti) {
+      std::string name = (*ti).name();
+      vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
+      names.push_back(name.c_str());
+      this->TargetsSelection->AddArray(name.c_str());
+    }
   }
 
   // This array is used to assign names to nodes.

@@ -172,7 +172,9 @@ void pqCircuitReaderPanel::updateSIL()
     this->UI->SILUpdateStamp = stamp;
     vtkPVSILInformation* info = vtkPVSILInformation::New();
     reader->GatherInformation(info);
-    this->UI->SILModel.update(info->GetSIL());
+    if (info->GetSIL()) {
+      this->UI->SILModel.update(info->GetSIL());
+    }
     info->Delete();
   }
 }
@@ -235,7 +237,9 @@ void pqCircuitReaderPanel::linkServerManagerProperties()
   std::string default = vtkSMPropertyHelper(reader, "DefaultTarget").GetAsString();
 
   pqSILModel* silModel = qobject_cast<pqSILModel*>(targetsProxyModel->sourceModel());
-  targetsProxyModel->setData(silModel->makeIndex(silModel->findVertex(default.c_str())), Qt::Checked, Qt::CheckStateRole);
+  if (silModel->findVertex(default.c_str())!=-1) {
+    targetsProxyModel->setData(silModel->makeIndex(silModel->findVertex(default.c_str())), Qt::Checked, Qt::CheckStateRole);
+  }
 }
 //----------------------------------------------------------------------------
 void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const QModelIndex &previous)
