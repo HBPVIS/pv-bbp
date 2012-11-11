@@ -17,9 +17,24 @@ message("BBP_SDK_INCLUDE_DIRS are ${BBP_SDK_INCLUDE_DIRS}")
 # --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
-find_package(Boost COMPONENTS
-  thread filesystem system serialization unit_test_framework program_options
-  regex python)
+IF (MSVC)
+	message("Setting MSVC boost options")
+	set(Boost_USE_STATIC_LIBS        ON)
+	set(Boost_USE_STATIC             ON)
+	set(Boost_USE_MULTITHREADED      ON)
+	set(Boost_USE_STATIC_RUNTIME    OFF)
+ENDIF (MSVC)
+
+find_package(Boost 1.49 REQUIRED
+  thread
+  filesystem
+  system
+  serialization
+  program_options
+  date_time
+  regex
+  unit_test_framework
+)
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
 
