@@ -145,14 +145,19 @@ protected:
   int   FillOutputPortInformation( int port, vtkInformation* info );
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  //
+  
+  // top level functions which generate meshes/scalars for the whole data
   void GenerateNeuronMesh(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   void CreateReportScalars(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  void      AddOneMorphologyToDataSet(bbp::Neuron *neuron, vtkIdType Ncount, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
+  // generate mesh/scalars on a per neuron basis
+  void      AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
+  void      AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
   vtkIdType AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
   vtkIdType AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
+
+  // internally used to open report file
   int       OpenReportFile();
   //
   //

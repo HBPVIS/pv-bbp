@@ -377,6 +377,122 @@ int vtkCircuitReader::RequestData(
   return 1;
 }
 //-----------------------------------------------------------------------------
+void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
+{  
+  bool do_nrm = this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
+  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
+  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONID);
+  //
+  vtkSmartPointer<vtkIntArray>   neuronId = do_nid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONID)) : NULL;
+  vtkSmartPointer<vtkIntArray>  sectionId = do_sid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_ID)) : NULL;
+  vtkSmartPointer<vtkFloatArray> nvectors = do_nrm ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NORMAL)) : NULL;
+  //
+  const bbp::Mesh             *sdk_mesh = &neuron->morphology().mesh();
+  bbp::Vertex_Index         vertexCount = sdk_mesh->vertex_count();
+  bbp::Triangle_Index         faceCount = sdk_mesh->triangle_count();
+  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
+  const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
+  const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
+  //
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+  transform->PostMultiply();
+  transform->RotateY(neuron->orientation().rotation);
+  transform->Translate(neuron->position().vector());
+  transform->Update();
+  vtkIdType insertN = offsetN;
+  for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
+    float newPoint[3];
+    transform->TransformPoint(vertices2[v].vector(),newPoint); 
+    points->SetPoint(offsetN, newPoint);
+    if (do_nrm) {
+      transform->TransformNormal(vertex_normals[v].vector(),newPoint); 
+      nvectors->SetTuple(offsetN, newPoint); 
+    }
+    if (do_nid) {
+      neuronId->SetValue(offsetN,Ncount);
+    }
+    if (do_sid) {
+      sectionId->SetValue(offsetN, section_ids[v]);
+    }
+    offsetN++;
+  }
+
+  //
+  // Generate triangles in cell array for each face
+  // 
+  const bbp::Vertex_Index* faces2 = sdk_mesh->triangles().pointer();
+  for (bbp::Triangle_Index t=0; t<faceCount; ++t)
+  {
+    cells[offsetC*4 + 0] = 3;
+    cells[offsetC*4 + 1] = insertN + faces2[t*3 + 0];
+    cells[offsetC*4 + 2] = insertN + faces2[t*3 + 1];
+    cells[offsetC*4 + 3] = insertN + faces2[t*3 + 2];
+    offsetC++;
+  }
+}
+//-----------------------------------------------------------------------------
+void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
+{
+  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONID); 
+  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
+  bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
+  bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
+  //
+  vtkSmartPointer<vtkIntArray>                neuronId = do_nid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONID)) : NULL;
+  vtkSmartPointer<vtkIntArray>               sectionId = do_sid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_ID)) : NULL;
+  vtkSmartPointer<vtkUnsignedCharArray>    sectionType = do_sty ? vtkUnsignedCharArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_TYPE)) : NULL;
+  vtkSmartPointer<vtkFloatArray>        dendriteRadius = do_ddr ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_DENDRITE_RADIUS)) : NULL;
+  //
+  const bbp::Morphology               *morph = &neuron->morphology();
+  Morphology_Dataset                 dataset = std::move(morph->operator Morphology_Dataset());
+  const Section_Type          *section_types = dataset.section_types();
+  const Transform_3D<bbp::Micron> &transform = neuron->global_transform();
+
+  vtkIdType insertN = offsetN;
+  vtkIdType i = 0;
+  //
+  const bbp::Sections &sections = morph->neurites();
+  Segments::const_iterator current_segment;
+  for (Sections::const_iterator section=sections.begin(); section!=sections.end(); ++section) {
+    Segments segments = section->segments();
+    // allowed types are SOMA/AXON/DENDRITE/APICAL_DENDRITE
+    bbp::Section_Type section_type = section_types[section->id()];
+
+    // if the segment has more than zero pieces, add the start point
+    if (segments.begin()!=segments.end()) {
+      bbp::Vector_3D<bbp::Micron> newPoint = transform*segments.begin()->begin().center();
+      double radius = segments.begin()->begin().diameter()/2.0; 
+      //
+      points->SetPoint(offsetN + i, newPoint.vector());
+      if (do_sid) sectionId->SetValue(offsetN + i, section->id());
+      if (do_sty) sectionType->SetValue(offsetN + i, section_type);
+      if (do_ddr) dendriteRadius->SetValue(offsetN + i, radius);
+      if (do_nid) neuronId->SetValue(offsetN + i, Ncount);
+      i++;
+    }
+    // add one point for each segment piece
+    for (Segments::const_iterator segment=segments.begin(); segment!=segments.end(); ++segment) {
+      bbp::Vector_3D<bbp::Micron> newPoint = transform*segment->center();
+      double radius = segment->diameter()/2.0; 
+      //
+      points->SetPoint(offsetN + i, newPoint.vector());
+      if (do_sid) sectionId->SetValue(offsetN + i, section->id());
+      if (do_sty) sectionType->SetValue(offsetN + i, section_type);
+      if (do_ddr) dendriteRadius->SetValue(offsetN + i, radius);
+      if (do_nid) neuronId->SetValue(offsetN + i, Ncount);
+      //
+      if (i>0) {
+        cells[offsetC*3 + 0] = 2;
+        cells[offsetC*3 + 1] = i - 1 + insertN;
+        cells[offsetC*3 + 2] = i     + insertN;
+        offsetC++;
+      }
+      i++;
+    }
+  }
+  offsetN += i;
+}
+//-----------------------------------------------------------------------------
 void vtkCircuitReader::GenerateNeuronMesh(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
@@ -390,53 +506,48 @@ void vtkCircuitReader::GenerateNeuronMesh(
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
-  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-  std::cout << "Neuron count for Target : " << this->TargetName.c_str() << " is " << neurons.size() << std::endl;
-  //
-  // Allocate VTK arrays
-  //
+  // VTK arrays 
   vtkSmartPointer<vtkPoints>           points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray>     triangles = vtkSmartPointer<vtkCellArray>::New();
-  //
-  vtkSmartPointer<vtkTransform>     transform = vtkSmartPointer<vtkTransform>::New();
-  vtkSmartPointer<vtkMatrix4x4>        matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-  //
-  vtkSmartPointer<vtkIntArray>   neuronId;
-  vtkSmartPointer<vtkIntArray>  sectionId;
-  vtkSmartPointer<vtkFloatArray> nvectors;
+  vtkSmartPointer<vtkPointData>     pointdata = vtkSmartPointer<vtkPointData>::New();
+  vtkSmartPointer<vtkIntArray>       neuronId;
+  vtkSmartPointer<vtkIntArray>      sectionId;
+  vtkSmartPointer<vtkFloatArray>     nvectors;
 
-
-  // -------------------------------------------------------------------   
-  // iterate over neurons
-  // -------------------------------------------------------------------   
-
+  // counters
   vtkIdType Ncount    = 0;
   vtkIdType maxPoints = 0;
   vtkIdType maxCells  = 0;
 
-  // count up the vertices and faces before allocating memory
-  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni, ++Ncount) {
+  //
+  // loop over neurons : count up the total vertices and cells so we can allocate memory all in one go
+  //
+  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
-    const bbp::Mesh *sdk_mesh = &ni->morphology().mesh();
+    const bbp::Mesh *sdk_mesh = &neuron->morphology().mesh();
     maxPoints += sdk_mesh->vertex_count();
     maxCells += sdk_mesh->triangle_count();
   }
+  //
+  // reserve space for coordinates
+  //
   points->GetData()->Resize(maxPoints);
   points->SetNumberOfPoints(maxPoints);
+  //
+  // reserve space for each scalar/vector field
   //
   bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONID);
   bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
   bool do_nrm = this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
+  //
   if (do_nid) {
     neuronId = vtkSmartPointer<vtkIntArray>::New();
     neuronId->SetName(BBP_ARRAY_NAME_NEURONID);
     neuronId->Resize(maxPoints);
     neuronId->SetNumberOfTuples(maxPoints);
-    this->CachedNeuronMesh->GetPointData()->AddArray(neuronId);
-  }
-  else {
-    this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_NEURONID);
+    pointdata->AddArray(neuronId);
   }
   //    
   if (do_sid) {
@@ -444,10 +555,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
     sectionId->SetName(BBP_ARRAY_NAME_SECTION_ID);
     sectionId->Resize(maxPoints);
     sectionId->SetNumberOfTuples(maxPoints);
-    this->CachedNeuronMesh->GetPointData()->AddArray(sectionId);
-  }
-  else {
-    this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_SECTION_ID);
+    pointdata->AddArray(sectionId);
   }
   //
   if (do_nrm) {
@@ -456,99 +564,30 @@ void vtkCircuitReader::GenerateNeuronMesh(
     nvectors->SetName(BBP_ARRAY_NAME_NORMAL);
     nvectors->Resize(maxPoints);
     nvectors->SetNumberOfTuples(maxPoints);
-    this->CachedNeuronMesh->GetPointData()->SetNormals(nvectors);
+    pointdata->SetNormals(nvectors);
   }
-  else {
-    this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_NORMAL);
-  }
+  //
+  // reserve space for cells
   //
   vtkIdType *cells = triangles->WritePointer(maxCells, 4*(maxCells));
-
   //
-  //
-  //
-  // Track the current insertion position for vertices
-  vtkIdType insertN = 0;
-  // each new neuron counts vertices from 0, we must increment by a growing offset with each neuron
-  vtkIdType offsetN = 0;
+  // Each neuron counts vertices starting from zero, but we increment one much larger array
   // Track insertion location for Cell vertex index Ids
-  vtkIdType insertC = 0;
-  //
+  vtkIdType offsetN = 0;
+  vtkIdType offsetC = 0;
 
   Ncount = 0;
-  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni,++Ncount) {
+  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
-    const bbp::Morphology* sdk_morph    = &ni->morphology();
-    const bbp::Mesh*       sdk_mesh     = &ni->morphology().mesh();
-
-    //
-    bbp::Vertex_Index         vertexCount = sdk_mesh->vertex_count();
-    bbp::Triangle_Index         faceCount = sdk_mesh->triangle_count();
-    bbp::Triangle_Index       stripLength = sdk_mesh->triangle_strip_length();
-    const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
-    const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
-    const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
-    const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
-
-    //
-    std::cout << "Neuron : " << std::distance(neurons.begin(),ni) << std::endl;
-    std::cout << "vertex count : " << vertexCount << std::endl;
-    std::cout << "face count : " << faceCount << std::endl;
-
-#ifdef USE_VTK_TRANSFORM
-    transform->Identity();
-    transform->PostMultiply();
-    transform->RotateY(ni->orientation().rotation);
-    transform->Translate(ni->position().x(), ni->position().y(), ni->position().z());
-    transform->Update();
-    for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
-      float newPoint[3];
-      transform->TransformPoint(vertices2[v].vector(),newPoint); 
-      points->SetPoint(insertN, newPoint);
-      if (do_nrm) {
-        transform->TransformNormal(vertex_normals[v].vector(),newPoint); 
-        nvectors->SetTuple(insertN, newPoint); 
-      }
-#else
-    const Transform_3D<bbp::Micron> &bbp_transform = ni->global_transform();
-    for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
-      bbp::Vector_3D<bbp::Micron> newPoint = bbp_transform*vertices2[v];
-      points->SetPoint(insertN, newPoint.vector());
-      if (do_nrm) {
-        // how to transform normal vector using sdk?
-        nvectors->SetTuple(insertN, vertex_normals[v].vector()); 
-      }
-#endif
-      if (do_nid) {
-        neuronId->SetValue(insertN,Ncount);
-      }
-      if (do_sid) {
-        sectionId->SetValue(insertN,section_ids[v]);
-      }
-      insertN++;
-    }
-
-    //
-    // Generate triangles in cell array for each face
-    // 
-    const bbp::Vertex_Index* faces2 = sdk_mesh->triangles().pointer();
-    for (bbp::Triangle_Index t=0; t<faceCount; ++t)
-    {
-      cells[insertC*4 + 0] = 3;
-      cells[insertC*4 + 1] = offsetN + faces2[t*3 + 0];
-      cells[insertC*4 + 2] = offsetN + faces2[t*3 + 1];
-      cells[insertC*4 + 3] = offsetN + faces2[t*3 + 2];
-      insertC++;
-    }
-
-    offsetN = insertN;
+    this->AddOneNeuronToMesh(&*neuron, Ncount, points, cells, pointdata, offsetN, offsetC);
   }
   //
   this->CachedNeuronMesh->SetPoints(points);
   this->CachedNeuronMesh->SetPolys(triangles);
+  this->CachedNeuronMesh->GetPointData()->ShallowCopy(pointdata);
 }
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::GenerateMorphologySkeleton(
@@ -564,23 +603,102 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
-  //
-  vtkSmartPointer<vtkPoints>       points = vtkSmartPointer<vtkPoints>::New();
-  vtkSmartPointer<vtkCellArray>     lines = vtkSmartPointer<vtkCellArray>::New();
-  vtkSmartPointer<vtkPointData> pointdata = vtkSmartPointer<vtkPointData>::New();
+  // VTK arrays 
+  vtkSmartPointer<vtkPoints>                    points = vtkSmartPointer<vtkPoints>::New();
+  vtkSmartPointer<vtkCellArray>                  lines = vtkSmartPointer<vtkCellArray>::New();
+  vtkSmartPointer<vtkPointData>              pointdata = vtkSmartPointer<vtkPointData>::New();
+  vtkSmartPointer<vtkFloatArray>        dendriteRadius;
+  vtkSmartPointer<vtkUnsignedCharArray>    sectionType;
+  vtkSmartPointer<vtkIntArray>               sectionId;
+  vtkSmartPointer<vtkIntArray>                neuronId;
 
+  // counters
+  vtkIdType Ncount    = 0;
+  vtkIdType maxPoints = 0;
+  vtkIdType maxCells  = 0;
+
+  //
+  // loop over neurons : count up the total vertices and cells so we can allocate memory all in one go
+  //
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-  vtkIdType Ncount = 0;
-  for (bbp::Neurons::iterator ni = neurons.begin(); ni != neurons.end(); ++ni,++Ncount) {
+  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
+    if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
+    //
+    const bbp::Sections &sections = neuron->morphology().neurites();
+    for (Sections::const_iterator section = sections.begin(); section != sections.end(); ++section) {
+      Segments segments = section->segments();
+      if (segments.begin()!=segments.end()) {
+        ++maxPoints;
+      }
+      for (Segments::const_iterator segment = segments.begin(); segment != segments.end(); ++segment) {
+        if (maxPoints>0) {
+          maxCells++;
+        }
+        ++maxPoints;
+      }
+    }
+  }
+  //
+  // reserve space for coordinates
+  //
+  points->GetData()->Resize(maxPoints);
+  points->SetNumberOfPoints(maxPoints);
+  //
+  // reserve space for each scalar/vector field
+  //
+  bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
+  bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
+  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
+  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONID); 
+  //
+  if (do_nid) {
+    neuronId = vtkSmartPointer<vtkIntArray>::New();
+    neuronId->SetName(BBP_ARRAY_NAME_NEURONID);
+    neuronId->Resize(maxPoints);
+    neuronId->SetNumberOfTuples(maxPoints);
+    pointdata->AddArray(neuronId);
+  }
+  //    
+  if (do_sid) {
+    sectionId = vtkSmartPointer<vtkIntArray>::New();
+    sectionId->SetName(BBP_ARRAY_NAME_SECTION_ID);
+    sectionId->Resize(maxPoints);
+    sectionId->SetNumberOfTuples(maxPoints);
+    pointdata->AddArray(sectionId);
+  }
+  //
+  if (do_sty) {
+    sectionType = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    sectionType->SetName(BBP_ARRAY_NAME_SECTION_TYPE);
+    sectionType->Resize(maxPoints);
+    sectionType->SetNumberOfTuples(maxPoints);
+    pointdata->AddArray(sectionType);
+  }
+  //
+  if (do_ddr) {
+    dendriteRadius = vtkSmartPointer<vtkFloatArray>::New();
+    dendriteRadius->SetName(BBP_ARRAY_NAME_DENDRITE_RADIUS);
+    dendriteRadius->Resize(maxPoints);
+    dendriteRadius->SetNumberOfTuples(maxPoints);
+    pointdata->AddArray(dendriteRadius);
+  }
+  //
+  // reserve space for cells
+  //
+  vtkIdType *cells = lines->WritePointer(maxCells, 3*(maxCells));
+  //
+  // Each neuron counts vertices starting from zero, but we increment one much larger array
+  // Track insertion location for Cell vertex index Ids
+  vtkIdType offsetN = 0;
+  vtkIdType offsetC = 0;
+
+  Ncount = 0;
+  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
-    const bbp::Morphology* sdk_morph    = &ni->morphology();
-    const bbp::Mesh*       sdk_mesh     = &ni->morphology().mesh();
-    //
-    const Transform_3D<bbp::Micron> &bbp_transform = ni->global_transform();
-    this->AddOneMorphologyToDataSet(&*ni, Ncount, sdk_morph, points, lines, pointdata, bbp_transform);
+    this->AddOneNeuronToMorphologySkeleton(&*neuron, Ncount, points, cells, pointdata, offsetN, offsetC);
   }
   //
   this->CachedMorphologySkeleton->SetPoints(points);
@@ -660,7 +778,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
   float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportMapping->number_of_compartments(index, lastAxon)];
 
   vtkIdType i = 0;
-  Sections sections = morph->neurites();
+  const bbp::Sections &sections = morph->neurites();
   Segments::const_iterator current_segment;
   for (Sections::const_iterator section=sections.begin(); section!=sections.end(); ++section) {
     Segments segments = section->segments();
@@ -791,149 +909,6 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
     voltages->SetValue(offsetN + i, rvoltage);
   }
   return offsetN + vertexCount;
-}
-//-----------------------------------------------------------------------------
-void vtkCircuitReader::AddOneMorphologyToDataSet(bbp::Neuron *neuron, vtkIdType Ncount, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const Transform_3D<bbp::Micron> &transform)
-{
-  // Varying dendrite radius using the information of the morphology points
-  vtkSmartPointer<vtkFloatArray>        dendriteRadius;
-  vtkSmartPointer<vtkUnsignedCharArray> sectionTypes;
-  vtkSmartPointer<vtkIntArray>          sectionIds;
-  vtkSmartPointer<vtkIntArray>          neuronId;
-  //
-  bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
-  bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
-  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
-  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONID);
-  
-  Morphology_Dataset dataset = std::move(morph->operator Morphology_Dataset());
-  const Section_Type  *section_types = dataset.section_types();
-
-  vtkIdType pointcount = 0;
-  vtkIdType linecount = 0;
-  //
-  Sections sections = morph->neurites();
-  for (Sections::const_iterator section = sections.begin(); section != sections.end(); ++section) {
-    Segments segments = section->segments();
-    if (segments.begin()!=segments.end()) {
-      ++pointcount;
-    }
-    for (Segments::const_iterator segment = segments.begin(); segment != segments.end(); ++segment) {
-      if (pointcount>0) {
-        linecount++;
-      }
-      ++pointcount;
-    }
-  }
-
-  vtkIdType offsetN = points->GetNumberOfPoints();
-  vtkIdType maxPoints = offsetN + pointcount;
-  vtkIdType offsetC = lines->GetNumberOfCells();
-  vtkIdType maxL = offsetC + linecount;
-  vtkIdType *cells = lines->WritePointer(maxL, 3*(maxL));
-  vtkIdType insertL = offsetC;
-  points->GetData()->Resize(maxPoints);
-  points->SetNumberOfPoints(maxPoints);
-
-  // Radius of each segment endpoint
-  if (do_ddr) {
-    dendriteRadius = vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_DENDRITE_RADIUS));
-    if (!dendriteRadius) {
-      dendriteRadius = vtkSmartPointer<vtkFloatArray>::New();
-      dendriteRadius->SetName(BBP_ARRAY_NAME_DENDRITE_RADIUS);
-      field->AddArray(dendriteRadius);
-    }
-    dendriteRadius->Resize(maxPoints);
-   dendriteRadius->SetNumberOfTuples(maxPoints);
-  }
-  else {
-    field->RemoveArray(BBP_ARRAY_NAME_DENDRITE_RADIUS);
-  }
-
-  // A flag to what type each segment is
-  if (do_sty) {
-    sectionTypes = vtkUnsignedCharArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_TYPE));
-    if (!sectionTypes) {
-      sectionTypes = vtkSmartPointer<vtkUnsignedCharArray>::New();
-      sectionTypes->SetName(BBP_ARRAY_NAME_SECTION_TYPE);
-      field->AddArray(sectionTypes);
-    }
-    sectionTypes->Resize(maxPoints);
-    sectionTypes->SetNumberOfTuples(maxPoints);
-  }
-  else {
-    field->RemoveArray(BBP_ARRAY_NAME_SECTION_TYPE);
-  }
-
-  // Id of each section
-  if (do_sid) {
-    sectionIds = vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_ID));
-    if (!sectionIds) {
-      sectionIds = vtkSmartPointer<vtkIntArray>::New();
-      sectionIds->SetName(BBP_ARRAY_NAME_SECTION_ID);
-      field->AddArray(sectionIds);
-    }
-    sectionIds->Resize(maxPoints);
-    sectionIds->SetNumberOfTuples(maxPoints);
-  }
-  else {
-    field->RemoveArray(BBP_ARRAY_NAME_SECTION_ID);
-  }
-
-  // Id of each section
-  if (do_nid) {
-    neuronId = vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONID));
-    if (!neuronId) {
-      neuronId = vtkSmartPointer<vtkIntArray>::New();
-      neuronId->SetName(BBP_ARRAY_NAME_NEURONID);
-      field->AddArray(neuronId);
-    }
-    neuronId->Resize(maxPoints);
-    neuronId->SetNumberOfTuples(maxPoints);
-  }
-  else {
-    field->RemoveArray(BBP_ARRAY_NAME_NEURONID);
-  }
-
-  vtkIdType i = 0;
-  Segments::const_iterator current_segment;
-  for (Sections::const_iterator section=sections.begin(); section!=sections.end(); ++section) {
-    Segments segments = section->segments();
-    // allowed types are SOMA/AXON/DENDRITE/APICAL_DENDRITE
-    bbp::Section_Type section_type = section_types[section->id()];
-
-    // if the segment has more than zero pieces, add the start point
-    if (segments.begin()!=segments.end()) {
-      bbp::Vector_3D<bbp::Micron> newPoint = transform*segments.begin()->begin().center();
-      double radius = segments.begin()->begin().diameter()/2.0; 
-      //
-      points->SetPoint(offsetN + i, newPoint.vector());
-      if (do_sid) sectionIds->SetValue(offsetN + i, section->id());
-      if (do_sty) sectionTypes->SetValue(offsetN + i, section_type);
-      if (do_ddr) dendriteRadius->SetValue(offsetN + i, radius);
-      if (do_nid) neuronId->SetValue(offsetN + i, Ncount);
-      i++;
-    }
-    // add one point for each segment piece
-    for (Segments::const_iterator segment=segments.begin(); segment!=segments.end(); ++segment) {
-      bbp::Vector_3D<bbp::Micron> newPoint = transform*segment->center();
-      double radius = segment->diameter()/2.0; 
-      //
-      points->SetPoint(offsetN + i, newPoint.vector());
-      if (do_sid) sectionIds->SetValue(offsetN + i, section->id());
-      if (do_sty) sectionTypes->SetValue(offsetN + i, section_type);
-      if (do_ddr) dendriteRadius->SetValue(offsetN + i, radius);
-      if (do_nid) neuronId->SetValue(offsetN + i, Ncount);
-      //
-      if (i>0) {
-        cells[insertL*3 + 0] = 2;
-        cells[insertL*3 + 1] = i - 1 + offsetN;
-        cells[insertL*3 + 2] = i     + offsetN;
-        insertL++;
-      }
-      i++;
-    }
-  }
 }
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::BuildSIL()
