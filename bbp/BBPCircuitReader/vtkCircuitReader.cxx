@@ -18,6 +18,7 @@
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
+#include "vtkUnstructuredGrid.h"
 #include "vtkDataArray.h"
 //
 #include "vtkCharArray.h"
@@ -36,9 +37,11 @@
 #include "vtkStringArray.h"
 #include "vtkCellArray.h"
 #include "vtkMutableDirectedGraph.h"
+#include "vtkExtentTranslator.h"
 //
 #include "vtkTransform.h"
 #include "vtkPolyDataNormals.h"
+#include "vtkDistributedDataFilter.h"
 //
 #include "vtkDummyController.h"
 //
@@ -136,7 +139,12 @@ vtkCircuitReader::~vtkCircuitReader()
 int vtkCircuitReader::FillOutputPortInformation( int port, vtkInformation* info )
 {
   if (port == 0) {
-    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
+    if (this->Controller && this->Controller->GetNumberOfProcesses()>1) {
+      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid" );
+    }
+    else {
+      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
+    }
     return 1;
   }
 
@@ -321,8 +329,8 @@ int vtkCircuitReader::RequestData(
   vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
 
   // get the ouptut
-  vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPointSet *output0 = vtkPointSet::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPointSet *output1 = vtkPointSet::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
   // Which time step has been requested
   double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
@@ -344,6 +352,25 @@ int vtkCircuitReader::RequestData(
   output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
   output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
 
+  // parallel pieces info
+  this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  this->UpdateNumPieces = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+
+  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+  int PartitionExtents[6], WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
+  vtkSmartPointer<vtkExtentTranslator> extTran = vtkSmartPointer<vtkExtentTranslator>::New();
+  extTran->SetSplitModeToBlock();
+  extTran->SetNumberOfPieces(this->UpdateNumPieces);
+  extTran->SetPiece(this->UpdatePiece);
+  extTran->SetWholeExtent(WholeExtent);
+  extTran->PieceToExtent();
+  extTran->GetExtent(PartitionExtents);
+
+  this->NeuronStart = neurons.begin();
+  this->NeuronEnd = neurons.begin();
+  std::advance(this->NeuronStart,PartitionExtents[0]);
+  std::advance(this->NeuronEnd,PartitionExtents[1]);
+  //
   bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime);
   if (NeedToRegenerateMesh) {
     if (this->ExportNeuronMesh) {
@@ -358,20 +385,34 @@ int vtkCircuitReader::RequestData(
     else {
       this->CachedMorphologySkeleton = vtkSmartPointer<vtkPolyData>::New();
     }
+  
+    if (this->UpdateNumPieces>1 && !this->DistributedDataFilter) {
+      this->DistributedDataFilter = vtkSmartPointer<vtkDistributedDataFilter>::New();
+      this->DistributedDataFilter->SetInputData(this->CachedNeuronMesh);
+      this->DistributedDataFilter->Update();
+      this->DistributedNeuronMesh = vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput());
+      this->DistributedDataFilter->SetInputData(NULL);
+      this->CachedNeuronMesh = NULL;
+    }
     this->MeshGeneratedTime.Modified();
   }
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
     bool do_rep = this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
     if (do_rep) {
-      this->CreateReportScalars(request, inputVector, outputVector);
+//     this->CreateReportScalars(request, inputVector, outputVector);
     }
     else {
-      this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_VOLTAGE);
+//      this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_VOLTAGE);
     }
     this->TimeModifiedTime.Modified();
   }
   //
-  output0->ShallowCopy(this->CachedNeuronMesh);
+  if (this->UpdateNumPieces>1) {
+      output0->ShallowCopy(this->DistributedNeuronMesh);
+  }
+  else {
+    output0->ShallowCopy(this->CachedNeuronMesh);
+  }
   output1->ShallowCopy(this->CachedMorphologySkeleton);
   //  
   return 1;
@@ -502,10 +543,6 @@ void vtkCircuitReader::GenerateNeuronMesh(
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
   vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
 
-  // get the outputs
-  vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
-
   // VTK arrays 
   vtkSmartPointer<vtkPoints>           points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray>     triangles = vtkSmartPointer<vtkCellArray>::New();
@@ -522,8 +559,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   //
   // loop over neurons : count up the total vertices and cells so we can allocate memory all in one go
   //
-  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
+  for (bbp::Neurons::iterator neuron=this->NeuronStart; neuron!=this->NeuronEnd; ++neuron, ++Ncount) {
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
     const bbp::Mesh *sdk_mesh = &neuron->morphology().mesh();
@@ -577,13 +613,18 @@ void vtkCircuitReader::GenerateNeuronMesh(
   vtkIdType offsetC = 0;
 
   Ncount = 0;
-  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
+  for (bbp::Neurons::iterator neuron=this->NeuronStart; neuron!=this->NeuronEnd; ++neuron, ++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
     this->AddOneNeuronToMesh(&*neuron, Ncount, points, cells, pointdata, offsetN, offsetC);
   }
+  // get the outputs
+  vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
+
+
   //
   this->CachedNeuronMesh->SetPoints(points);
   this->CachedNeuronMesh->SetPolys(triangles);
@@ -620,8 +661,7 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
   //
   // loop over neurons : count up the total vertices and cells so we can allocate memory all in one go
   //
-  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
+  for (bbp::Neurons::iterator neuron=this->NeuronStart; neuron!=this->NeuronEnd; ++neuron, ++Ncount) {
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
     const bbp::Sections &sections = neuron->morphology().neurites();
@@ -693,7 +733,7 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
   vtkIdType offsetC = 0;
 
   Ncount = 0;
-  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron, ++Ncount) {
+  for (bbp::Neurons::iterator neuron=this->NeuronStart; neuron!=this->NeuronEnd; ++neuron, ++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
@@ -737,18 +777,17 @@ void vtkCircuitReader::CreateReportScalars(
     voltageN->SetNumberOfTuples(maxPointsN);
   }
 
-  bbp::Neurons &neurons = this->Microcircuit->neurons(); 
   vtkIdType Ncount = 0, offsetN = 0, offsetM = 0;
-  for (bbp::Neurons::iterator ni=neurons.begin(); ni!=neurons.end(); ++ni,++Ncount) {
+  for (bbp::Neurons::iterator neuron=this->NeuronStart; neuron!=this->NeuronEnd; ++neuron, ++Ncount) {
 
     // only load the maximum requested to save memory
     if (this->MaximumNumberOfNeurons>0 && Ncount>=this->MaximumNumberOfNeurons) break;
     //
     if (this->ExportMorphologySkeleton) {
-      offsetM = this->AddReportScalarsToNeuronMorphology(&*ni, voltageM, offsetM);  
+      offsetM = this->AddReportScalarsToNeuronMorphology(&*neuron, voltageM, offsetM);  
     }
     if (this->ExportNeuronMesh) {
-      offsetN = this->AddReportScalarsToNeuronMesh(&*ni, voltageN, offsetN);  
+      offsetN = this->AddReportScalarsToNeuronMesh(&*neuron, voltageN, offsetN);  
     }
   }
 }
@@ -851,8 +890,6 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
   const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
   //
-  //  Morphology_Dataset dataset = std::move(sdk_morph->operator Morphology_Dataset());
-  //  const Section_Type                *section_types = dataset.section_types();
 
   vtkIdType vertexCount = sdk_mesh->vertex_count();
 
@@ -864,7 +901,6 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
     }
     return offsetN + vertexCount;
   }
-
 
   const bbp::Count index = this->OffsetMapping[neuron->gid()];
 

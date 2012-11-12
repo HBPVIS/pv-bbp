@@ -21,7 +21,8 @@ class vtkDataArraySelection;
 class vtkMultiProcessController;
 class vtkFloatArray;
 class vtkMutableDirectedGraph;
-
+class vtkDistributedDataFilter;
+class vtkUnstructuredGrid;
 // BBP-SDK
 
 #include <BBP/common.h>
@@ -201,6 +202,9 @@ protected:
   bbp::CompartmentReportReaderPtr           ReportReader;
   bbp::Compartment_Report_Mapping_Ptr       ReportMapping;
   std::map<bbp::Cell_GID, bbp::Cell_Index>  OffsetMapping;
+  bbp::Neurons::iterator                    NeuronStart;
+  bbp::Neurons::iterator                    NeuronEnd;
+
   // 
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
   void BuildSIL();
@@ -210,8 +214,11 @@ protected:
   int Random;
   int MaximumNumberOfNeurons;
 
-  vtkSmartPointer<vtkPolyData>             CachedNeuronMesh;
-  vtkSmartPointer<vtkPolyData>             CachedMorphologySkeleton;
+  vtkSmartPointer<vtkPolyData>              CachedNeuronMesh;
+  vtkSmartPointer<vtkPolyData>              CachedMorphologySkeleton;
+  vtkSmartPointer<vtkUnstructuredGrid>      DistributedNeuronMesh;
+  vtkSmartPointer<vtkUnstructuredGrid>      DistributedMorphologySkeleton;
+  vtkSmartPointer<vtkDistributedDataFilter> DistributedDataFilter;
 
 private:
   vtkCircuitReader(const vtkCircuitReader&); 
