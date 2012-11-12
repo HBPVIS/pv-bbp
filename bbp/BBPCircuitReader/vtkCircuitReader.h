@@ -53,18 +53,25 @@ public:
   vtkSetStringMacro(DefaultTarget);
   vtkGetStringMacro(DefaultTarget);
 
-  vtkSetMacro(MeshType,int);
-  vtkGetMacro(MeshType,int);
-
-  void SetGenerateNormalVectors(int n) {
-    if (this->GenerateNormalVectors != n) { 
-      this->GenerateNormalVectors = n; 
+  void SetExportMorphologySkeleton(int n) {
+    if (this->ExportMorphologySkeleton != n) { 
+      this->ExportMorphologySkeleton = n; 
       this->MeshParamsModifiedTime.Modified();
       this->Modified(); 
     } 
   }
-  vtkGetMacro(GenerateNormalVectors,int);
-  vtkBooleanMacro(GenerateNormalVectors,int);
+  vtkGetMacro(ExportMorphologySkeleton,int);
+  vtkBooleanMacro(ExportMorphologySkeleton,int);
+
+  void SetExportNeuronMesh(int n) {
+    if (this->ExportNeuronMesh != n) { 
+      this->ExportNeuronMesh = n; 
+      this->MeshParamsModifiedTime.Modified();
+      this->Modified(); 
+    } 
+  }
+  vtkGetMacro(ExportNeuronMesh,int);
+  vtkBooleanMacro(ExportNeuronMesh,int);
 
   vtkSetMacro(Random,int);
   vtkGetMacro(Random,int);
@@ -143,7 +150,7 @@ protected:
   void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   void CreateReportScalars(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  void      AddOneMorphologyToDataSet(bbp::Neuron *neuron, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
+  void      AddOneMorphologyToDataSet(bbp::Neuron *neuron, vtkIdType Ncount, const bbp::Morphology *morph, vtkPoints *points, vtkCellArray *lines, vtkFieldData *field, const bbp::Transform_3D<bbp::Micron> &transform);
   vtkIdType AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
   vtkIdType AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
   int       OpenReportFile();
@@ -193,8 +200,8 @@ protected:
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
   void BuildSIL();
   int SILUpdateStamp;
-  int MeshType;
-  int GenerateNormalVectors;
+  int ExportMorphologySkeleton;
+  int ExportNeuronMesh;
   int Random;
   int MaximumNumberOfNeurons;
 

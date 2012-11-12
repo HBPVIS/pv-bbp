@@ -1,7 +1,7 @@
 <ServerManagerConfiguration>
-  
+
   <ProxyGroup name="sources">
-    
+
     <SourceProxy name="CircuitReader"
                 class="vtkCircuitReader"
                 label="BlueConfig circuit reader">
@@ -33,6 +33,15 @@
          number_of_elements="1">
       </StringVectorProperty>
 
+      <StringVectorProperty
+         name="TargetsStatus"
+         command="SetTargetsStatus"
+         number_of_elements="0"
+         repeat_command="1"
+         number_of_elements_per_command="2"
+         element_types="2 0">
+      </StringVectorProperty>
+
       <IntVectorProperty name="SILUpdateStamp"
          command="GetSILUpdateStamp"
          information_only="1">
@@ -43,38 +52,25 @@
         </Documentation>
       </IntVectorProperty>
 
-      <StringVectorProperty
-         name="TargetsStatus"
-         command="SetTargetsStatus"
-         number_of_elements="0"
-         repeat_command="1"
-         number_of_elements_per_command="2"
-         element_types="2 0">
-      </StringVectorProperty>
-
       <IntVectorProperty
-         name="MeshType"
-         command="SetMeshType"
+         name="ExportNeuronMesh"
+         command="SetExportNeuronMesh"
          number_of_elements="1"
-         default_values="0" >
-        <EnumerationDomain name="enum">
-          <Entry value="0" text="Full Mesh"/>
-          <Entry value="1" text="Morphology Skeleton"/>
-          <Entry value="2" text="Unused"/>
-        </EnumerationDomain>
+         default_values="1" >
+        <BooleanDomain name="bool"/>
         <Documentation>
-          Choose between the full mesh, or a skeleton of the Morphology
+          Generate the full neuron mesh (triangles)
         </Documentation>
       </IntVectorProperty>
 
       <IntVectorProperty
-         name="GenerateNormalVectors"
-         command="SetGenerateNormalVectors"
+         name="ExportMorphologySkeleton"
+         command="SetExportMorphologySkeleton"
          number_of_elements="1"
          default_values="0" >
         <BooleanDomain name="bool"/>
         <Documentation>
-          When set, normal vectors are calculated for each mesh vertex
+          Generate the morphology skeleton (lines)
         </Documentation>
       </IntVectorProperty>
 
@@ -94,7 +90,7 @@
          name="MaximumNumberOfNeurons"
          command="SetMaximumNumberOfNeurons"
          number_of_elements="1"
-         default_values="25" >
+         default_values="1" >
         <Documentation>
           When nonzero, only a subset of neurons up to a count of N will be loaded to save time/memory
         </Documentation>
@@ -106,13 +102,38 @@
         <TimeStepsInformationHelper/>
       </DoubleVectorProperty>
 
+      <StringVectorProperty
+         name="PointArrayInfo"
+         information_only="1">
+        <ArraySelectionInformationHelper attribute_name="Point"/>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+         name="PointArrayStatus"
+         command="SetPointArrayStatus"
+         default_values ="0"
+         number_of_elements="0"
+         repeat_command="1"
+         number_of_elements_per_command="2"
+         element_types="2 0"
+         information_property="PointArrayInfo"
+         label="Point Arrays">
+        <ArraySelectionDomain name="array_list">
+          <RequiredProperties>
+            <Property name="PointArrayInfo" function="ArrayList"/>
+          </RequiredProperties>
+        </ArraySelectionDomain>
+        <Documentation>
+          This property lists to select point-centered arrays to read.
+        </Documentation>
+      </StringVectorProperty>
+    
       <Hints>
         <Property name="FileName" show="1"/>
         <Property name="DefaultTarget" show="0"/>
         <Property name="TargetsStatus" show="0"/>
       </Hints>
     </SourceProxy>
-    
-  </ProxyGroup>
 
+  </ProxyGroup>
 </ServerManagerConfiguration>
