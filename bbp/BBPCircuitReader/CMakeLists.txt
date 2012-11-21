@@ -32,17 +32,67 @@ FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 #INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
 
+# --------------------------------------------------
+# Optional Trilinos support 
+# --------------------------------------------------
+SET(TRILINOS_ENABLED 0)
+IF (PARAVIEW_USE_MPI)
+  OPTION(USE_TRILINOS "Use Trilinos library" OFF)
+  IF(USE_TRILINOS)
+
+    OPTION(USE_SYSTEM_TRILINOS "Use System Trilinos library" OFF)
+    IF(USE_SYSTEM_TRILINOS)
+      FIND_PACKAGE(Trilinos)
+    ELSE(USE_SYSTEM_TRILINOS)
+      SET(TPL_ENABLE_MPI ON CACHE BOOL "Do not change")
+      SET(Trilinos_ENABLE_TESTS OFF CACHE BOOL "Do not change")
+      SET(Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES OFF CACHE BOOL "Do not change")
+      SET(Trilinos_ENABLE_Zoltan ON CACHE BOOL "Do not change")
+      SET(Trilinos_ENABLE_Fortran OFF CACHE BOOL "Do not change")
+      IF (WIN32)
+        ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
+        INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/trilinos/cmake/tribits/common_tools/win_interface/include")
+      ENDIF(WIN32)
+      ADD_SUBDIRECTORY(trilinos)
+      SET(Trilinos_FOUND 1)
+      SET(Trilinos_DEPS_HTML_OUTPUT_FILE "" CACHE STRING "Leave empty" FORCE)
+    ENDIF(USE_SYSTEM_TRILINOS)
+
+    IF(Trilinos_FOUND)
+      INCLUDE_DIRECTORIES("${Trilinos_INCLUDE_DIRS}")
+      LINK_DIRECTORIES("${Trilinos_LIBRARY_DIRS}")
+      # MESSAGE("Trilinos Include Dirs ${Trilinos_INCLUDE_DIRS} and Trilinos Link Dirs ${Trilinos_LIBRARY_DIRS} ")
+      #
+      # Add source which depends on trilinos to our plugin
+      #
+      SET(TRILINOS_CXX ${CMAKE_CURRENT_SOURCE_DIR}/vtkParticlePartitionFilter.cxx)
+      SET(TRILINOS_XML ${CMAKE_CURRENT_SOURCE_DIR}/vtkParticlePartitionFilter.xml)
+      SET(TRILINOS_LIBS zoltan)
+      SET(TRILINOS_ENABLED 1)
+      ADD_DEFINITIONS(-DPLUGIN_USE_TRILINOS)
+    ENDIF(Trilinos_FOUND)
+
+  ENDIF(USE_TRILINOS)
+ELSE (PARAVIEW_USE_MPI)
+  SET(USE_TRILINOS OFF CACHE BOOL "Use Trilinos library" FORCE)
+ENDIF (PARAVIEW_USE_MPI)
+
+# --------------------------------------------------
+# Plugin config
+# --------------------------------------------------
 # PLUGIN PATHS
 set(XML_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # INCLUDES
 include_directories(
-    ${PLUGIN_PATH}
-    ${BBP_SDK_INCLUDE_DIRS})
+  ${PLUGIN_PATH}
+  ${BBP_SDK_INCLUDE_DIRS}
+)
+
 
 #--------------------------------------------------
-# Setup GUI custom Qt panel sources and wrapping
+# CONDITIONAL : Setup Qt/GUI panel sources/wrapping
 #--------------------------------------------------
 IF(PARAVIEW_BUILD_QT_GUI)
 
@@ -69,9 +119,8 @@ IF(PARAVIEW_BUILD_QT_GUI)
 
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 
-
 #--------------------------------------------------
-# Define Plugin
+# Define plugin sources
 #--------------------------------------------------
 
 SET(PLUGIN_NAME pv_BBP)
@@ -81,9 +130,16 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
+    ${TRILINOS_XML}/
+    ${XML_PATH}/vtkDepthSortRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
+    ${TRILINOS_CXX}
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkBoundsExtentTranslator.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortRepresentation.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPainter.cxx
   SERVER_SOURCES
   GUI_INTERFACES 
     ${BBP_IFACE}
@@ -98,10 +154,12 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/pv_BBP_Filters.xml
 )
 
-       
-# LINK
+#--------------------------------------------------
+# setup plugin linking
+#--------------------------------------------------
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
     ${BBP_SDK_LIBRARIES}
+    ${TRILINOS_LIBS}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 
     ${Boost_SERIALIZATION_LIBRARY} 

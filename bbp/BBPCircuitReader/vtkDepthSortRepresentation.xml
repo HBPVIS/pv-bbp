@@ -1,0 +1,98 @@
+<ServerManagerConfiguration>
+
+  <!--======================================================================-->
+
+  <ProxyGroup name="representations">
+
+    <!-- ================================================================= -->
+    <!-- Add to "GeometryRepresentation" -->
+    <Extension name="GeometryRepresentation">
+
+      <!-- this adds to what is already defined in PVRepresentationBase -->
+      <RepresentationType subproxy="DepthSortRepresentation"
+                          text="Depth Sort Polygons"
+                          subtype="Surface" />
+
+      <SubProxy>
+        <Proxy name="DepthSortRepresentation"
+               proxygroup="representations"
+               proxyname="DepthSortRepresentation" />
+
+        <ShareProperties subproxy="SurfaceRepresentation">
+          <Exception name="Input" />
+          <Exception name="Visibility" />
+          <Exception name="Representation" />
+        </ShareProperties>
+
+        <!--<ExposedProperties>
+          <Property name="MIPTypeActive"/>
+          <Property name="MIPActiveParticleType"/>
+          <Property name="MIPActiveParticleSettings"/>
+          <Property name="MIPTypeScalars"/>
+          <Property name="MIPActiveScalars"/>
+        </ExposedProperties>-->
+      </SubProxy>
+    </Extension>
+
+    <RepresentationProxy class="vtkDepthSortRepresentation"
+                         name="DepthSortRepresentation"
+                         processes="client|renderserver|dataserver"
+                         base_proxygroup="representations"
+                         base_proxyname="SurfaceRepresentationBase" >
+      <Documentation>
+        Representation which uses a depth sort filter.
+      </Documentation>
+
+      <SubProxy>
+        <Proxy name="DepthSortDefaultPainter"
+          proxygroup="painters" proxyname="DepthSortDefaultPainter" />
+      </SubProxy>
+
+      <SubProxy>
+        <Proxy name="DepthSortPainter"
+          proxygroup="painters" proxyname="DepthSortPainter" />
+      </SubProxy>
+
+      <!-- End of DepthSortRepresentation -->
+    </RepresentationProxy>
+
+    <!-- End of "representations" -->
+  </ProxyGroup>
+
+  <!--======================================================================-->
+
+  <ProxyGroup name="painters">
+
+    <Proxy name="DepthSortDefaultPainter" class="vtkDepthSortDefaultPainter">
+
+      <ProxyProperty name="DepthSortPainter"
+        command="SetDepthSortPainter">
+      </ProxyProperty>
+
+    </Proxy>
+
+    <!--=======================================-->
+
+    <Proxy name="DepthSortPainter" class="vtkDepthSortPainter">
+
+      <IntVectorProperty
+        name="DepthSortEnableMode"
+        command="SetDepthSortEnableMode"
+        default_values="1"
+        number_of_elements="1"
+        animateable="0">
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="Always"/>
+          <Entry value="1" text="IfNoDepthPeeling"/>
+          <Entry value="2" text="Never"/>
+        </EnumerationDomain>
+      </IntVectorProperty>
+
+    </Proxy>
+
+  <!-- End of "painters" -->
+  </ProxyGroup>
+
+   <!--======================================================================-->
+</ServerManagerConfiguration>
+
