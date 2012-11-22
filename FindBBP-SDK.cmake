@@ -225,18 +225,18 @@ endforeach()
 
 # find BBP-SDK data directory
 unset(BBP_SDK_DATA_DIR CACHE)
-find_path(BBP_SDK_DATA_DIR CMake/BBP-SDKCompilerFlags.cmake
-  HINTS ${BBP_SDK_ROOT}/share/BBP-SDK${BBP-SDK_FIND_SOVERSION} ${BBP_SDK_ROOT})
+#find_path(BBP_SDK_DATA_DIR CMake/BBP-SDKCompilerFlags.cmake
+#  HINTS ${BBP_SDK_ROOT}/share/BBP-SDK${BBP-SDK_FIND_SOVERSION} ${BBP_SDK_ROOT})
 # search again in latest version
 if(NOT BBP_SDK_DATA_DIR)
-  find_path(BBP_SDK_DATA_DIR CMake/BBP-SDKCompilerFlags.cmake
-    HINTS ${BBP_SDK_ROOT}/share/BBP-SDK)
+#  find_path(BBP_SDK_DATA_DIR CMake/BBP-SDKCompilerFlags.cmake
+#    HINTS ${BBP_SDK_ROOT}/share/BBP-SDK)
 endif()
 set(BBP_SDK_IDL_DIR ${BBP_SDK_DATA_DIR}/idl)
 
 # handle the QUIETLY and REQUIRED arguments and set BBP_SDK_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(BBP-SDK DEFAULT_MSG ${BBP_SDK_COMPONENTS_FOUND} BBP_SDK_INCLUDE_DIR BBP_SDK_DATA_DIR)
+find_package_handle_standard_args(BBP-SDK DEFAULT_MSG ${BBP_SDK_COMPONENTS_FOUND} BBP_SDK_INCLUDE_DIR )
 
 # Corba needs extra include directory
 if(BBP_SDK_CORBA_FOUND)
@@ -244,7 +244,7 @@ if(BBP_SDK_CORBA_FOUND)
 endif()
                 
 if(BBP-SDK_FOUND)
-  include(${BBP_SDK_DATA_DIR}/CMake/BBP-SDKCompilerFlags.cmake)
+#  include(${BBP_SDK_DATA_DIR}/CMake/BBP-SDKCompilerFlags.cmake)
 endif()
 
 # Auxiliary dependencies

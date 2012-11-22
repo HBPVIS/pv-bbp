@@ -59,6 +59,8 @@
 #include "BBP/Microcircuit/Readers/compartmentReportReader.h"
 #include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
 #include "BBP/Microcircuit/Soma.h"
+#include "BBP/Microcircuit/Mesh.h"
+#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
 #include "vtkCircuitReader.h"
@@ -66,8 +68,8 @@
 
 // BBP-SDK
 // Voxelization
-#include "BBP/Voxelization/voxelization.h"
-#include "BBP/VtkDebugging/visualization.h"
+//#include "BBP/Voxelization/voxelization.h"
+//#include "BBP/VtkDebugging/visualization.h"
 
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL          "Normal"
@@ -307,7 +309,7 @@ int vtkCircuitReader::OpenReportFile()
   bbp::Cell_Target ctarget = this->Target.cell_target();
   if (ctarget.size() != 0) {
     Cell_Index index = 0;
-    for (Cell_Target::iterator i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
+    for (Cell_Target::const_iterator i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
       this->OffsetMapping[*i] = index;
     }
   } else {
@@ -846,12 +848,12 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
       bbp::Vector_3D<bbp::Micron> newPoint = transform*segments.begin()->begin().center();
       double radius = segments.begin()->begin().diameter()/2.0; 
       //
-      Compartment_Count compartments = this->ReportMapping->number_of_compartments(index, section->id());
+      uint16_t compartments = this->ReportMapping->number_of_compartments(index, section->id());
 
       if (compartments) {
         // Computing the relative length within section of the capsule midpoint
         float position = section->section_distance(*segments.begin());
-        Compartment_Count compartment = std::min(compartments - 1, (int)floor(compartments * position));
+        uint16_t compartment = std::min(compartments - 1, (int)floor(compartments * position));
         unsigned long offset = offsets[section->id()];
         rvoltage = buffer[offset + compartment];
       } else {
@@ -869,14 +871,14 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
     }
     // add one point for each segment piece
     for (Segments::const_iterator segment=segments.begin(); segment!=segments.end(); ++segment) {
-      Compartment_Count compartments = this->ReportMapping->number_of_compartments(index, section->id());
+      uint16_t compartments = this->ReportMapping->number_of_compartments(index, section->id());
       bbp::Vector_3D<bbp::Micron> newPoint = transform*segment->center();
       double radius = segment->diameter()/2.0; 
 
       if (compartments) {
         // Computing the relative length within section of the capsule midpoint
         float position = section->section_distance(*segment);
-        Compartment_Count compartment = std::min(compartments - 1, (int)floor(compartments * position));
+        uint16_t compartment = std::min(compartments - 1, (int)floor(compartments * position));
         unsigned long offset = offsets[section->id()];
         rvoltage = buffer[offset + compartment];
       } else {
@@ -938,7 +940,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
     Section_ID     sectionId = section_ids[i];
     size_t num_sections = this->ReportMapping->number_of_sections(index);
-    Compartment_Count compartments = 0;
+    uint16_t compartments = 0;
     if (sectionId < num_sections) {
       compartments = this->ReportMapping->number_of_compartments(index, sectionId);
     }
@@ -946,7 +948,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
     //
     if (compartments) {
       // Computing the relative length within section of the capsule midpoint
-      Compartment_Count compartment = std::min(compartments - 1, (int)floor(compartments * position));
+      uint16_t compartment = std::min(compartments - 1, (int)floor(compartments * position));
       unsigned long offset = offsets[sectionId];
       rvoltage = buffer[offset + compartment];
     } else {
