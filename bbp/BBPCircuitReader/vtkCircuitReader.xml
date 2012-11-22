@@ -13,11 +13,12 @@
 
       <!--         default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple" -->
 
+      <!--default_values="D:/data/bbp/small/BlueConfig"-->
       <StringVectorProperty
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="D:/data/bbp/small/BlueConfig"
+         default_values="D:/data/bbp/bmc-benchmark/blueconfig"
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>
@@ -29,7 +30,7 @@
          name="DefaultTarget"
          command="SetDefaultTarget"
          label="Default Target"
-         default_values="viz1"
+         default_values="1K"
          number_of_elements="1">
       </StringVectorProperty>
 
@@ -75,14 +76,13 @@
       </IntVectorProperty>
 
       <IntVectorProperty
-         name="Random"
-         command="SetRandom"
+         name="ParallelRedistribution"
+         command="SetParallelRedistribution"
          number_of_elements="1"
          default_values="1" >
         <BooleanDomain name="bool"/>
         <Documentation>
-          When MaximumNumberOfNeurons is set, this flag controls how the N loaded neurons are found,
-          either at random, or sequentially
+          When running in parallel, this option enables the redistribution of polygons (principally to enable sort last compositing with transparency)
         </Documentation>
       </IntVectorProperty>
 

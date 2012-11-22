@@ -74,9 +74,9 @@ public:
   vtkGetMacro(ExportNeuronMesh,int);
   vtkBooleanMacro(ExportNeuronMesh,int);
 
-  vtkSetMacro(Random,int);
-  vtkGetMacro(Random,int);
-  vtkBooleanMacro(Random,int);
+  vtkSetMacro(ParallelRedistribution,int);
+  vtkGetMacro(ParallelRedistribution,int);
+  vtkBooleanMacro(ParallelRedistribution,int);
 
   void SetMaximumNumberOfNeurons(int n) {
     if (this->MaximumNumberOfNeurons != n) { 
@@ -211,13 +211,11 @@ protected:
   int SILUpdateStamp;
   int ExportMorphologySkeleton;
   int ExportNeuronMesh;
-  int Random;
+  int ParallelRedistribution;
   int MaximumNumberOfNeurons;
 
   vtkSmartPointer<vtkPolyData>              CachedNeuronMesh;
   vtkSmartPointer<vtkPolyData>              CachedMorphologySkeleton;
-  vtkSmartPointer<vtkUnstructuredGrid>      DistributedNeuronMesh;
-  vtkSmartPointer<vtkUnstructuredGrid>      DistributedMorphologySkeleton;
   vtkSmartPointer<vtkDistributedDataFilter> DistributedDataFilter;
 
 private:

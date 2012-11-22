@@ -91,7 +91,7 @@ vtkCircuitReader::vtkCircuitReader()
 {
   this->FileName = NULL;
   this->SetNumberOfInputPorts(0);
-  this->SetNumberOfOutputPorts(2);
+  this->SetNumberOfOutputPorts(1);
   //
   this->NumberOfTimeSteps               = 0;
   this->TimeStep                        = 0;
@@ -105,7 +105,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->IntegerTimeStepValues           = 0;
   this->ExportNeuronMesh                = 1;
   this->ExportMorphologySkeleton        = 0;
-  this->Random                          = 1;
+  this->ParallelRedistribution          = 1;
   this->MaximumNumberOfNeurons          = 25;
   //
   this->PointDataArraySelection         = vtkDataArraySelection::New();
@@ -115,32 +115,34 @@ vtkCircuitReader::vtkCircuitReader()
   if (this->Controller == NULL) {
     this->SetController(vtkSmartPointer<vtkDummyController>::New());
   }
-  this->SIL                      = vtkSmartPointer<vtkMutableDirectedGraph>::New();
-  this->SILUpdateStamp           = 0;
+  this->SIL              = vtkSmartPointer<vtkMutableDirectedGraph>::New();
+  this->SILUpdateStamp   = 0;
   //
-  this->CachedNeuronMesh         = vtkSmartPointer<vtkPolyData>::New();
-  this->CachedMorphologySkeleton = vtkSmartPointer<vtkPolyData>::New();
+  this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
+  this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
+  this->DistributedDataFilter         = NULL;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
 {
-  this->SIL = NULL;
-  delete []this->FileName;
-  delete []this->DefaultTarget;
-  //
-  this->CachedNeuronMesh         = NULL;
-  this->CachedMorphologySkeleton = NULL;
+  this->SIL                           = NULL;
+  this->CachedNeuronMesh              = NULL;
+  this->CachedMorphologySkeleton      = NULL;
+  this->DistributedDataFilter         = NULL;
   //
   this->PointDataArraySelection->Delete();
   this->TargetsSelection->Delete();
   this->SetController(NULL);
+  //
+  delete []this->FileName;
+  delete []this->DefaultTarget;
 }
 //----------------------------------------------------------------------------
 int vtkCircuitReader::FillOutputPortInformation( int port, vtkInformation* info )
 {
   if (port == 0) {
     if (this->Controller && this->Controller->GetNumberOfProcesses()>1) {
-      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkUnstructuredGrid" );
+      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
     }
     else {
       info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
@@ -188,7 +190,7 @@ int vtkCircuitReader::RequestInformation(
     return 1;
   }
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  vtkInformation *outInfo1 = outputVector->GetInformationObject(0);
+//  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
   //
   this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
@@ -240,7 +242,7 @@ int vtkCircuitReader::RequestInformation(
     this->Microcircuit->load(this->Target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
 
     // time steps of reports are in the report file
-    this->OpenReportFile();
+//    this->OpenReportFile();
 
     this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
 
@@ -250,29 +252,35 @@ int vtkCircuitReader::RequestInformation(
     }
 
     if (this->NumberOfTimeSteps==0) {
-      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
+//      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
     }
 
-    outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
-      &this->TimeStepValues[0],
-      static_cast<int>(this->TimeStepValues.size()));
-    double timeRange[2] = { this->TimeStepValues.front(), this->TimeStepValues.back() };
-    if (this->TimeStepValues.size()>1)
-    {
-      this->TimeStepTolerance = 0.01*(this->TimeStepValues[1]-this->TimeStepValues[0]);
+    if (this->TimeStepValues.size()>0) {
+      outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
+        &this->TimeStepValues[0],
+        static_cast<int>(this->TimeStepValues.size()));
+  //    outInfo1->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
+  //      &this->TimeStepValues[0],
+  //      static_cast<int>(this->TimeStepValues.size()));
+      double timeRange[2] = { this->TimeStepValues.front(), this->TimeStepValues.back() };
+      if (this->TimeStepValues.size()>1)
+      {
+        this->TimeStepTolerance = 0.01*(this->TimeStepValues[1]-this->TimeStepValues[0]);
+      }
+      else
+      {
+        this->TimeStepTolerance = 1E-3;
+      }
+      outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
     }
-    else
-    {
-      this->TimeStepTolerance = 1E-3;
-    }
-    outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
+    //    outInfo1->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
 
     this->FileOpenedTime.Modified();
     result = 1;
   }
   //
-  this->BuildSIL();
-  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
+//  this->BuildSIL();
+//  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
   //
   return result;
 }
@@ -314,6 +322,18 @@ int vtkCircuitReader::OpenReportFile()
   return 1;
 }
 //----------------------------------------------------------------------------
+// We know that our data contains only triangles, so this is safe
+//----------------------------------------------------------------------------
+vtkSmartPointer<vtkPolyData> UnstructuredGridToPolyData(vtkUnstructuredGrid *ug, vtkSmartPointer<vtkPolyData> pd) 
+{
+  if (!pd) pd = vtkSmartPointer<vtkPolyData>::New();
+  pd->SetPoints(ug->GetPoints());
+  pd->SetPolys(ug->GetCells());
+  pd->GetPointData()->ShallowCopy(ug->GetPointData());
+  //
+  return pd;
+}
+//----------------------------------------------------------------------------
 int vtkCircuitReader::RequestData(
   vtkInformation *request,
   vtkInformationVector **inputVector,
@@ -326,16 +346,16 @@ int vtkCircuitReader::RequestData(
 
   // get the info object
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
+//  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
 
   // get the ouptut
   vtkPointSet *output0 = vtkPointSet::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPointSet *output1 = vtkPointSet::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
+//  vtkPointSet *output1 = vtkPointSet::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
   // Which time step has been requested
   double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
-    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
-    : outInfo1->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
+    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) : 0.0; 
+//    : outInfo1->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
   //
   this->ActualTimeStep = std::find_if(
     this->TimeStepValues.begin(), this->TimeStepValues.end(),
@@ -350,7 +370,7 @@ int vtkCircuitReader::RequestData(
   }
   //
   output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
-  output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
+//  output1->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
 
   // parallel pieces info
   this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
@@ -377,22 +397,25 @@ int vtkCircuitReader::RequestData(
       this->GenerateNeuronMesh(request, inputVector, outputVector);
     }
     else {
-      this->CachedNeuronMesh = vtkSmartPointer<vtkPolyData>::New();
+      this->CachedNeuronMesh->Initialize();
     }
     if (this->ExportMorphologySkeleton) {
       this->GenerateMorphologySkeleton(request, inputVector, outputVector);
     }
     else {
-      this->CachedMorphologySkeleton = vtkSmartPointer<vtkPolyData>::New();
+      this->CachedMorphologySkeleton->Initialize();
     }
   
-    if (this->UpdateNumPieces>1 && !this->DistributedDataFilter) {
+    if (this->UpdateNumPieces>1 && this->ParallelRedistribution && !this->DistributedDataFilter) {
       this->DistributedDataFilter = vtkSmartPointer<vtkDistributedDataFilter>::New();
       this->DistributedDataFilter->SetInputData(this->CachedNeuronMesh);
+      this->DistributedDataFilter->SetBoundaryModeToAssignToOneRegion();
+      this->DistributedDataFilter->SetClipCells(0);
+      this->DistributedDataFilter->SetUseMinimalMemory(1);
       this->DistributedDataFilter->Update();
-      this->DistributedNeuronMesh = vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput());
+      this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput()), this->CachedNeuronMesh);
       this->DistributedDataFilter->SetInputData(NULL);
-      this->CachedNeuronMesh = NULL;
+      this->DistributedDataFilter = NULL;
     }
     this->MeshGeneratedTime.Modified();
   }
@@ -406,14 +429,8 @@ int vtkCircuitReader::RequestData(
     }
     this->TimeModifiedTime.Modified();
   }
-  //
-  if (this->UpdateNumPieces>1) {
-      output0->ShallowCopy(this->DistributedNeuronMesh);
-  }
-  else {
-    output0->ShallowCopy(this->CachedNeuronMesh);
-  }
-  output1->ShallowCopy(this->CachedMorphologySkeleton);
+  output0->ShallowCopy(this->CachedNeuronMesh);
+//  output1->ShallowCopy(this->CachedMorphologySkeleton);
   //  
   return 1;
 }
@@ -541,7 +558,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
 {
   // get the info objects
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
+//  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
 
   // VTK arrays 
   vtkSmartPointer<vtkPoints>           points = vtkSmartPointer<vtkPoints>::New();
@@ -622,7 +639,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   }
   // get the outputs
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
+//  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
 
   //
@@ -638,11 +655,11 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
 {
   // get the info objects
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
+//  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
 
   // get the outputs
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
+//  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
 
   // VTK arrays 
   vtkSmartPointer<vtkPoints>                    points = vtkSmartPointer<vtkPoints>::New();

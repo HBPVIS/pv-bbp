@@ -21,10 +21,12 @@
 #define __vtkDepthSortRepresentation_h
 
 #include "vtkGeometryRepresentation.h"
+#include "vtkSmartPointer.h"
 
 class vtkDepthSortPainter;
 class vtkDepthSortDefaultPainter;
 class vtkMultiProcessController;
+class vtkBoundsExtentTranslator;
 
 class VTK_EXPORT vtkDepthSortRepresentation : public vtkGeometryRepresentation
 {
@@ -62,6 +64,7 @@ protected:
 
   vtkDepthSortDefaultPainter* DepthSortDefaultPainter;
   vtkDepthSortPainter* DepthSortPainter;
+  vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
 
   int UseDataParititions;
   //

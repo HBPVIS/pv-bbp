@@ -30,7 +30,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
 #include "vtkMultiProcessController.h"
-#include "vtkSmartPointer.h"
 #include "vtkDummyController.h"
 //
 #include "vtkBoundsExtentTranslator.h"
@@ -65,6 +64,7 @@ vtkDepthSortRepresentation::~vtkDepthSortRepresentation()
 {
   this->DepthSortDefaultPainter->Delete();
   this->DepthSortPainter->Delete();
+  this->SetController(NULL);
 }
 
 //----------------------------------------------------------------------------
@@ -143,41 +143,41 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
       // Check the input to see if it has a bounds translator already initialized
       // with partition info 
       //
-      vtkBoundsExtentTranslator *input_bet = vtkBoundsExtentTranslator::SafeDownCast(translator);
+      this->BoundsTranslator = vtkBoundsExtentTranslator::SafeDownCast(translator);
       // if the extent translator has not been initialized well - don't use it
-      if (input_bet && input_bet->GetNumberOfPieces()==0) {
-        input_bet = NULL;
+      if (this->BoundsTranslator && this->BoundsTranslator->GetNumberOfPieces()==0) {
+        this->BoundsTranslator = NULL;
       }
       //
       // we should have enough information to generate a bounds translator if one was not supplied
       //
-      if (!input_bet) {
-        input_bet = vtkBoundsExtentTranslator::New();
+      if (!this->BoundsTranslator) {
+        this->BoundsTranslator = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
         vtkBoundingBox box(this->DataBounds);
         // use 2% for now
         box.Inflate(-2.0*box.GetDiagonalLength()/100.0);
         double shrunkenbounds[6];
         box.GetBounds(shrunkenbounds);
-        input_bet->ExchangeBoundsForAllProcesses(this->Controller, shrunkenbounds);
-        input_bet->InitWholeBounds();
+        this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, shrunkenbounds);
+        this->BoundsTranslator->InitWholeBounds();
         int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
-        input_bet->SetWholeExtent(whole_extent);
+        this->BoundsTranslator->SetWholeExtent(whole_extent);
         //
-        double *whole_bounds = input_bet->GetWholeBounds();
+        double *whole_bounds = this->BoundsTranslator->GetWholeBounds();
         // pick an arbitrary resolution of 4096^3 
         double spacing[3] = { 
           (whole_bounds[1]-whole_bounds[0])/(whole_extent[1]+1.0), 
           (whole_bounds[3]-whole_bounds[2])/(whole_extent[3]+1.0),  
           (whole_bounds[5]-whole_bounds[4])/(whole_extent[5]+1.0)
         };
-        input_bet->SetSpacing(spacing);
+        this->BoundsTranslator->SetSpacing(spacing);
         double origin[3] = { this->GlobalDataBounds[0], this->GlobalDataBounds[2], this->GlobalDataBounds[4] };
-        vtkPVRenderView::SetOrderedCompositingInformation(inInfo, this, input_bet, whole_extent, origin, spacing);
+        vtkPVRenderView::SetOrderedCompositingInformation(inInfo, this, this->BoundsTranslator, whole_extent, origin, spacing);
       }
       else {
         //
         int whole_extent[6] = {1, -1, 1, -1, 1, -1};
-        input_bet->GetWholeExtent(whole_extent);
+        this->BoundsTranslator->GetWholeExtent(whole_extent);
         //
         double origin[3] = { this->GlobalDataBounds[0], this->GlobalDataBounds[2], this->GlobalDataBounds[4] };
         double spacing[3] = {
