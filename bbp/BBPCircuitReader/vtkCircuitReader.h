@@ -29,7 +29,7 @@ class vtkUnstructuredGrid;
 #include "BBP/Microcircuit/Morphology.h"
 #include "BBP/Microcircuit/Experiment.h"
 #include "BBP/Common/Math/Geometry/Rotation.h"
-#include "BBP/Microcircuit/Datasets/CompartmentReportFrame.h"
+#include "BBP/Microcircuit/Datasets/compartmentReportFrame.h"
 #include "BBP/Microcircuit/Morphology.h"
 #include "BBP/Microcircuit/Experiment.h"
 #include "BBP/Microcircuit/Targets/Targets.h"

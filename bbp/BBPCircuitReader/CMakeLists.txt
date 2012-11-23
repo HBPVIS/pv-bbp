@@ -32,6 +32,8 @@ FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 #INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
 
+find_package(Qt4 )
+
 # --------------------------------------------------
 # Optional Trilinos support 
 # --------------------------------------------------
@@ -158,6 +160,7 @@ ADD_PARAVIEW_PLUGIN(
 # setup plugin linking
 #--------------------------------------------------
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
+        vtkRenderingFreeTypeFontConfig
     ${BBP_SDK_LIBRARIES}
     ${TRILINOS_LIBS}
     ${HDF5_C_LIBRARY} 

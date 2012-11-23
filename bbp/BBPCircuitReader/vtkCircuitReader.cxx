@@ -525,7 +525,7 @@ void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtk
   vtkSmartPointer<vtkFloatArray>        dendriteRadius = do_ddr ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_DENDRITE_RADIUS)) : NULL;
   //
   const bbp::Morphology               *morph = &neuron->morphology();
-  Morphology_Dataset                 dataset = std::move(morph->operator Morphology_Dataset());
+  Morphology_Dataset                 dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
   const Section_Type          *section_types = dataset.section_types();
   const Transform_3D<bbp::Micron> &transform = neuron->global_transform();
 
@@ -854,7 +854,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
   const bbp::Count index = this->OffsetMapping[neuron->gid()];
   std::cout << "Neuron with GID " << neuron->gid() << " has mapping offset " << index << std::endl;
 
-  Morphology_Dataset dataset = std::move(morph->operator Morphology_Dataset());
+  Morphology_Dataset dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
   const Section_Type                *section_types = dataset.section_types();
 
   /* These are the buffer offsets for this neuron */
