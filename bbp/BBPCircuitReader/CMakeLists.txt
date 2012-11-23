@@ -130,7 +130,7 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
-    ${TRILINOS_XML}/
+    ${TRILINOS_XML}
     ${XML_PATH}/vtkDepthSortRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx

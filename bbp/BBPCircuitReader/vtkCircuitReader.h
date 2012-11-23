@@ -195,6 +195,8 @@ protected:
   bbp::Experiment                           Experiment;
   std::string                               TargetName;
   bbp::Target                               Target;
+  bbp::Target                               Partitioned_target;
+  int                                       PartitionExtents[6];
   bbp::Millisecond                          startTime;
   bbp::Millisecond                          stopTime;
   bbp::Millisecond                          timestep;
@@ -202,8 +204,6 @@ protected:
   bbp::CompartmentReportReaderPtr           ReportReader;
   bbp::Compartment_Report_Mapping_Ptr       ReportMapping;
   std::map<bbp::Cell_GID, bbp::Cell_Index>  OffsetMapping;
-  bbp::Neurons::iterator                    NeuronStart;
-  bbp::Neurons::iterator                    NeuronEnd;
 
   // 
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
