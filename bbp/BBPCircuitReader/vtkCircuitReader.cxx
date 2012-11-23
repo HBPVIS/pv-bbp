@@ -247,18 +247,23 @@ int vtkCircuitReader::RequestInformation(
     // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
     this->Microcircuit->load(this->Target, bbp::NEURONS);
 
+// std::cout <<"Made it past load " << std::endl;
+
     // time steps of reports are in the report file
 //    this->OpenReportFile();
+  this->NumberOfTimeSteps = 0;
 
-    this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+//    this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
 
-    this->TimeStepValues.assign(this->NumberOfTimeSteps, 0.0);
-    for (int i=0; i<this->NumberOfTimeSteps; ++i) {
-      this->TimeStepValues[i] = this->startTime + (i*this->timestep);
-    }
 
     if (this->NumberOfTimeSteps==0) {
 //      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
+    }
+    else {
+      this->TimeStepValues.assign(this->NumberOfTimeSteps, 0.0);
+      for (int i=0; i<this->NumberOfTimeSteps; ++i) {
+        this->TimeStepValues[i] = this->startTime + (i*this->timestep);
+      }
     }
 
     if (this->TimeStepValues.size()>0) {
