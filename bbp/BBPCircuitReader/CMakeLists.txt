@@ -133,12 +133,14 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
     ${TRILINOS_XML}
+    ${XML_PATH}/vtkPartitionOutline.xml
     ${XML_PATH}/vtkDepthSortRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
     ${TRILINOS_CXX}
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkBoundsExtentTranslator.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkPartitionOutline.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortRepresentation.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPainter.cxx
