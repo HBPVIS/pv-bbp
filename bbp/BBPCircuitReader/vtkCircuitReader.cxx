@@ -46,6 +46,9 @@
 //
 #include "vtkDummyController.h"
 //
+#include "vtkPKdTree.h"
+#include "vtkBoundsExtentTranslator.h"
+//
 #include <vtksys/SystemTools.hxx>
 //
 #include <vector>
@@ -126,6 +129,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
   this->DistributedDataFilter         = NULL;
+  this->BoundsTranslator              = NULL;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
@@ -292,6 +296,11 @@ int vtkCircuitReader::RequestInformation(
     this->FileOpenedTime.Modified();
     result = 1;
   }
+
+  if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
+    outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
+  }
+
   //
 //  this->BuildSIL();
 //  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
@@ -433,7 +442,7 @@ int vtkCircuitReader::RequestData(
       this->CachedMorphologySkeleton->Initialize();
     }
   
-    if (this->UpdateNumPieces>1 && this->ParallelRedistribution && !this->DistributedDataFilter) {
+    if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
       vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
       redist_timer->StartTimer();
       //
@@ -443,6 +452,19 @@ int vtkCircuitReader::RequestData(
       this->DistributedDataFilter->SetClipCells(0);
       this->DistributedDataFilter->SetUseMinimalMemory(1);
       this->DistributedDataFilter->Update();
+
+      // setup bounds for future use
+      this->BoundsTranslator = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
+      this->BoundsTranslator->SetKdTree(this->DistributedDataFilter->GetKdtree());
+
+      vtkDataSet *dataset = vtkDataSet::SafeDownCast(this->DistributedDataFilter->GetOutput());
+      double bounds[6];
+      dataset->GetBounds(bounds);
+      this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, bounds);
+      this->BoundsTranslator->InitWholeBounds();
+      int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
+      this->BoundsTranslator->SetWholeExtent(whole_extent);
+
       this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput()), this->CachedNeuronMesh);
       this->DistributedDataFilter->SetInputData(NULL);
       this->DistributedDataFilter = NULL;

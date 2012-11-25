@@ -23,6 +23,7 @@ class vtkFloatArray;
 class vtkMutableDirectedGraph;
 class vtkDistributedDataFilter;
 class vtkUnstructuredGrid;
+class vtkBoundsExtentTranslator;
 // BBP-SDK
 
 #include <BBP/common.h>
@@ -214,9 +215,10 @@ protected:
   int ParallelRedistribution;
   int MaximumNumberOfNeurons;
 
-  vtkSmartPointer<vtkPolyData>              CachedNeuronMesh;
-  vtkSmartPointer<vtkPolyData>              CachedMorphologySkeleton;
-  vtkSmartPointer<vtkDistributedDataFilter> DistributedDataFilter;
+  vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
+  vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
+  vtkSmartPointer<vtkDistributedDataFilter>  DistributedDataFilter;
+  vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
 
 private:
   vtkCircuitReader(const vtkCircuitReader&); 

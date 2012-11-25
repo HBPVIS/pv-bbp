@@ -163,6 +163,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
         box.GetBounds(shrunkenbounds);
         this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, shrunkenbounds);
         this->BoundsTranslator->InitWholeBounds();
+
         int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
         this->BoundsTranslator->SetWholeExtent(whole_extent);
         //
@@ -178,6 +179,8 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
         vtkPVRenderView::SetOrderedCompositingInformation(inInfo, this, this->BoundsTranslator, whole_extent, origin, spacing);
       }
       else {
+        // 
+        // The user supplied a translator of the right kind, lets use it
         //
         int whole_extent[6] = {1, -1, 1, -1, 1, -1};
         this->BoundsTranslator->GetWholeExtent(whole_extent);
@@ -190,7 +193,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
         };
 
         vtkPVRenderView::SetOrderedCompositingInformation(inInfo, this,
-          translator, whole_extent, origin, spacing);
+          translator, whole_extent, origin, spacing, this->BoundsTranslator->GetKdTree());
       }
     }
     else if (!this->UseDataParititions) {
