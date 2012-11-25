@@ -154,8 +154,11 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
       if (!this->BoundsTranslator) {
         this->BoundsTranslator = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
         vtkBoundingBox box(this->DataBounds);
-        // use 2% for now
-        box.Inflate(-2.0*box.GetDiagonalLength()/100.0);
+        // shrink the box by 25% of the shortest side.
+        double lengths[3];
+        box.GetLengths(lengths);
+        double min_side = std::min(lengths[0], std::min(lengths[1], lengths[2]));
+        box.Inflate(min_side*0.25*0.5);
         double shrunkenbounds[6];
         box.GetBounds(shrunkenbounds);
         this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, shrunkenbounds);
