@@ -13,6 +13,7 @@
 #include "vtkInformation.h"
 #include "vtkDataObject.h"
 #include "vtkSmartPointer.h"
+#include "vtkTimerLog.h"
 //
 #include "vtkDataArraySelection.h"
 #include "vtkPointData.h"
@@ -72,13 +73,14 @@
 //#include "BBP/VtkDebugging/visualization.h"
 
 //----------------------------------------------------------------------------
-#define BBP_ARRAY_NAME_NORMAL          "Normal"
-#define BBP_ARRAY_NAME_NEURONGID       "Neuron Gid"
-#define BBP_ARRAY_NAME_NEURONINDEX     "Neuron Index"
-#define BBP_ARRAY_NAME_SECTION_ID      "Section Id"
-#define BBP_ARRAY_NAME_SECTION_TYPE    "Section Type"
-#define BBP_ARRAY_NAME_DENDRITE_RADIUS "Dendrite Radius"
-#define BBP_ARRAY_NAME_VOLTAGE         "Voltage"
+#define BBP_ARRAY_NAME_NORMAL           "Normal"
+#define BBP_ARRAY_NAME_NEURONGID        "Neuron Gid"
+#define BBP_ARRAY_NAME_NEURONINDEX      "Neuron Index"
+#define BBP_ARRAY_NAME_SECTION_ID       "Section Id"
+#define BBP_ARRAY_NAME_SECTION_TYPE     "Section Type"
+#define BBP_ARRAY_NAME_DENDRITE_RADIUS  "Dendrite Radius"
+#define BBP_ARRAY_NAME_VOLTAGE          "Voltage"
+#define BBP_ARRAY_NAME_RTNEURON_OPACITY "RTNeuron Opacity"
 
 //----------------------------------------------------------------------------
 #define USE_BBP_TRANSFORM
@@ -214,6 +216,7 @@ int vtkCircuitReader::RequestInformation(
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_SECTION_TYPE);
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_DENDRITE_RADIUS);
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_VOLTAGE);
+  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_RTNEURON_OPACITY);
 
   if (NeedToReadInformation) {
     std::string blueconfig = this->FileName;
@@ -387,6 +390,9 @@ int vtkCircuitReader::RequestData(
   this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
+  vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();        
+  load_timer->StartTimer();
+
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
   int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
   if (this->MaximumNumberOfNeurons>0) {
@@ -428,6 +434,9 @@ int vtkCircuitReader::RequestData(
     }
   
     if (this->UpdateNumPieces>1 && this->ParallelRedistribution && !this->DistributedDataFilter) {
+      vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
+      redist_timer->StartTimer();
+      //
       this->DistributedDataFilter = vtkSmartPointer<vtkDistributedDataFilter>::New();
       this->DistributedDataFilter->SetInputData(this->CachedNeuronMesh);
       this->DistributedDataFilter->SetBoundaryModeToAssignToOneRegion();
@@ -437,6 +446,11 @@ int vtkCircuitReader::RequestData(
       this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput()), this->CachedNeuronMesh);
       this->DistributedDataFilter->SetInputData(NULL);
       this->DistributedDataFilter = NULL;
+      //
+      redist_timer->StopTimer();
+      if (this->UpdatePiece==0) {
+        std::cout << "ParallelRedistribution : " << redist_timer->GetElapsedTime() << " seconds\n";
+      }
     }
     this->MeshGeneratedTime.Modified();
   }
@@ -453,6 +467,10 @@ int vtkCircuitReader::RequestData(
   output0->ShallowCopy(this->CachedNeuronMesh);
 //  output1->ShallowCopy(this->CachedMorphologySkeleton);
   //  
+  load_timer->StopTimer();
+  if (this->UpdatePiece==0) {
+    std::cout << "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds\n";
+  }
   return 1;
 }
 //-----------------------------------------------------------------------------
@@ -462,19 +480,24 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount,
   bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
   bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID);
   bool do_nix = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
+  bool do_rtn = this->GetPointArrayStatus(BBP_ARRAY_NAME_RTNEURON_OPACITY);
+  
   //
   vtkSmartPointer<vtkIntArray>   neuronId = do_nid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONGID)) : NULL;
   vtkSmartPointer<vtkIntArray>   neuronIx = do_nix ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONINDEX)) : NULL;
   vtkSmartPointer<vtkIntArray>  sectionId = do_sid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_SECTION_ID)) : NULL;
   vtkSmartPointer<vtkFloatArray> nvectors = do_nrm ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NORMAL)) : NULL;
+  vtkSmartPointer<vtkFloatArray> rtneuron = do_rtn ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_RTNEURON_OPACITY)) : NULL;
   //
   const bbp::Mesh             *sdk_mesh = &neuron->morphology().mesh();
   bbp::Vertex_Index         vertexCount = sdk_mesh->vertex_count();
   bbp::Triangle_Index         faceCount = sdk_mesh->triangle_count();
-  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
-  const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
+  const Array<Vector_3D<bbp::Micron> >       &vertices = sdk_mesh->vertices();
+  const Section_ID                        *section_ids = sdk_mesh->vertex_sections().pointer();
+  const float                               *positions = sdk_mesh->vertex_relative_distances().pointer();
   const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
-  //
+  const bbp::Morphology &morph = neuron->morphology();
+    //
   vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
   transform->PostMultiply();
   transform->RotateY(neuron->orientation().rotation);
@@ -483,8 +506,10 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount,
   vtkIdType insertN = offsetN;
   for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
     float newPoint[3];
-    transform->TransformPoint(vertices2[v].vector(),newPoint); 
+    transform->TransformPoint(vertices[v].vector(),newPoint); 
     points->SetPoint(offsetN, newPoint);
+    Section_ID sectionID = section_ids[v];
+
     if (do_nrm) {
       transform->TransformNormal(vertex_normals[v].vector(),newPoint); 
       nvectors->SetTuple(offsetN, newPoint); 
@@ -496,7 +521,52 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount,
       neuronIx->SetValue(offsetN,Ncount);
     }
     if (do_sid) {
-      sectionId->SetValue(offsetN, section_ids[v]);
+      sectionId->SetValue(offsetN, sectionID);
+    }
+    //
+    // Following code taken from RTNeuron
+    // C:\Code\Buildyard\src\RTNeuron\src\render\rawModels.cpp
+    //
+    const Soma_Surface_Points &soma = morph.soma().surface_points();
+    if (do_rtn) {
+      float position = positions[v];
+      const Section &section = morph.section(sectionID);
+      if (position < 0) {
+              position = 0;
+      } else if (position > 1) {
+              position = 1;
+      }
+      float width;
+      const float trunkWidth = 2;
+      if (section.type() == SOMA) {
+          float radius = soma.max_radius() * 0.9;
+          float distance = (vertices[v] - soma.center()).length() - radius;
+          if (distance < 0) {
+              width = radius;
+          } else if (distance > 2) {
+              width = trunkWidth;
+          } else {
+              width = ((1 - distance / 2) * radius + 
+                        distance / 2 * trunkWidth);
+          }
+      } else if (section.parent().type() == SOMA) {
+          float diameter = section.cross_section(position).diameter();
+          float distance = section.length() * position;
+          if (distance > 2)
+              width = diameter;
+          else {
+              if (diameter > trunkWidth) {
+                  width = diameter / 2;
+              } else {
+                  width = trunkWidth * (1 - distance / 2) + 
+                      diameter * distance / 2;
+              }
+          }
+      } else {
+          width = section.cross_section(position).diameter();
+      }
+      float alpha = 0.35 * (1 - exp(-width * 0.3));
+      rtneuron->SetValue(offsetN, alpha);
     }
     offsetN++;
   }
@@ -598,6 +668,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   vtkSmartPointer<vtkIntArray>       neuronIx;
   vtkSmartPointer<vtkIntArray>      sectionId;
   vtkSmartPointer<vtkFloatArray>     nvectors;
+  vtkSmartPointer<vtkFloatArray>     rtneuron;
 
   // counters
   vtkIdType maxPoints = 0;
@@ -625,6 +696,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   bool do_nix = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
   bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
   bool do_nrm = this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
+  bool do_rtn = this->GetPointArrayStatus(BBP_ARRAY_NAME_RTNEURON_OPACITY);
   //
   if (do_nid) {
     neuronId = vtkSmartPointer<vtkIntArray>::New();
@@ -657,6 +729,14 @@ void vtkCircuitReader::GenerateNeuronMesh(
     nvectors->Resize(maxPoints);
     nvectors->SetNumberOfTuples(maxPoints);
     pointdata->SetNormals(nvectors);
+  }
+  //
+  if (do_rtn) {
+    rtneuron = vtkSmartPointer<vtkFloatArray>::New();
+    rtneuron->SetName(BBP_ARRAY_NAME_RTNEURON_OPACITY);
+    rtneuron->Resize(maxPoints);
+    rtneuron->SetNumberOfTuples(maxPoints);
+    pointdata->AddArray(rtneuron);
   }
   //
   // reserve space for cells
