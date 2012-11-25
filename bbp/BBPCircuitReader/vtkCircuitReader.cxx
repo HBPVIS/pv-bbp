@@ -129,7 +129,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
   this->DistributedDataFilter         = NULL;
-  this->BoundsTranslator              = NULL;
+  this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
@@ -297,7 +297,7 @@ int vtkCircuitReader::RequestInformation(
     result = 1;
   }
 
-  if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
+  if (this->Controller->GetNumberOfProcesses()>1 && this->ParallelRedistribution) {
     outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
   }
 
@@ -454,7 +454,6 @@ int vtkCircuitReader::RequestData(
       this->DistributedDataFilter->Update();
 
       // setup bounds for future use
-      this->BoundsTranslator = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
       this->BoundsTranslator->SetKdTree(this->DistributedDataFilter->GetKdtree());
 
       vtkDataSet *dataset = vtkDataSet::SafeDownCast(this->DistributedDataFilter->GetOutput());
