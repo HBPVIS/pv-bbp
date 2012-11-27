@@ -1,6 +1,0 @@
-<ParaViewReaders>
-  <Reader name="MeshBinReader"
-          extensions="bin"
-          file_description="Blue Brain Mesh Neuron">
-  </Reader>
-</ParaViewReaders>

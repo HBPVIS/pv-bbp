@@ -16,7 +16,6 @@
 
 using namespace bbp;
 
-vtkCxxRevisionMacro(vtkMeshBinReader, "$Revision: 1.0 $");
 vtkStandardNewMacro(vtkMeshBinReader);
  
 vtkMeshBinReader::vtkMeshBinReader()
@@ -101,7 +100,7 @@ int vtkMeshBinReader::RequestData(
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   
   const Vector_3D<Micron>* vertices2 = vertices.get(); 
-  vtkstd::cout << "vertex count : " << vertexCount << std::endl;
+  std::cout << "vertex count : " << vertexCount << std::endl;
   for ( Vertex_Index v = 0 ; v < vertexCount ; ++v )
   {
      points->InsertNextPoint(vertices2[v].x(),
@@ -113,7 +112,7 @@ int vtkMeshBinReader::RequestData(
   vtkSmartPointer<vtkCellArray> triangles = vtkSmartPointer<vtkCellArray>::New();
 
   const Vertex_Index* faces2 = faces.get();
-  vtkstd::cout  << faceCount << std::endl;
+  std::cout  << faceCount << std::endl;
   for ( Triangle_Index t = 0 ; t < faceCount ; ++t )
   {
      vtkSmartPointer<vtkTriangle> triangle = vtkSmartPointer<vtkTriangle>::New();

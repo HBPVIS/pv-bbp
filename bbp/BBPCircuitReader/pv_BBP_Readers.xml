@@ -3,4 +3,12 @@
           extensions="BlueConfig"
           file_description="Blue Brain Circuit (BlueConfig)">
   </Reader>
+  <Reader name="MorphologyReader"
+          extensions="h5"
+          file_description="Blue Brain HDF5 Morphology">
+  </Reader>
+  <Reader name="MeshBinReader"
+          extensions="bin"
+          file_description="Blue Brain Mesh Neuron">
+  </Reader>
 </ParaViewReaders>

@@ -22,7 +22,6 @@
 
 using namespace bbp;
 
-vtkCxxRevisionMacro(vtkMorphologyReader, "$Revision: 1.0 $");
 vtkStandardNewMacro(vtkMorphologyReader);
  
 vtkMorphologyReader::vtkMorphologyReader()

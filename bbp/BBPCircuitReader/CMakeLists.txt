@@ -129,12 +129,16 @@ SET(PLUGIN_NAME pv_BBP)
 ADD_PARAVIEW_PLUGIN(
   ${PLUGIN_NAME}
   "1.0" 
+
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
     ${TRILINOS_XML}
     ${XML_PATH}/vtkPartitionOutline.xml
     ${XML_PATH}/vtkDepthSortRepresentation.xml
+    ${XML_PATH}/vtkMorphologyReader.xml
+    ${XML_PATH}/vtkMeshBinReader.xml
+
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
@@ -145,14 +149,20 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTwoScalarsToColorsPainter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
+
   SERVER_SOURCES
+
   GUI_INTERFACES 
     ${BBP_IFACE}
+
   GUI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.cxx
     ${BBP_IFACE_SRCS}
     ${BBP_MOC_SRCS}
     ${BBP_UI_SOURCES}
+
   GUI_RESOURCE_FILES
     ${XML_PATH}/pv_BBP_Readers.xml
     ${XML_PATH}/pv_BBP_Sources.xml

@@ -1,9 +1,0 @@
-=> vtkMultiPieceDataSet::SetPiece(id, dataSet) => mapper + actor
-add actor ....
-MultiblockdataSet
-vtkMultiGroupDataGeometryFilter
-http://www.vtk.org/Wiki/VTK/Examples
-http://www.vtk.org/Wiki/VTK/Examples/GeometricObjects/Display/ColoredLines
-http://www.vtk.org/Wiki/VTK/Examples/GeometricObjects/Display/PolyLine
-http://www.vtk.org/Wiki/VTK/Examples/GeometricObjects/Display/Point
-

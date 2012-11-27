@@ -1,34 +1,34 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: mesh_bin_reader.cxx,v $
+  Module:    $RCSfile: vtkMorphologyReader.cxx,v $
 
   Copyright (c) Sebastien Lasserre, Blue Brain Project
   All rights reserved.
 
 =========================================================================*/
 
-#ifndef __vtkMeshBinReader_h
-#define __vtkMeshBinReader_h 
+#ifndef __vtkMorphologyReader_h
+#define __vtkMorphologyReader_h 
  
 #include "vtkPolyDataAlgorithm.h"
  
-class VTK_EXPORT vtkMeshBinReader : public vtkPolyDataAlgorithm 
+class VTK_EXPORT vtkMorphologyReader : public vtkPolyDataAlgorithm 
 {
 public:
-  static vtkMeshBinReader *New();
-  //vtkTypeMacro(vtkMeshBinReader,vtkPolyDataAlgorithm);
-  vtkTypeRevisionMacro(vtkMeshBinReader,vtkPolyDataAlgorithm);
+  static vtkMorphologyReader *New();
+  //vtkTypeMacro(vtkMorphologyReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkMorphologyReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
  
   // Description:
-  // Specify file name of the mesh file.
+  // Specify file name of the morphology file.
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
  
 protected:
-  vtkMeshBinReader();
-  ~vtkMeshBinReader();
+  vtkMorphologyReader();
+  ~vtkMorphologyReader();
 
   int FillOutputPortInformation( int port, vtkInformation* info );
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
@@ -36,8 +36,8 @@ protected:
   char *FileName;
  
 private:
-  vtkMeshBinReader(const vtkMeshBinReader&); // Not implemented
-  void operator=(const vtkMeshBinReader&); // Not implemented
+  vtkMorphologyReader(const vtkMorphologyReader&); 
+  void operator=(const vtkMorphologyReader&); 
 };
  
 #endif
