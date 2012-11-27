@@ -23,8 +23,9 @@
 #include "vtkGeometryRepresentation.h"
 #include "vtkSmartPointer.h"
 
-class vtkDepthSortPainter;
 class vtkDepthSortDefaultPainter;
+class vtkDepthSortPainter;
+class vtkTwoScalarsToColorsPainter;
 class vtkMultiProcessController;
 class vtkBoundsExtentTranslator;
 
@@ -48,6 +49,15 @@ public:
   // but this method can be used to set another instead.
   virtual void SetController(vtkMultiProcessController*);
 
+  // Description:
+  // Set/Get the name of the second array to blend with.
+  void SetOpacityArrayName(const char* opacity);
+
+  void SetEnableOpacity(int enable);
+  int  GetEnableOpacity();
+
+
+  void SetDepthSortEnableMode(int mode);
 
 protected:
   vtkDepthSortRepresentation();
@@ -62,8 +72,9 @@ protected:
     vtkInformation* inInfo, vtkInformation* outInfo);
 
 
-  vtkDepthSortDefaultPainter* DepthSortDefaultPainter;
-  vtkDepthSortPainter* DepthSortPainter;
+  vtkDepthSortDefaultPainter   *DepthSortDefaultPainter;
+  vtkDepthSortPainter          *DepthSortPainter;
+  vtkTwoScalarsToColorsPainter *TwoScalarsToColorsPainter;
   vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
 
   int UseDataParititions;

@@ -84,21 +84,31 @@ public:
   // If disabled, this painter only shallow copies the input.
   virtual vtkDataObject* GetOutput();
 
+  
+  // Description:
+  // Under certain circumstances, we may know that depth sorting is required
+  // such as when we have forced transparency using the TwoScalarsToColors Painter.
+  // if this flag is set before every render then the sometimes expensive call
+  // to NeedSorting can be bypassed by returning true immediately
+  void SetDepthSortRequired(int required);
+
   // Description:
   // this methods returns if this painter needs to
   // sort the dataset or not.
   // returns :
-  // 1. false if the DepthSortEnableMode is ENABLE_SORT_NEVER or ENABLE_SORT_IF_NO_DEPTH_PEELING and the renderer uses depth peeling.
-  // 2. true if the color array has an alpha component (this result id cached)
-  // 3. false if the texture is either fully opaque or fully transparent (alpha = 0 or 255) (this result is cached)
-  // 4. the result of actor->HasTranslucentPolygonalGeometry.
-  virtual int   NeedSorting(vtkRenderer* renderer, vtkActor* actor);
+  // 1. false if the DepthSortEnableMode is ENABLE_SORT_NEVER or ENABLE_SORT_IF_NO_DEPTH_PEELING and the renderer uses depth peeling
+  // 3. true if DepthSortOverrideFlag is set
+  // 4. true if the color array has an alpha component (this result id cached)
+  // 5. false if the texture is either fully opaque or fully transparent (alpha = 0 or 255) (this result is cached)
+  // 6. the result of actor->HasTranslucentPolygonalGeometry
+  virtual int NeedSorting(vtkRenderer* renderer, vtkActor* actor);
+
 
   // Description:
   // Set/Get the internal vtkDepthSortPolyData algorithm
   // Rem : this painter will set the camera, prop3D and direction
   // before sorting.
-  virtual void  SetDepthSortPolyData(vtkDepthSortPolyData*);
+  virtual void SetDepthSortPolyData(vtkDepthSortPolyData*);
   vtkGetObjectMacro(DepthSortPolyData, vtkDepthSortPolyData);
 
 protected:
@@ -140,6 +150,7 @@ protected:
   vtkTimeStamp          CachedIsColorSemiTranslucentTime;
   int                   CachedIsColorSemiTranslucent;
   vtkDepthSortPolyData* DepthSortPolyData;
+  int                   DepthSortOverrideFlag;
 
   //BTX
   vtkWeakPointer<vtkDataObject> PrevInput;

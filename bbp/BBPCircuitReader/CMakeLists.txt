@@ -144,6 +144,7 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortRepresentation.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPainter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTwoScalarsToColorsPainter.cxx
   SERVER_SOURCES
   GUI_INTERFACES 
     ${BBP_IFACE}

@@ -15,7 +15,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkDepthSortRepresentation.h"
 
 #include "vtkCompositePolyDataMapper2.h"
-#include "vtkDepthSortPainter.h"
 #include "vtkObjectFactory.h"
 #include "vtkDepthSortDefaultPainter.h"
 #include "vtkPVLODActor.h"
@@ -32,6 +31,8 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkMultiProcessController.h"
 #include "vtkDummyController.h"
 //
+#include "vtkDepthSortPainter.h"
+#include "vtkTwoScalarsToColorsPainter.h"
 #include "vtkBoundsExtentTranslator.h"
 //
 //----------------------------------------------------------------------------
@@ -41,13 +42,15 @@ vtkCxxSetObjectMacro(vtkDepthSortRepresentation, Controller, vtkMultiProcessCont
 vtkDepthSortRepresentation::vtkDepthSortRepresentation()
 {
 
-  this->DepthSortDefaultPainter = vtkDepthSortDefaultPainter::New();
-  this->DepthSortPainter        = vtkDepthSortPainter::New();
-  this->UseDataParititions      = 1;
+  this->DepthSortDefaultPainter   = vtkDepthSortDefaultPainter::New();
+  this->DepthSortPainter          = vtkDepthSortPainter::New();
+  this->TwoScalarsToColorsPainter = vtkTwoScalarsToColorsPainter::New();
+  this->UseDataParititions        = 1;
   //
   vtkMath::UninitializeBounds(this->GlobalDataBounds);
   //
   this->DepthSortDefaultPainter->SetDepthSortPainter(this->DepthSortPainter);
+  this->DepthSortDefaultPainter->SetTwoScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
   vtkCompositePolyDataMapper2* compositeMapper = vtkCompositePolyDataMapper2::SafeDownCast(this->Mapper);
   this->DepthSortDefaultPainter->SetDelegatePainter(compositeMapper->GetPainter()->GetDelegatePainter());
   compositeMapper->SetPainter(this->DepthSortDefaultPainter);
@@ -58,7 +61,6 @@ vtkDepthSortRepresentation::vtkDepthSortRepresentation()
     this->SetController(vtkSmartPointer<vtkDummyController>::New());
   }
 }
-
 //----------------------------------------------------------------------------
 vtkDepthSortRepresentation::~vtkDepthSortRepresentation()
 {
@@ -66,7 +68,6 @@ vtkDepthSortRepresentation::~vtkDepthSortRepresentation()
   this->DepthSortPainter->Delete();
   this->SetController(NULL);
 }
-
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetUseDataParititions(bool val)
 {
@@ -76,7 +77,30 @@ void vtkDepthSortRepresentation::SetUseDataParititions(bool val)
     this->MarkModified();
   }
 }
-
+//----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetOpacityArrayName(const char* opacity)
+{
+  this->TwoScalarsToColorsPainter->SetOpacityArrayName(opacity);
+  this->MarkModified();
+}
+//----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetEnableOpacity(int enable)
+{
+  this->TwoScalarsToColorsPainter->SetEnableOpacity(enable);
+  this->DepthSortPainter->SetDepthSortRequired(enable);
+  this->MarkModified();
+}
+//----------------------------------------------------------------------------
+int vtkDepthSortRepresentation::GetEnableOpacity()
+{
+  return this->TwoScalarsToColorsPainter->GetEnableOpacity();
+}
+//----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetDepthSortEnableMode(int mode)
+{
+  this->DepthSortPainter->SetDepthSortEnableMode(mode);
+  this->MarkModified();
+}
 //----------------------------------------------------------------------------
 int vtkDepthSortRepresentation::RequestData(vtkInformation* request,
                                             vtkInformationVector** inputVector, vtkInformationVector* outputVector)
@@ -116,7 +140,6 @@ int vtkDepthSortRepresentation::RequestData(vtkInformation* request,
   }
   return 1;
 }
-
 //----------------------------------------------------------------------------
 int vtkDepthSortRepresentation::ProcessViewRequest(
   vtkInformationRequestKey* request_type,
@@ -127,9 +150,15 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
     return 0;
   }
 
-  if (request_type == vtkPVView::REQUEST_UPDATE()) {
+  if (request_type == vtkPVView::REQUEST_UPDATE())
+    {
 
-    // override the setting made in the geometry representation
+    if (this->GetEnableOpacity()) {
+      outInfo->Set(vtkPVRenderView::NEED_ORDERED_COMPOSITING(), 1);
+    }
+
+    // override the setting made in the geometry representation, we do not allow any redistribution
+    // because we assume that the data has been partitioned
     vtkPVRenderView::MarkAsRedistributable(inInfo, this, false);
 
     if (this->GetNumberOfInputConnections(0) == 1 && this->UseDataParititions) {
@@ -152,6 +181,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
       // we should have enough information to generate a bounds translator if one was not supplied
       //
       if (!this->BoundsTranslator) {
+/*
         this->BoundsTranslator = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
         vtkBoundingBox box(this->DataBounds);
         // shrink the box by 25% of the shortest side.
@@ -177,6 +207,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
         this->BoundsTranslator->SetSpacing(spacing);
         double origin[3] = { this->GlobalDataBounds[0], this->GlobalDataBounds[2], this->GlobalDataBounds[4] };
         vtkPVRenderView::SetOrderedCompositingInformation(inInfo, this, this->BoundsTranslator, whole_extent, origin, spacing);
+*/
       }
       else {
         // 
@@ -209,7 +240,6 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
   }
   return 1;
 }
-
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 {

@@ -70,11 +70,12 @@ vtkCxxSetObjectMacro(vtkDepthSortPainter,OutputData,vtkDataObject)
 
 vtkDepthSortPainter::vtkDepthSortPainter()
 {
-  this->DepthSortEnableMode = ENABLE_SORT_IF_NO_DEPTH_PEELING;
-  this->CachedIsTextureSemiTranslucent = 1;
-  this->CachedIsColorSemiTranslucent = 1;
-  this->DepthSortPolyData = vtkDepthSortPolyData::New();
-  this->OutputData = NULL;
+  this->DepthSortEnableMode             = ENABLE_SORT_IF_NO_DEPTH_PEELING;
+  this->CachedIsTextureSemiTranslucent  = 1;
+  this->CachedIsColorSemiTranslucent    = 1;
+  this->DepthSortPolyData               = vtkDepthSortPolyData::New();
+  this->OutputData                      = NULL;
+  this->DepthSortOverrideFlag               = 0;
 }
 //-----------------------------------------------------------------------------
 vtkDepthSortPainter::~vtkDepthSortPainter()
@@ -86,6 +87,11 @@ vtkDepthSortPainter::~vtkDepthSortPainter()
 void vtkDepthSortPainter::PrintSelf(ostream &os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+}
+//-----------------------------------------------------------------------------
+void vtkDepthSortPainter::SetDepthSortRequired(int required)
+{
+  this->DepthSortOverrideFlag = required; 
 }
 
 //-----------------------------------------------------------------------------
@@ -165,15 +171,23 @@ void vtkDepthSortPainter::Sort(vtkDataSet* output,
 
 int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
 {
-  if (!actor || !renderer)
+  // exit immediately if invalid or disabled 
+  if (!actor || !renderer || (this->GetDepthSortEnableMode() == ENABLE_SORT_NEVER))
     return false;
 
-  if (this->GetDepthSortEnableMode() == ENABLE_SORT_NEVER)
-    return false;
+  // hopefully not used very often
+  if (this->GetDepthSortEnableMode() == ENABLE_SORT_ALWAYS)
+    return true;
 
+  // default mode
   if (this->GetDepthSortEnableMode() == ENABLE_SORT_IF_NO_DEPTH_PEELING
       && renderer->GetUseDepthPeeling())
     return false;
+
+  // this flag might be set by the Representation if a vtkTwoScalarsToColors painter 
+  // is being used -  it saves us checking color arrays by hand
+  if (this->DepthSortOverrideFlag) 
+    return true;
 
   if (actor->GetProperty()->GetOpacity() < 1)
     return true;
@@ -181,7 +195,12 @@ int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
   // if the color array has an alpha component, return true.
   // rem : this alpha component can come from the vtkTwoScalarsToColors painter,
   // and thus cannot be simply deduced from the opacity and lut.
-  vtkUnsignedCharArray* colors = NULL;
+  vtkUnsignedCharArray* colors = NULL; 
+
+  // this next code never caled because the input is always composite in new ParaView versions
+  // Shall we remove it or keep it. DepthSortOverrideFlag is set by owner and saves us the need
+  // to checl color arrays by hand.
+
   vtkPolyData* input = vtkPolyData::SafeDownCast(this->GetInput());
   if (input)
     {

@@ -36,6 +36,7 @@
 #include "vtkDefaultPainter.h"
 
 class vtkDepthSortPainter;
+class vtkTwoScalarsToColorsPainter;
 
 class VTK_EXPORT vtkDepthSortDefaultPainter : public vtkDefaultPainter
 {
@@ -45,10 +46,17 @@ public :
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Get/Set the PolyDataPainter. This painter is slow but
-  // it can send any kind of primitives to the device.
+  // Get/Set the DepthSortPainter. 
+  // The depth sort painter reorders primive in distance from camera order
   void SetDepthSortPainter(vtkDepthSortPainter*);
   vtkGetObjectMacro(DepthSortPainter, vtkDepthSortPainter);
+
+  // Description:
+  // Get/Set the TwoScalarsToColorsPainter. 
+  // The two scalars painter combines the usual RGB scalars with another array
+  // for the alpha component
+  void SetTwoScalarsToColorsPainter(vtkTwoScalarsToColorsPainter*);
+  vtkGetObjectMacro(TwoScalarsToColorsPainter, vtkTwoScalarsToColorsPainter);
 
 protected:
   // Description:
@@ -60,6 +68,7 @@ protected:
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
   vtkDepthSortPainter* DepthSortPainter;
+  vtkTwoScalarsToColorsPainter* TwoScalarsToColorsPainter;
 
   vtkDepthSortDefaultPainter();
   ~vtkDepthSortDefaultPainter();
