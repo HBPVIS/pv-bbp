@@ -249,7 +249,7 @@ endif()
 
 # Auxiliary dependencies
 if(CMAKE_VERSION VERSION_GREATER 2.7)
-  find_package(HDF5 COMPONENTS C CXX REQUIRED)
+  find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
 else()
   find_package(HDF5 REQUIRED)
 endif()

@@ -41,9 +41,9 @@ include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
 # --------------------------------------------------------------
 # Find HDF5
 # --------------------------------------------------------------
-find_package(HDF5 COMPONENTS C CXX REQUIRED)
-include_directories(${HDF5_INCLUDE_DIRS}
-                    ${HDF5_INCLUDE_DIRS}/cpp)
+find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+include_directories(${HDF5_INCLUDE_DIR}
+                    ${HDF5_INCLUDE_DIR}/cpp)
 
 #--------------------------------------------------
 # If (paraview) using system H5FDdsm

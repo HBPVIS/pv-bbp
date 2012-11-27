@@ -86,10 +86,14 @@ ENDIF (PARAVIEW_USE_MPI)
 set(XML_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 
+FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR})
+
 # INCLUDES
 include_directories(
   ${PLUGIN_PATH}
   ${BBP_SDK_INCLUDE_DIRS}
+  ${HDF5_INCLUDE_DIR}/cpp
 )
 
 
@@ -177,7 +181,6 @@ ADD_PARAVIEW_PLUGIN(
 # setup plugin linking
 #--------------------------------------------------
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
-        vtkRenderingFreeTypeFontConfig
     ${BBP_SDK_LIBRARIES}
     ${TRILINOS_LIBS}
     ${HDF5_C_LIBRARY} 
