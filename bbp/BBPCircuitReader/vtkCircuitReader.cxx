@@ -201,8 +201,8 @@ int vtkCircuitReader::RequestInformation(
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
 //  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
   //
-  this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-  this->UpdateNumPieces = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+  this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
   //
   outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
   bool NeedToReadInformation = (FileModifiedTime>FileOpenedTime);
@@ -257,10 +257,14 @@ int vtkCircuitReader::RequestInformation(
 // std::cout <<"Made it past load " << std::endl;
 
     // time steps of reports are in the report file
-//    this->OpenReportFile();
-  this->NumberOfTimeSteps = 0;
+    if (this->UpdateNumPieces==1) {
+      this->OpenReportFile();
+      this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+    }
+    else {
+      this->NumberOfTimeSteps = 0;
+    }
 
-//    this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
 
 
     if (this->NumberOfTimeSteps==0) {
@@ -477,11 +481,11 @@ int vtkCircuitReader::RequestData(
   }
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
     bool do_rep = this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
-    if (do_rep) {
-//     this->CreateReportScalars(request, inputVector, outputVector);
+    if (do_rep && this->UpdateNumPieces==1) {
+     this->CreateReportScalars(request, inputVector, outputVector);
     }
     else {
-//      this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_VOLTAGE);
+      this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_VOLTAGE);
     }
     this->TimeModifiedTime.Modified();
   }

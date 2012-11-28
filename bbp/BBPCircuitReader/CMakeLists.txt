@@ -138,6 +138,7 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkDepthSortRepresentation.xml
     ${XML_PATH}/vtkMorphologyReader.xml
     ${XML_PATH}/vtkMeshBinReader.xml
+    ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
@@ -151,6 +152,7 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTwoScalarsToColorsPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
 

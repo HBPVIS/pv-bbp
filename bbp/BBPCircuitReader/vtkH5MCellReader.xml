@@ -1,0 +1,23 @@
+<ServerManagerConfiguration>
+ <ProxyGroup name="sources">
+
+   <SourceProxy name="H5MCellReader" 
+                class="vtkH5MCellReader"
+                label="Blue Brain Molecule report reader">
+     <StringVectorProperty
+        name="FileName"
+        command="SetFileName"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+     </StringVectorProperty>
+
+      <DoubleVectorProperty
+        name="TimestepValues"
+        information_only="1">
+        <TimeStepsInformationHelper/>
+      </DoubleVectorProperty>
+
+    </SourceProxy>
+   
+ </ProxyGroup>
+</ServerManagerConfiguration>

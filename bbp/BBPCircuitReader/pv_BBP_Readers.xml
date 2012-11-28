@@ -11,4 +11,8 @@
           extensions="bin"
           file_description="Blue Brain Mesh Neuron">
   </Reader>
+  <Reader name="H5MCellReader"
+          extensions="h5mcell"
+          file_description="Blue Brain Molecule Report">
+  </Reader>
 </ParaViewReaders>
