@@ -329,7 +329,7 @@ vtkSmartPointer<vtkDataArray> vtkH5MCellReader::ReadDataSetIntoDataArray(char *n
   //
   // Get the array size
   //
-  herr_t herr, r;
+  herr_t herr=0, r=0;
   hid_t dataset_id = H5Dopen(this->H5FileId, name, H5P_DEFAULT);
   hid_t  diskshape = H5Dget_space ( dataset_id );
   hsize_t dims[2], maxdims[2];
@@ -337,10 +337,16 @@ vtkSmartPointer<vtkDataArray> vtkH5MCellReader::ReadDataSetIntoDataArray(char *n
   int numDims = H5Sget_simple_extent_ndims(diskshape); 
   vtkIdType Nt = dims[0];
   vtkIdType Nc = numDims>1 ? dims[1] : 1;
+  hid_t memspace = H5S_ALL; 
 
   // if user has requested a piece
-  if (s!=-1 && e!=-1) {
-    Nt = (e-s);
+  if (s!=-1) {
+    if (e==-1) {
+      Nt = (dims[0]-s);
+    }
+    else {
+      Nt = (e-s);
+    }
     hsize_t  count1_mem[] = { Nt*Nc,  1 }; // the physical memory is really a flat array of size Nt*Nc 
     hsize_t  count2_mem[] = { Nt,    Nc }; // the memory space is Nt*Nc
     hsize_t  offset_mem[] = { 0,     0 };  // always read into meory starting at 0,0
@@ -349,13 +355,21 @@ vtkSmartPointer<vtkDataArray> vtkH5MCellReader::ReadDataSetIntoDataArray(char *n
     hsize_t  offset_dsk[] = { s,     0 };  // offset from our start point
     hsize_t  stride_dsk[] = { 1,     1 };  // and stride 1,1
     r = H5Sselect_hyperslab(diskshape, H5S_SELECT_SET, offset_dsk, stride_dsk, count1_dsk, NULL);
+    if (r<0) 
+      H5Eprint1(stdout);
+    memspace = H5Screate_simple(1, count1_mem, NULL);
+//    r = H5Sselect_hyperslab(memspace, H5S_SELECT_SET, offset_mem, stride_mem, count2_mem, NULL);
+    if (r<0) 
+      H5Eprint1(stdout);
   }
   vtkSmartPointer<vtkDataArray> dataarray;
   dataarray.TakeReference(vtkDataArray::CreateDataArray(vtk_datatype));
   dataarray->SetNumberOfComponents(Nc);
   dataarray->SetNumberOfTuples(Nt);
   dataarray->SetName(vtksys::SystemTools::GetFilenameName(name).c_str());
-  herr = H5Dread(dataset_id, datatype, H5S_ALL, diskshape, H5P_DEFAULT, dataarray->GetVoidPointer(0));
+  herr = H5Dread(dataset_id, datatype, memspace, diskshape, H5P_DEFAULT, dataarray->GetVoidPointer(0));
+  if (r<0) 
+    H5Eprint1(stdout);
 
   herr = H5Tclose(datatype);
   herr = H5Sclose ( diskshape );
@@ -383,9 +397,9 @@ int vtkH5MCellReader::RequestInformation(
       {
       return 0;
       }
-    this->offsets = this->ReadDataSetIntoDataArray("/molecules/glutamate/0/positions/offsets", -1, -1);
+    this->offsets = this->ReadDataSetIntoDataArray("/molecules/molecule_4/0/positions/offsets", -1, -1);
 
-    this->NumberOfTimeSteps = this->offsets->GetNumberOfTuples();
+    this->NumberOfTimeSteps = this->offsets->GetNumberOfTuples()-1;
 /*
     for (int i=0; i<nds; i++)
       {
@@ -428,9 +442,9 @@ int vtkH5MCellReader::RequestInformation(
       }
     outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
 
-  }
 
-  this->CloseFileIntermediate();
+    this->CloseFileIntermediate();
+  }
 
   return 1;
 }
@@ -538,16 +552,15 @@ int vtkH5MCellReader::RequestData(
 
 
   // Setup arrays for reading data
-  int startval = this->offsets->GetTuple1(this->TimeStep);
-  int   endval = this->offsets->GetTuple1(this->TimeStep+1);
+  int startval = this->offsets->GetTuple1(this->ActualTimeStep);
+  int   endval = (this->ActualTimeStep<(this->NumberOfTimeSteps-1)) ? this->offsets->GetTuple1(this->ActualTimeStep+1) : -1;
   vtkSmartPointer<vtkPoints>    points = vtkSmartPointer<vtkPoints>::New();
-  vtkSmartPointer<vtkDataArray> coords = this->ReadDataSetIntoDataArray("/molecules/glutamate/0/positions/data", startval, endval);
+  vtkSmartPointer<vtkDataArray> coords = this->ReadDataSetIntoDataArray("/molecules/molecule_4/0/positions/data", startval, endval);
 
   //
   // generate cells
   //
   vtkIdType Nt = coords->GetNumberOfTuples();
-  points->SetNumberOfPoints(Nt);
   if (1 || this->GenerateVertexCells)
     {
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
