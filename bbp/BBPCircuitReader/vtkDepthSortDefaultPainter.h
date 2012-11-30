@@ -37,6 +37,7 @@
 
 class vtkDepthSortPainter;
 class vtkTwoScalarsToColorsPainter;
+class vtkDepthSortPolygonsPainter;
 
 class VTK_EXPORT vtkDepthSortDefaultPainter : public vtkDefaultPainter
 {
@@ -58,6 +59,14 @@ public :
   void SetTwoScalarsToColorsPainter(vtkTwoScalarsToColorsPainter*);
   vtkGetObjectMacro(TwoScalarsToColorsPainter, vtkTwoScalarsToColorsPainter);
 
+  // Description:
+  // Get/Set the DepthSortPolygonsPainter. 
+  // The DepthSortPolygonsPainter is a primitive painter which paints
+  // using the order provided by the sorted depths generated in the
+  // Depth Sort Painter which should be earlier in the painter chain
+  void SetDepthSortPolygonsPainter(vtkDepthSortPolygonsPainter*);
+  vtkGetObjectMacro(DepthSortPolygonsPainter, vtkDepthSortPolygonsPainter);
+
 protected:
   // Description:
   // Setups the the painter chain.
@@ -67,8 +76,9 @@ protected:
   // Take part in garbage collection.
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
-  vtkDepthSortPainter* DepthSortPainter;
-  vtkTwoScalarsToColorsPainter* TwoScalarsToColorsPainter;
+  vtkDepthSortPainter          *DepthSortPainter;
+  vtkTwoScalarsToColorsPainter *TwoScalarsToColorsPainter;
+  vtkDepthSortPolygonsPainter  *DepthSortPolygonsPainter;
 
   vtkDepthSortDefaultPainter();
   ~vtkDepthSortDefaultPainter();

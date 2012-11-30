@@ -47,7 +47,7 @@ class vtkCamera;
 class vtkPoints;
 class vtkDataObject;
 class vtkTexture;
-class vtkDepthSortPolyData;
+class vtkDepthSortPolyData2;
 class vtkUnsignedCharArray;
 
 class VTK_EXPORT vtkDepthSortPainter : public vtkPainter
@@ -105,11 +105,11 @@ public:
 
 
   // Description:
-  // Set/Get the internal vtkDepthSortPolyData algorithm
+  // Set/Get the internal vtkDepthSortPolyData2 algorithm
   // Rem : this painter will set the camera, prop3D and direction
   // before sorting.
-  virtual void SetDepthSortPolyData(vtkDepthSortPolyData*);
-  vtkGetObjectMacro(DepthSortPolyData, vtkDepthSortPolyData);
+  virtual void SetDepthSortPolyData(vtkDepthSortPolyData2*);
+  vtkGetObjectMacro(DepthSortPolyData, vtkDepthSortPolyData2);
 
 protected:
   vtkDepthSortPainter();
@@ -149,7 +149,7 @@ protected:
   vtkTimeStamp          CachedIsTextureSemiTranslucentTime;
   vtkTimeStamp          CachedIsColorSemiTranslucentTime;
   int                   CachedIsColorSemiTranslucent;
-  vtkDepthSortPolyData* DepthSortPolyData;
+  vtkDepthSortPolyData2* DepthSortPolyData;
   int                   DepthSortOverrideFlag;
 
   //BTX
