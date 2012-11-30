@@ -258,14 +258,16 @@ int vtkCircuitReader::RequestInformation(
 
     // time steps of reports are in the report file
     if (this->UpdateNumPieces==1) {
-      this->OpenReportFile();
-      this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+      if (this->OpenReportFile()) {
+        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+      }
+      else {
+        this->NumberOfTimeSteps = 0;
+      }
     }
     else {
       this->NumberOfTimeSteps = 0;
     }
-
-
 
     if (this->NumberOfTimeSteps==0) {
 //      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
@@ -319,6 +321,9 @@ int vtkCircuitReader::OpenReportFile()
   for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
     reportname = (*ri).label();
   }                                          
+  if (reports.size()==0) {
+    return 0;
+  }
   bbp::Reports_Specification::iterator ri=reports.find(reportname);
   this->ReportReader = bbp::CompartmentReportReader::createReader(*ri);
   this->ReportReader->updateMapping(Target);
@@ -480,7 +485,7 @@ int vtkCircuitReader::RequestData(
     this->MeshGeneratedTime.Modified();
   }
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
-    bool do_rep = this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
+    bool do_rep = (this->NumberOfTimeSteps>0) && this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
     if (do_rep && this->UpdateNumPieces==1) {
      this->CreateReportScalars(request, inputVector, outputVector);
     }
