@@ -44,27 +44,52 @@
 #include "vtkImageData.h"
 #include "vtkOpenGL.h"
 #include "vtkMapper.h"
-
+//-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkTwoScalarsToColorsPainter)
-
+//-----------------------------------------------------------------------------
 vtkTwoScalarsToColorsPainter::vtkTwoScalarsToColorsPainter()
 {
-  this->OpacityArrayName = NULL;
-  this->EnableOpacity = false;
+  this->OpacityArrayName  = NULL;
+  this->EnableOpacity     = false;
   this->OpacityScalarMode = VTK_SCALAR_MODE_USE_POINT_FIELD_DATA;
-
   this->InterpolateScalarsBeforeMapping = 0;
 }
-
+//-----------------------------------------------------------------------------
 vtkTwoScalarsToColorsPainter::~vtkTwoScalarsToColorsPainter()
 {
   this->SetOpacityArrayName(NULL);
 }
-
-void vtkTwoScalarsToColorsPainter::PrepareForRendering(
-  vtkRenderer* vtkNotUsed(renderer),
-    vtkActor* actor)
+//-----------------------------------------------------------------------------
+int vtkTwoScalarsToColorsPainter::GetPremultiplyColorsWithAlpha(vtkActor* actor)
 {
+  if (actor && (actor->GetTexture() || actor->GetProperty()->GetNumberOfTextures() > 0)) {
+    return 0;
+  }
+  //  usually we premultiply the colours with the alpha to simplify blend operation
+  if (this->EnableOpacity) return 1;
+  // let base class decide
+  return this->Superclass::GetPremultiplyColorsWithAlpha(actor);
+}
+//-----------------------------------------------------------------------------
+void vtkTwoScalarsToColorsPainter::ProcessInformation(vtkInformation* info)
+{
+  this->Superclass::ProcessInformation(info);
+
+  // we will not use textures for colours because we add independent opacity 
+  // therefore textures would need to be 2D (and potentially very large too)
+  if (this->EnableOpacity) {
+    this->SetInterpolateScalarsBeforeMapping(false);
+  }
+}
+//-----------------------------------------------------------------------------
+void vtkTwoScalarsToColorsPainter::PrepareForRendering(
+  vtkRenderer* renderer, vtkActor* actor)
+{
+  if (!this->EnableOpacity) {
+    this->Superclass::PrepareForRendering(renderer, actor);
+    return;
+  }
+
   vtkDataObject* input = this->GetInput();
   if (!input)
     {
@@ -73,9 +98,10 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
     }
 
   // If the input polydata has changed, the output should also reflect
-  if (!this->OutputData || !this->OutputData->IsA(input->GetClassName())
-      || this->OutputUpdateTime < this->MTime || this->OutputUpdateTime
-      < this->GetInput()->GetMTime())
+  if (!this->OutputData ||
+    !this->OutputData->IsA(input->GetClassName()) ||
+    this->OutputUpdateTime < this->MTime ||
+    this->OutputUpdateTime < this->GetInput()->GetMTime())
     {
     if (this->OutputData)
       {
@@ -104,21 +130,9 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
   // the composite dataset to ensure that we employ the technique for all the
   // blocks.
   this->ScalarsLookupTable = 0;
-  int useTexture = this->CanUseTextureMapForColoring(input);
-  if (useTexture)
-    {
-    // Ensure that the ColorTextureMap has been created and updated correctly.
-    // ColorTextureMap depends on the LookupTable. Hence it can be generated
-    // independent of the input.
-    this->UpdateColorTextureMap(actor->GetProperty()->GetOpacity(),
-        this->GetPremultiplyColorsWithAlpha(actor));
-    }
-  else
-    {
-    // Remove texture map if present.
-    this->ColorTextureMap = 0;
-    }
-
+  int useTexture = 0;
+  // Remove texture map if present.
+  this->ColorTextureMap = 0;
   this->UsingScalarColoring = 0;
 
   // Now if we have composite data, we need to MapScalars for all leaves.
@@ -137,7 +151,7 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
       if (pdInput && pdOutput)
         {
         this->MapScalars(pdOutput, actor->GetProperty()->GetOpacity(),
-            this->GetPremultiplyColorsWithAlpha(actor), pdInput, actor);
+            this->GetPremultiplyColorsWithAlpha(actor), pdInput);
         }
       }
 
@@ -148,43 +162,68 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
     this->MapScalars(vtkDataSet::SafeDownCast(this->OutputData),
         actor->GetProperty()->GetOpacity(),
         this->GetPremultiplyColorsWithAlpha(actor), vtkDataSet::SafeDownCast(
-            input), actor);
+            input));
     }
   this->LastUsedAlpha = actor->GetProperty()->GetOpacity();
   this->GetLookupTable()->SetAlpha(this->LastUsedAlpha);
+  this->LastUsedMultiplyWithAlpha = this->GetPremultiplyColorsWithAlpha(actor);
+}
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+static inline void vtkMultiplyColorsWithOpacity(vtkDataArray* array, vtkDataArray *opacity, bool multiply_with_alpha)
+{
+  vtkUnsignedCharArray* colors = vtkUnsignedCharArray::SafeDownCast(array);
+  if (!colors || colors->GetNumberOfComponents() != 4)
+    {
+    return;
+    }
+  unsigned char* ptr = colors->GetPointer(0);
+  
+  vtkIdType numValues = colors->GetNumberOfTuples() * colors->GetNumberOfComponents();
+  if (numValues < 4) {
+    return;
+  }
+
+  vtkIdType tuple = 0;
+  for (vtkIdType cc=0; cc<numValues; cc+=4, ptr+=4, tuple++) {
+    // the alpha component set by actor opacity
+    double alpha = (0x0ff & ptr[3])/255.0;
+
+    // @TODO : assume values are 0-1 for now
+    alpha = alpha * opacity->GetTuple1(tuple);
+    if (multiply_with_alpha) {
+      ptr[0] = static_cast<unsigned char>(0x0ff & static_cast<int>((0x0ff&ptr[0])*alpha));
+      ptr[1] = static_cast<unsigned char>(0x0ff & static_cast<int>((0x0ff&ptr[1])*alpha));
+      ptr[2] = static_cast<unsigned char>(0x0ff & static_cast<int>((0x0ff&ptr[2])*alpha));
+    }
+    ptr[3] = static_cast<unsigned char>(0x0ff & static_cast<int>(0x0ff*alpha));
+  }
 }
 
-void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output,
-    double alpha,
-    int multiply_with_alpha,
-    vtkDataSet* input,
-    vtkActor* actor)
+//-----------------------------------------------------------------------------
+// This method is copied directly from vtkScalarsToColors, with the addition that
+// we blend in our per vertex opacity array
+// we do not create any textures or use them anywhere.
+void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha, 
+  int multiply_with_alpha, vtkDataSet* input)
 {
-  this->InterpolateScalarsBeforeMapping = 0;
-  this->ColorTextureMap = NULL;
-
-  this->Superclass::MapScalars(output, alpha, multiply_with_alpha, input);
-
-  if (!this->EnableOpacity)
-    {
+  if (!this->EnableOpacity) {
+    this->Superclass::MapScalars(output, alpha, multiply_with_alpha, input);
     return;
-    }
+  }
 
   int cellFlag;
-  //double orig_alpha;
+  double orig_alpha;
+  vtkDataArray* scalars = vtkAbstractMapper::GetScalars(input,
+    this->ScalarMode, this->ArrayAccessMode, this->ArrayId,
+    this->ArrayName, cellFlag);
 
+  // We want the opacity array to be the same type as the color array (cell/point). 
+  // if no colours ... then a blank LUT with just opacity per vertex/cell
   vtkDataArray* opacity;
-
-  if (input == 0)
-    {
-    return;
-    }
-
-  vtkPointData* oppd = output->GetPointData();
-  //vtkCellData* opcd = output->GetCellData();
-  vtkFieldData* opfd = output->GetFieldData();
-
-  vtkDataArray* originalColors = NULL;
   if (this->ScalarVisibility)
     {
     // if we map scalars to colors, then the opacity array has to
@@ -200,229 +239,124 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output,
 
     }
 
-  if (!opacity)
-    return;
+  vtkPointData* oppd = output->GetPointData();
+  vtkCellData* opcd  = output->GetCellData();
+  vtkFieldData* opfd = output->GetFieldData();
 
-  if (cellFlag == 0)
+  int arraycomponent = this->ArrayComponent;
+  // This is for a legacy feature: selection of the array component to color by
+  // from the mapper.  It is now in the lookuptable.  When this feature
+  // is removed, we can remove this condition.
+  if (scalars == 0 || scalars->GetNumberOfComponents() <= this->ArrayComponent)
     {
-    originalColors = oppd->GetScalars();
+    arraycomponent = 0;
     }
-  else if (cellFlag == 1)
+
+  if (!this->ScalarVisibility || scalars == 0 || input == 0)
     {
-    originalColors = oppd->GetScalars();
+    return;
+    }
+
+  // Let subclasses know that scalar coloring was employed in the current pass.
+  // it is used in opengl scalars to colours as follows :
+  // "if we are doing vertex colors then set lmcolor to adjust
+  // the current materials ambient and diffuse values using
+  // vertex color commands otherwise tell it not to".
+
+  this->UsingScalarColoring = 1;
+
+  vtkScalarsToColors* lut = 0;
+  // Get the lookup table.
+  if (scalars->GetLookupTable())
+    {
+    lut = scalars->GetLookupTable();
     }
   else
     {
-    originalColors = opfd->GetArray("Color");
+    lut = this->GetLookupTable();
+    lut->Build();
     }
 
-  if (originalColors && (this->GetMTime() < this->BlendTime
-      && input->GetMTime() < this->BlendTime && originalColors->GetMTime()
-      < this->BlendTime) && actor->GetProperty()->GetMTime() < this->BlendTime)
+  if (!this->UseLookupTableScalarRange)
     {
-    //re-use old colors
-    return;
+    lut->SetRange(this->ScalarRange);
     }
 
-  if (!this->ScalarVisibility)
+  // Try to reuse the old colors.
+  vtkDataArray* colors;
+  if (cellFlag == 0)
     {
-    vtkUnsignedCharArray* constantColor = vtkUnsignedCharArray::New();
-    constantColor->SetNumberOfComponents(4);
-    constantColor->SetNumberOfTuples(opacity->GetNumberOfTuples());
-    if (cellFlag == 0)
-      {
-      oppd->SetScalars(constantColor);
-      }
-    else if (cellFlag == 1)
-      {
-      oppd->SetScalars(constantColor);
-      }
-    else
-      {
-      opfd->AddArray(constantColor);
-      }
-    constantColor->Delete();
-
-    double col[4];
-    actor->GetProperty()->GetColor(col);
-    unsigned char ucol[4];
-    if(multiply_with_alpha)
-      {
-      ucol[0] = static_cast<unsigned char> (col[0] * alpha * 255);
-      ucol[1] = static_cast<unsigned char> (col[1] * alpha * 255);
-      ucol[2] = static_cast<unsigned char> (col[2] * alpha * 255);
-      }
-    else
-      {
-      ucol[0] = static_cast<unsigned char> (col[0] * 255);
-      ucol[1] = static_cast<unsigned char> (col[1] * 255);
-      ucol[2] = static_cast<unsigned char> (col[2] * 255);
-      }
-    ucol[3] = static_cast<unsigned char> (alpha * 255);
-    unsigned char* pointer = constantColor->GetPointer(0);
-
-    for (vtkIdType id = 0; id < constantColor->GetNumberOfTuples(); id++)
-      {
-      pointer[0] = ucol[0];
-      pointer[1] = ucol[1];
-      pointer[2] = ucol[2];
-      pointer[3] = ucol[3];
-      pointer += 4;
-      }
-    originalColors = constantColor;
+    colors = oppd->GetScalars();
     }
-
-  if (!originalColors || originalColors->GetNumberOfTuples()
-      != opacity->GetNumberOfTuples()
-      || originalColors->GetNumberOfComponents() != 4)
+  else if (cellFlag == 1)
     {
-    this->BlendTime.Modified();
-    return;
+    colors = opcd->GetScalars();
     }
-
-  /// we then blend the two arrays together
-  vtkIdType id;
-  //int comp;
-  //double tuple[4];
-  int floatMode = opacity->GetDataType() == VTK_FLOAT || opacity->GetDataType()
-      == VTK_DOUBLE;
-
-  double amin = opacity->GetDataTypeMin();
-  double amax = opacity->GetDataTypeMax();
-  double arange = amax - amin;
-
-  for (id = 0; id < opacity->GetNumberOfTuples(); id++)
+  else
     {
-    double *tuple = originalColors->GetTuple(id);
-    //double orig = tuple[3];
-    double val = opacity->GetTuple1(id);
-    // in the float Mode, the values are supposed to vary between 0 and 1
-    if (floatMode)
-      {
-      if (val < 0.0)
-        val = 0.0;
-      if (val > 1.0)
-        val = 1.0;
-      tuple[3] = val * alpha * 255;
-      }
-    else // if the type is not float or double, values are supposed to vary from DataTypeMin to DataTypeMax
-      {
-      tuple[3] = ((val - amin) / arange) * alpha * 255;
-      }
-    originalColors->SetTuple(id, tuple);
+    colors = opfd->GetArray("Color");
     }
-  // the primitive painter looks at the name to decide if the colors are opaque or not.
-  // we use the translucent path, which means setting the name to NULL.
-  if (cellFlag == 0 || cellFlag == 1)
+
+  // The LastUsedAlpha checks ensures that opacity changes are reflected
+  // correctly when this->MapScalars(..) is called when iterating over a
+  // composite dataset.
+  if (colors &&
+    this->LastUsedAlpha == alpha &&
+    this->LastUsedMultiplyWithAlpha == multiply_with_alpha)
     {
-    originalColors->SetName(NULL);
+    if (this->GetMTime() < colors->GetMTime() &&
+      input->GetMTime() < colors->GetMTime() &&
+      lut->GetMTime() < colors->GetMTime() &&
+      opacity->GetMTime() < colors->GetMTime())
+      {
+      // using old colors.
+      return;
+      }
     }
-  this->BlendTime.Modified();
+
+  // Get rid of old colors.
+  colors = 0;
+  orig_alpha = lut->GetAlpha();
+  lut->SetAlpha(alpha);
+  colors = lut->MapScalars(scalars, this->ColorMode, arraycomponent);
+  lut->SetAlpha(orig_alpha);
+
+  // It is possible that the LUT simply returns the scalars as the
+  // colors. In which case, we allocate a new array to ensure
+  // that we don't modify the array in the input.
+  if (scalars == colors)
+    {
+    // Since we will be changing the colors array
+    // we create a copy.
+    colors->Delete();
+    colors = scalars->NewInstance();
+    colors->DeepCopy(scalars);
+    }
+  vtkMultiplyColorsWithOpacity(colors, opacity, multiply_with_alpha);
+
+  if (cellFlag == 0)
+    {
+    oppd->SetScalars(colors);
+    }
+  else if (cellFlag == 1)
+    {
+    opcd->SetScalars(colors);
+    }
+  else
+    {
+    // Typically, when a name is assigned of the scalars array in PointData or CellData
+    // it implies 3 component colors. This implication does not hold for FieldData.
+    // For colors in field data, we use the component count of the color array
+    // to decide if the colors are opaque colors.
+    // These colors are nothing but cell colors,
+    // except when rendering TStrips, in which case they represent
+    // the triange colors.
+    colors->SetName("Color");
+    opfd->AddArray(colors);
+    }
+  colors->Delete();
 }
-
-vtkDataObject* vtkTwoScalarsToColorsPainter::NewClone(vtkDataObject* data)
-{
-  if (data->IsA("vtkDataSet"))
-    {
-    vtkDataSet* ds = vtkDataSet::SafeDownCast(data);
-    vtkDataSet* clone = ds->NewInstance();
-    clone->ShallowCopy(ds);
-    // scalars passed thru this filter are colors, which will be built in
-    // the pre-rendering stage.
-    // SetActiveScalars is used so that the SetScalars
-    // call afterwards do not remove the scalar array.
-    clone->GetCellData()->SetActiveScalars(0);
-    clone->GetPointData()->SetActiveScalars(0);
-    clone->GetCellData()->SetScalars(0);
-    clone->GetPointData()->SetScalars(0);
-    return clone;
-    }
-  else if (data->IsA("vtkCompositeDataSet"))
-    {
-    vtkCompositeDataSet* cd = vtkCompositeDataSet::SafeDownCast(data);
-    vtkCompositeDataSet* clone = cd->NewInstance();
-    clone->CopyStructure(cd);
-    vtkCompositeDataIterator* iter = cd->NewIterator();
-    for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
-      {
-      vtkDataObject* leafClone = this->NewClone(iter->GetCurrentDataObject());
-      clone->SetDataSet(iter, leafClone);
-      leafClone->Delete();
-      }
-    iter->Delete();
-    return clone;
-    }
-  return 0;
-
-}
-
-void vtkTwoScalarsToColorsPainter::RenderInternals(vtkRenderer* renderer,
-    vtkActor* actor,
-    unsigned long typeflags,
-    bool forceCompileOnly)
-{
-  vtkProperty* prop = actor->GetProperty();
-
-  // if we are doing vertex colors then set lmcolor to adjust
-  // the current materials ambient and diffuse values using
-  // vertex color commands otherwise tell it not to.
-  glDisable(GL_COLOR_MATERIAL);
-  if (this->ScalarVisibility || this->EnableOpacity)
-    {
-    GLenum lmcolorMode;
-    if (this->ScalarMaterialMode == VTK_MATERIALMODE_DEFAULT)
-      {
-      if (prop->GetAmbient() > prop->GetDiffuse())
-        {
-        lmcolorMode = GL_AMBIENT;
-        }
-      else
-        {
-        lmcolorMode = GL_DIFFUSE;
-        }
-      }
-    else if (this->ScalarMaterialMode == VTK_MATERIALMODE_AMBIENT_AND_DIFFUSE)
-      {
-      lmcolorMode = GL_AMBIENT_AND_DIFFUSE;
-      }
-    else if (this->ScalarMaterialMode == VTK_MATERIALMODE_AMBIENT)
-      {
-      lmcolorMode = GL_AMBIENT;
-      }
-    else // if (this->ScalarMaterialMode == VTK_MATERIALMODE_DIFFUSE)
-      {
-      lmcolorMode = GL_DIFFUSE;
-      }
-
-    glColorMaterial(GL_FRONT_AND_BACK, lmcolorMode);
-    glEnable(GL_COLOR_MATERIAL);
-
-    }
-
-  int pre_multiplied_by_alpha = this->GetPremultiplyColorsWithAlpha(actor);
-
-  // We colors were premultiplied by alpha then we change the blending
-  // function to one that will compute correct blended destination alpha
-  // value, otherwise we stick with the default.
-  if (pre_multiplied_by_alpha)
-    {
-    // save the blend function.
-    glPushAttrib(GL_COLOR_BUFFER_BIT);
-
-    // the following function is not correct with textures because there are
-    // not premultiplied by alpha.
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    }
-  this->ColorTextureMap = 0;
-  this->Superclass::RenderInternal(renderer, actor, typeflags, forceCompileOnly);
-
-  if (pre_multiplied_by_alpha)
-    {
-    // restore the blend function
-    glPopAttrib();
-    }
-}
-
+//-----------------------------------------------------------------------------
 void vtkTwoScalarsToColorsPainter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);

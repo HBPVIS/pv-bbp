@@ -48,6 +48,7 @@ vtkDepthSortDefaultPainter::vtkDepthSortDefaultPainter()
 {
   this->DepthSortPainter          = vtkDepthSortPainter::New();
   this->TwoScalarsToColorsPainter = vtkTwoScalarsToColorsPainter::New();
+  this->SetScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
 }
 //----------------------------------------------------------------------------
 vtkDepthSortDefaultPainter::~vtkDepthSortDefaultPainter()
@@ -58,14 +59,16 @@ vtkDepthSortDefaultPainter::~vtkDepthSortDefaultPainter()
 //----------------------------------------------------------------------------
 void vtkDepthSortDefaultPainter::BuildPainterChain()
 {
+  // make sure teh scalars to colour is using our painter
+  this->SetScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
+  
   // build the superclass painter chain
   this->Superclass::BuildPainterChain();
 
-  // insert our painters into the current painter chain :
-  // ... -> ScalarsToColorsPainter -> TwoScalarsToColorsPainter -> DepthSortPainter -> ...
+  // insert our depth sort painter into the current painter chain :
+  // ... -> ScalarsToColorsPainter -> DepthSortPainter -> ...
   this->DepthSortPainter->SetDelegatePainter(this->ScalarsToColorsPainter->GetDelegatePainter());
-  this->TwoScalarsToColorsPainter->SetDelegatePainter(this->DepthSortPainter);
-  this->ScalarsToColorsPainter->SetDelegatePainter(this->TwoScalarsToColorsPainter);
+  this->ScalarsToColorsPainter->SetDelegatePainter(this->DepthSortPainter);
 }
 //----------------------------------------------------------------------------
 void vtkDepthSortDefaultPainter::ReportReferences(vtkGarbageCollector *collector)
