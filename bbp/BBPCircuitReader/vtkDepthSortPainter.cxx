@@ -66,23 +66,11 @@ vtkStandardNewMacro(vtkDepthSortPainter)
 vtkCxxSetObjectMacro(vtkDepthSortPainter,DepthSortPolyData,vtkDepthSortPolyData2);
 vtkCxxSetObjectMacro(vtkDepthSortPainter,OutputData,vtkDataObject);
 //-----------------------------------------------------------------------------
-template<typename T>
-void insertionSort(T *data, vtkIdType N)
-{
-  vtkIdType key;
-  for (vtkIdType j=1; j<N; j++){
-    key = data[j];
-    for (vtkIdType i=j-1; (data[i]<key) && (i>=0); i--) {
-      data[i+1] = data[i];
-    }
-    data[i+1] = key;
-  }
-}
-//-----------------------------------------------------------------------------
 vtkDepthSortPainter::vtkDepthSortPainter()
 {
   this->DepthSortEnableMode             = ENABLE_SORT_IF_NO_DEPTH_PEELING;
   this->DepthSortMode                   = VTK_SORT_FIRST_POINT;
+  this->UseCachedSortOrder              = true;
   this->CachedIsTextureSemiTranslucent  = 1;
   this->CachedIsColorSemiTranslucent    = 1;
   this->DepthSortPolyData               = vtkDepthSortPolyData2::New();
@@ -114,8 +102,6 @@ void vtkDepthSortPainter::PrepareForRendering(vtkRenderer* renderer,
     {
     this->DepthSortPolyData->SetCamera(renderer->GetActiveCamera());
     this->DepthSortPolyData->SetProp3D(actor);
-    this->DepthSortPolyData->SetDirectionToBackToFront();
-    this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
     }
 
   // check if we need to update
@@ -173,6 +159,9 @@ void vtkDepthSortPainter::Sort(vtkDataSet* output,
     vtkActor* vtkNotUsed(actor))
 {
   this->DepthSortPolyData->SetInputData(input);
+  this->DepthSortPolyData->SetDirectionToBackToFront();
+  this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
+  this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
   this->DepthSortPolyData->Update();
   output->ShallowCopy(this->DepthSortPolyData->GetOutput());
 }

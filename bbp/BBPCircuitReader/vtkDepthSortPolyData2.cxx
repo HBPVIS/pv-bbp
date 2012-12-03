@@ -26,10 +26,15 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkIdTypeArray.h"
 #include "vtkCellArray.h"
 #include "vtkSmartPointer.h"
+#include "vtkTimerLog.h"
 
+#include "Sort.h"
 #include <algorithm>
 #include <functional>
 #include <tuple>
+//
+// depth, cellId, pts_offset
+//
 typedef std::tuple<double, vtkIdType, vtkIdType> depthInfo;
 typedef std::vector<depthInfo> depthList;
 
@@ -38,10 +43,11 @@ vtkStandardNewMacro(vtkDepthSortPolyData2);
 //-----------------------------------------------------------------------------
 vtkDepthSortPolyData2::vtkDepthSortPolyData2()
 {
-  this->Direction       = VTK_DIRECTION_BACK_TO_FRONT;
-  this->DepthSortMode   = VTK_SORT_FIRST_POINT;
-  this->FastPolygonMode = 1;
-  this->SortingList     = new depthList;
+  this->Direction          = VTK_DIRECTION_BACK_TO_FRONT;
+  this->DepthSortMode      = VTK_SORT_FIRST_POINT;
+  this->FastPolygonMode    = 1;
+  this->UseCachedSortOrder = 1;
+  this->SortingList        = new depthList;
 }
 //-----------------------------------------------------------------------------
 vtkDepthSortPolyData2::~vtkDepthSortPolyData2()
@@ -85,11 +91,29 @@ void CentreBoundsFromPtIds(vtkIdType *pts, vtkIdType npts, T *points, T result[3
   result[2] = (bounds[4]+bounds[5])/2.0;
 }
 //-----------------------------------------------------------------------------
+template<typename T>
+void insertionSort(T *data, vtkIdType N)
+{
+  vtkIdType i;
+  T key;
+  for (vtkIdType j=1; j<N; j++) {
+    key = data[j];
+    for (i=j-1; (i>=0) && (data[i]<key); i--) {
+      data[i+1] = data[i];
+    }
+    data[i+1] = key;
+  }
+}
+//-----------------------------------------------------------------------------
 int vtkDepthSortPolyData2::RequestData(
   vtkInformation *request,
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
+  vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
+  double UT = timer->GetUniversalTime();
+  timer->StartTimer();
+
   // if the user has not requested fast mode, default to the standard sort
   if (!this->FastPolygonMode) {
     return this->vtkDepthSortPolyData::RequestData(request, inputVector, outputVector);
@@ -125,78 +149,97 @@ int vtkDepthSortPolyData2::RequestData(
     FloatOrDoubleArrayPointer(points->GetData(), pointsF, pointsD);
   }
 
+  vtkIdType *cellArrayData = polys->GetPointer();
+
+  bool usingCachedSortOrder = (this->UseCachedSortOrder 
+    && polys->GetMTime()<this->LastSortTime 
+    && points->GetMTime()<this->LastSortTime 
+    && this->DepthOrder);
+
   // allocate space for depth values and sorted order
   depthList *ListToSort = static_cast<depthList*>(this->SortingList);
   ListToSort->resize(numCells);
   // traverse polygon list and compute depth
   polys->InitTraversal();
-  vtkIdType *zerooffset = polys->GetPointer();
-  for (vtkIdType cellId=0; cellId<numCells; cellId++) {
+  for (vtkIdType index=0; index<numCells; index++) {
     vtkIdType *pts;
     vtkIdType  npts;
-    // get pointer to point Ids for this cell
-    polys->GetNextCell(npts, pts);
+    if (!usingCachedSortOrder) {
+      // get N and pointer to point Ids for this cell
+      polys->GetNextCell(npts, pts);
+      // set the cell ID in 1st tuple entry
+      std::get<1>((*ListToSort)[index]) = index;
+      // set the offset to the cell {N,ptIds} in 2nd tuple entry
+      std::get<2>((*ListToSort)[index]) = static_cast<vtkIdType>(pts-cellArrayData-1);
+    }
+    else {
+      // get N and pointer to point Ids for this cell from last cached iteration
+      npts =  cellArrayData[std::get<2>((*ListToSort)[index])];
+      pts  = &cellArrayData[std::get<2>((*ListToSort)[index])+1];
+    }
 
-    if ( this->DepthSortMode == VTK_SORT_FIRST_POINT )
-    {
+    if (this->DepthSortMode == VTK_SORT_FIRST_POINT) {
       // set depth using float/double operation
       if (pointsF) {
         float *x = &pointsF[pts[0]*3];
-        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorF);
+        std::get<0>(ListToSort->operator[](index)) = vtkMath::Dot(x,vectorF);
       }
       else {
         double *x = &pointsD[pts[0]*3];
-        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorD);
+        std::get<0>(ListToSort->operator[](index)) = vtkMath::Dot(x,vectorD);
       }
     }
-    else if ( this->DepthSortMode == VTK_SORT_BOUNDS_CENTER )
+    else // if (this->DepthSortMode == VTK_SORT_BOUNDS_CENTER)
     {
+      // compute depth and store it in 0th entry of tuple
       if (pointsF) {
         float x[3];
         CentreBoundsFromPtIds<float>(pts, npts, pointsF, x);
-        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorF);
+        std::get<0>(ListToSort->operator[](index)) = vtkMath::Dot(x,vectorF);
       }
       else {
         double x[3];
         CentreBoundsFromPtIds<double>(pts, npts, pointsD, x);
-        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorD);
+        std::get<0>(ListToSort->operator[](index)) = vtkMath::Dot(x,vectorD);
       }
     }
-    else // VTK_SORT_PARAMETRIC_CENTER )
-    {
-    }
-
-    // set the cell ID to this cell
-    std::get<1>(ListToSort->operator[](cellId)) = cellId;
-    // set the offset to the cell {N,ptIds}
-    std::get<2>(ListToSort->operator[](cellId)) = static_cast<vtkIdType>(pts-zerooffset-1);
+//    else // VTK_SORT_PARAMETRIC_CENTER )
+//    {
+//    }
   }
-  this->UpdateProgress(0.20);
+  this->LastSortTime.Modified();
 
-  // Sort the depths
-  std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
-  this->UpdateProgress(0.60);
+  // Sort the tuples, using std::sort (quicksort?) if not cached, shellsort if cached
+  if (!usingCachedSortOrder) {
+    std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+  }
+  else {
+//    insertionSort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
+    std::stable_sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+//    shellsort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
+  }
 
   //  outCD->CopyAllocate(inCD);
   //  output->Allocate(tmpInput,numCells);
-  vtkSmartPointer<vtkIdTypeArray> DepthOrder = vtkSmartPointer<vtkIdTypeArray>::New();
-  DepthOrder->SetName("DepthOrder");
-  DepthOrder->SetNumberOfComponents(2);
-  DepthOrder->SetNumberOfTuples(numCells);
-  for (vtkIdType cellId=0; cellId<numCells; cellId++) {
-    // set values 1,2,3 
-    vtkIdType tupledata[2] = {
-      // tuple consists of "sorted cell Id", "Offset into cellArray list for {N,PtIds}"
-      std::get<1>(ListToSort->operator[](cellId)),
-      std::get<2>(ListToSort->operator[](cellId)),
-    };
-    DepthOrder->SetTupleValue(cellId, tupledata);
+  if (!this->DepthOrder) {
+    this->DepthOrder = vtkSmartPointer<vtkIdTypeArray>::New();
+    this->DepthOrder->SetName("DepthOrder");
+    this->DepthOrder->SetNumberOfComponents(2);
   }
-  this->UpdateProgress(0.90);
+  this->DepthOrder->SetNumberOfTuples(numCells);
+  vtkIdType *DepthData = this->DepthOrder->GetPointer(0);
+  for (vtkIdType cellId=0; cellId<numCells; cellId++) {
+    // tuple consists of "sorted cell Id", "Offset into cellArray list for {N,PtIds}"
+    DepthData[cellId*2+0] = std::get<1>(ListToSort->operator[](cellId));
+    DepthData[cellId*2+1] = std::get<2>(ListToSort->operator[](cellId));
+  }
 
   // Points are left alone
   output->ShallowCopy(input);
-  output->GetCellData()->AddArray(DepthOrder);
+  output->GetCellData()->AddArray(this->DepthOrder);
+
+  timer->StopTimer();
+  std::cout << "Cached " << usingCachedSortOrder << " Elapsed = " << timer->GetElapsedTime() << std::endl;
 
   return 1;
 }

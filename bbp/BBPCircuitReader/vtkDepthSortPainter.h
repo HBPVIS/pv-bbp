@@ -92,6 +92,10 @@ public:
   void SetDepthSortModeToParametricCenter()
     {this->SetDepthSortMode(VTK_SORT_PARAMETRIC_CENTER);}
 
+  vtkSetMacro(UseCachedSortOrder, int);
+  vtkGetMacro(UseCachedSortOrder, int);
+  vtkBooleanMacro(UseCachedSortOrder, int);
+
   // Description:
   // Get the output data object from this painter.
   // If Enabled, the output, the points will be ordered by
@@ -161,6 +165,8 @@ protected:
   int                   DepthSortEnableMode;
   int                   DepthSortMode;
   vtkTimeStamp          SortTime;
+  int                   UseCachedSortOrder;
+  //
   int                   CachedIsTextureSemiTranslucent;
   vtkTimeStamp          CachedIsTextureSemiTranslucentTime;
   vtkTimeStamp          CachedIsColorSemiTranslucentTime;

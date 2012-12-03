@@ -32,6 +32,7 @@
           <Property name="EnableOpacity"/>
           <Property name="DepthSortEnableMode"/>
           <Property name="DepthSortMode"/>
+          <Property name="UseCachedSortOrder"/>         
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -126,6 +127,15 @@
         </EnumerationDomain>
       </IntVectorProperty>
 
+      <IntVectorProperty
+       name="UseCachedSortOrder"
+       command="SetUseCachedSortOrder"
+       default_values="1"
+       number_of_elements="1"
+       animateable="0">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+      
       <!-- End of DepthSortRepresentation -->
     </RepresentationProxy>
 
@@ -177,6 +187,15 @@
           <Entry value="1" text="Bounds Centre"/>
           <Entry value="2" text="Parametric Centre (to be implemented)"/>
         </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+       name="UseCachedSortOrder"
+       command="SetUseCachedSortOrder"
+       default_values="1"
+       number_of_elements="1"
+       animateable="0">
+       <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
     </Proxy>

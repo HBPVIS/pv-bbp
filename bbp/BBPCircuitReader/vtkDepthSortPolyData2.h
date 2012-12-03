@@ -29,6 +29,8 @@
 #define __vtkDepthSortPolyData2_h
 
 #include "vtkDepthSortPolyData.h"
+#include "vtkSmartPointer.h"
+class vtkIdTypeArray;
 
 class VTK_EXPORT vtkDepthSortPolyData2 : public vtkDepthSortPolyData
 {
@@ -55,15 +57,30 @@ public:
   vtkGetMacro(FastPolygonMode, int);
   vtkBooleanMacro(FastPolygonMode, int);
 
+  
+  // Description:
+  // When UseCachedSortOrder is set, the sorted depth order is reused
+  // to traverse cells and the sort algorithm changes to insertion sort
+  // instead of quicksort (or std::sort default sort algorithm).
+  // The reason is that when the points are already nearly sorted, the insertion
+  // sort algorithm is ver fast and for small camera movments this is beneficial.
+  // Ideial usage is that when the camera movement is less than delta, use insertion
+  // otherwise, use quicksort.
+  vtkSetMacro(UseCachedSortOrder, int);
+  vtkGetMacro(UseCachedSortOrder, int);
+  vtkBooleanMacro(UseCachedSortOrder, int);
+
 protected:
   vtkDepthSortPolyData2();
   ~vtkDepthSortPolyData2();
-
+  //
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-
-  int           FastPolygonMode;
-  vtkTimeStamp  LastSortTime;
-  void         *SortingList;
+  //
+  int                             FastPolygonMode;
+  int                             UseCachedSortOrder;
+  vtkTimeStamp                    LastSortTime;
+  void                           *SortingList;
+  vtkSmartPointer<vtkIdTypeArray> DepthOrder;
 
 private:
   vtkDepthSortPolyData2(const vtkDepthSortPolyData2&);  // Not implemented.
