@@ -82,11 +82,12 @@ void insertionSort(T *data, vtkIdType N)
 vtkDepthSortPainter::vtkDepthSortPainter()
 {
   this->DepthSortEnableMode             = ENABLE_SORT_IF_NO_DEPTH_PEELING;
+  this->DepthSortMode                   = VTK_SORT_FIRST_POINT;
   this->CachedIsTextureSemiTranslucent  = 1;
   this->CachedIsColorSemiTranslucent    = 1;
   this->DepthSortPolyData               = vtkDepthSortPolyData2::New();
   this->OutputData                      = NULL;
-  this->DepthSortOverrideFlag               = 0;
+  this->DepthSortOverrideFlag           = 0;
 }
 //-----------------------------------------------------------------------------
 vtkDepthSortPainter::~vtkDepthSortPainter()
@@ -114,6 +115,7 @@ void vtkDepthSortPainter::PrepareForRendering(vtkRenderer* renderer,
     this->DepthSortPolyData->SetCamera(renderer->GetActiveCamera());
     this->DepthSortPolyData->SetProp3D(actor);
     this->DepthSortPolyData->SetDirectionToBackToFront();
+    this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
     }
 
   // check if we need to update

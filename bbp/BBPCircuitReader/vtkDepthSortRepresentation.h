@@ -58,6 +58,7 @@ public:
 
 
   void SetDepthSortEnableMode(int mode);
+  void SetDepthSortMode(int mode);
 
 protected:
   vtkDepthSortRepresentation();

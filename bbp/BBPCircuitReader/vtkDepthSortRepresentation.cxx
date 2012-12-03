@@ -102,6 +102,12 @@ void vtkDepthSortRepresentation::SetDepthSortEnableMode(int mode)
   this->MarkModified();
 }
 //----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetDepthSortMode(int mode)
+{
+  this->DepthSortPainter->SetDepthSortMode(mode);
+  this->MarkModified();
+}
+//----------------------------------------------------------------------------
 int vtkDepthSortRepresentation::RequestData(vtkInformation* request,
                                             vtkInformationVector** inputVector, vtkInformationVector* outputVector)
 {

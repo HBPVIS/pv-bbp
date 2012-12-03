@@ -39,6 +39,7 @@
 
 #include "vtkPainter.h"
 #include "vtkWeakPointer.h" // Needed
+#include "vtkDepthSortPolyData.h" // for #defines of sort modes
 
 class vtkFloatArray;
 class vtkIdTypeArray;
@@ -76,6 +77,20 @@ public:
   void  SetDepthSortEnableModeToAlways(){this->SetDepthSortEnableMode(ENABLE_SORT_ALWAYS);}
   void  SetDepthSortEnableModeToIfNoDepthPeeling(){this->SetDepthSortEnableMode(ENABLE_SORT_IF_NO_DEPTH_PEELING);}
   void  DepthSortEnableModeToNever(){this->SetDepthSortEnableMode(ENABLE_SORT_NEVER);}
+
+  // Description:
+  // Specify the point to use when sorting. The fastest is to just
+  // take the first cell point. Other options are to take the bounding
+  // box center or the parametric center of the cell. By default, the
+  // first cell point is used.
+  vtkSetMacro(DepthSortMode,int);
+  vtkGetMacro(DepthSortMode,int);
+  void SetDepthSortModeToFirstPoint()
+    {this->SetDepthSortMode(VTK_SORT_FIRST_POINT);}
+  void SetDepthSortModeToBoundsCenter()
+    {this->SetDepthSortMode(VTK_SORT_BOUNDS_CENTER);}
+  void SetDepthSortModeToParametricCenter()
+    {this->SetDepthSortMode(VTK_SORT_PARAMETRIC_CENTER);}
 
   // Description:
   // Get the output data object from this painter.
@@ -144,6 +159,7 @@ protected:
 
   vtkDataObject*        OutputData;
   int                   DepthSortEnableMode;
+  int                   DepthSortMode;
   vtkTimeStamp          SortTime;
   int                   CachedIsTextureSemiTranslucent;
   vtkTimeStamp          CachedIsTextureSemiTranslucentTime;

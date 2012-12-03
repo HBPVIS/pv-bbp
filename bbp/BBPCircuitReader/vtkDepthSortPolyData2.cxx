@@ -1,15 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    vtkDepthSortPolyData2.cxx
+Program:   Visualization Toolkit
+Module:    vtkDepthSortPolyData2.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 #include "vtkDepthSortPolyData2.h"
@@ -63,6 +63,28 @@ void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
   }
 }
 //-----------------------------------------------------------------------------
+template<typename T> 
+void CentreBoundsFromPtIds(vtkIdType *pts, vtkIdType npts, T *points, T result[3]) 
+{
+  T bounds[6];
+  T *pt = &points[pts[0]*3];
+  bounds[0] = bounds[1] = pt[0];
+  bounds[2] = bounds[3] = pt[1];
+  bounds[4] = bounds[5] = pt[2];
+  for (vtkIdType i=1; i<npts; i++) {
+    T *pt = &points[pts[0]*3];
+    bounds[0] = std::min(pt[0],bounds[0]);
+    bounds[1] = std::max(pt[0],bounds[1]);
+    bounds[2] = std::min(pt[1],bounds[2]);
+    bounds[3] = std::max(pt[1],bounds[3]);
+    bounds[4] = std::min(pt[2],bounds[4]);
+    bounds[5] = std::max(pt[2],bounds[5]);
+  }
+  result[0] = (bounds[0]+bounds[1])/2.0;
+  result[1] = (bounds[2]+bounds[3])/2.0;
+  result[2] = (bounds[4]+bounds[5])/2.0;
+}
+//-----------------------------------------------------------------------------
 int vtkDepthSortPolyData2::RequestData(
   vtkInformation *request,
   vtkInformationVector **inputVector,
@@ -114,15 +136,36 @@ int vtkDepthSortPolyData2::RequestData(
     vtkIdType  npts;
     // get pointer to point Ids for this cell
     polys->GetNextCell(npts, pts);
-    // set depth using float/double operation
-    if (pointsF) {
-      float *x = &pointsF[pts[0]*3];
-      std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorF);
+
+    if ( this->DepthSortMode == VTK_SORT_FIRST_POINT )
+    {
+      // set depth using float/double operation
+      if (pointsF) {
+        float *x = &pointsF[pts[0]*3];
+        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorF);
+      }
+      else {
+        double *x = &pointsD[pts[0]*3];
+        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorD);
+      }
     }
-    else {
-      double *x = &pointsD[pts[0]*3];
-      std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorD);
+    else if ( this->DepthSortMode == VTK_SORT_BOUNDS_CENTER )
+    {
+      if (pointsF) {
+        float x[3];
+        CentreBoundsFromPtIds<float>(pts, npts, pointsF, x);
+        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorF);
+      }
+      else {
+        double x[3];
+        CentreBoundsFromPtIds<double>(pts, npts, pointsD, x);
+        std::get<0>(ListToSort->operator[](cellId)) = vtkMath::Dot(x,vectorD);
+      }
     }
+    else // VTK_SORT_PARAMETRIC_CENTER )
+    {
+    }
+
     // set the cell ID to this cell
     std::get<1>(ListToSort->operator[](cellId)) = cellId;
     // set the offset to the cell {N,ptIds}
@@ -134,8 +177,8 @@ int vtkDepthSortPolyData2::RequestData(
   std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
   this->UpdateProgress(0.60);
 
-//  outCD->CopyAllocate(inCD);
-//  output->Allocate(tmpInput,numCells);
+  //  outCD->CopyAllocate(inCD);
+  //  output->Allocate(tmpInput,numCells);
   vtkSmartPointer<vtkIdTypeArray> DepthOrder = vtkSmartPointer<vtkIdTypeArray>::New();
   DepthOrder->SetName("DepthOrder");
   DepthOrder->SetNumberOfComponents(2);

@@ -31,6 +31,7 @@
           <Property name="OpacityArray"/>
           <Property name="EnableOpacity"/>
           <Property name="DepthSortEnableMode"/>
+          <Property name="DepthSortMode"/>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -112,6 +113,19 @@
         </EnumerationDomain>
       </IntVectorProperty>
 
+      <IntVectorProperty
+       name="DepthSortMode"
+       command="SetDepthSortMode"
+       default_values="1"
+       number_of_elements="1"
+       animateable="0">
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="First Point"/>
+          <Entry value="1" text="Bounds Centre"/>
+          <Entry value="2" text="Parametric Centre (to be implemented)"/>
+        </EnumerationDomain>
+      </IntVectorProperty>
+
       <!-- End of DepthSortRepresentation -->
     </RepresentationProxy>
 
@@ -149,6 +163,19 @@
           <Entry value="0" text="Always"/>
           <Entry value="1" text="If No Depth Peeling"/>
           <Entry value="2" text="Never"/>
+        </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+       name="DepthSortMode"
+       command="SetDepthSortMode"
+       default_values="1"
+       number_of_elements="1"
+       animateable="0">
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="First Point"/>
+          <Entry value="1" text="Bounds Centre"/>
+          <Entry value="2" text="Parametric Centre (to be implemented)"/>
         </EnumerationDomain>
       </IntVectorProperty>
 
