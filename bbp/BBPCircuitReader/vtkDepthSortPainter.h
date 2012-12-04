@@ -161,6 +161,8 @@ protected:
   // This is a helper method that tells if the color has some opacity (alpha values != 0 and != 255)
   virtual int IsColorSemiTranslucent(vtkUnsignedCharArray* color);
 
+  virtual void ReportReferences(vtkGarbageCollector *collector);
+
   vtkDataObject*        OutputData;
   int                   DepthSortEnableMode;
   int                   DepthSortMode;

@@ -14,8 +14,9 @@ PURPOSE.  See the above copyright notice for more information.
 =========================================================================*/
 #include "vtkDepthSortRepresentation.h"
 
-#include "vtkCompositePolyDataMapper2.h"
 #include "vtkObjectFactory.h"
+#include "vtkGarbageCollector.h"
+#include "vtkCompositePolyDataMapper2.h"
 #include "vtkDepthSortDefaultPainter.h"
 #include "vtkPVLODActor.h"
 #include "vtkTexture.h"
@@ -32,6 +33,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkDummyController.h"
 //
 #include "vtkDepthSortPainter.h"
+#include "vtkDepthSortPolygonsPainter.h"
 #include "vtkTwoScalarsToColorsPainter.h"
 #include "vtkBoundsExtentTranslator.h"
 //
@@ -41,16 +43,14 @@ vtkCxxSetObjectMacro(vtkDepthSortRepresentation, Controller, vtkMultiProcessCont
 //----------------------------------------------------------------------------
 vtkDepthSortRepresentation::vtkDepthSortRepresentation()
 {
-
-  this->DepthSortDefaultPainter   = vtkDepthSortDefaultPainter::New();
-  this->DepthSortPainter          = vtkDepthSortPainter::New();
-  this->TwoScalarsToColorsPainter = vtkTwoScalarsToColorsPainter::New();
   this->UseDataParititions        = 1;
+  this->DepthSortDefaultPainter   = vtkDepthSortDefaultPainter::New();
+  this->DepthSortPainter          = this->DepthSortDefaultPainter->GetDepthSortPainter();
+  this->TwoScalarsToColorsPainter = this->DepthSortDefaultPainter->GetTwoScalarsToColorsPainter();
+  this->DepthSortPolygonsPainter  = this->DepthSortDefaultPainter->GetDepthSortPolygonsPainter();
   //
   vtkMath::UninitializeBounds(this->GlobalDataBounds);
   //
-  this->DepthSortDefaultPainter->SetDepthSortPainter(this->DepthSortPainter);
-  this->DepthSortDefaultPainter->SetTwoScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
   vtkCompositePolyDataMapper2* compositeMapper = vtkCompositePolyDataMapper2::SafeDownCast(this->Mapper);
   this->DepthSortDefaultPainter->SetDelegatePainter(compositeMapper->GetPainter()->GetDelegatePainter());
   compositeMapper->SetPainter(this->DepthSortDefaultPainter);
@@ -65,8 +65,17 @@ vtkDepthSortRepresentation::vtkDepthSortRepresentation()
 vtkDepthSortRepresentation::~vtkDepthSortRepresentation()
 {
   this->DepthSortDefaultPainter->Delete();
-  this->DepthSortPainter->Delete();
   this->SetController(NULL);
+}
+//----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::ReportReferences(vtkGarbageCollector *collector)
+{
+  this->Superclass::ReportReferences(collector);
+
+  //vtkGarbageCollectorReport(collector, this->DepthSortDefaultPainter,   "DepthSortDefaultPainter");
+  //vtkGarbageCollectorReport(collector, this->DepthSortPainter,          "DepthSortPainter");
+  //vtkGarbageCollectorReport(collector, this->TwoScalarsToColorsPainter, "TwoScalarsToColorsPainter");
+  //vtkGarbageCollectorReport(collector, this->Controller,                "Controller");
 }
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetUseDataParititions(bool val)

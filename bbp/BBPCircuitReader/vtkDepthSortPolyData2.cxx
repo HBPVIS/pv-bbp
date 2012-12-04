@@ -52,6 +52,7 @@ vtkDepthSortPolyData2::vtkDepthSortPolyData2()
 //-----------------------------------------------------------------------------
 vtkDepthSortPolyData2::~vtkDepthSortPolyData2()
 {
+  delete this->SortingList ;
 }
 //-----------------------------------------------------------------------------
 void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
@@ -111,7 +112,6 @@ int vtkDepthSortPolyData2::RequestData(
   vtkInformationVector *outputVector)
 {
   vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
-  double UT = timer->GetUniversalTime();
   timer->StartTimer();
 
   // if the user has not requested fast mode, default to the standard sort
@@ -159,11 +159,11 @@ int vtkDepthSortPolyData2::RequestData(
   // allocate space for depth values and sorted order
   depthList *ListToSort = static_cast<depthList*>(this->SortingList);
   ListToSort->resize(numCells);
+  vtkIdType *pts;
+  vtkIdType  npts;
   // traverse polygon list and compute depth
   polys->InitTraversal();
   for (vtkIdType index=0; index<numCells; index++) {
-    vtkIdType *pts;
-    vtkIdType  npts;
     if (!usingCachedSortOrder) {
       // get N and pointer to point Ids for this cell
       polys->GetNextCell(npts, pts);
@@ -174,8 +174,9 @@ int vtkDepthSortPolyData2::RequestData(
     }
     else {
       // get N and pointer to point Ids for this cell from last cached iteration
-      npts =  cellArrayData[std::get<2>((*ListToSort)[index])];
-      pts  = &cellArrayData[std::get<2>((*ListToSort)[index])+1];
+      vtkIdType val = std::get<2>((*ListToSort)[index]);
+      npts =  cellArrayData[val];
+      pts  = &cellArrayData[val+1];
     }
 
     if (this->DepthSortMode == VTK_SORT_FIRST_POINT) {
@@ -208,19 +209,27 @@ int vtkDepthSortPolyData2::RequestData(
 //    }
   }
   this->LastSortTime.Modified();
-
+  //
+  timer->StopTimer();
+  double buildtime = timer->GetElapsedTime();
+  //
+  vtkSmartPointer<vtkTimerLog> timer2 = vtkSmartPointer<vtkTimerLog>::New();
+  timer2->StartTimer();
   // Sort the tuples, using std::sort (quicksort?) if not cached, shellsort if cached
   if (!usingCachedSortOrder) {
     std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
   }
   else {
 //    insertionSort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
-    std::stable_sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
 //    shellsort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
+    std::stable_sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
   }
+  timer2->StopTimer();
+  double sorttime = timer2->GetElapsedTime();
 
-  //  outCD->CopyAllocate(inCD);
-  //  output->Allocate(tmpInput,numCells);
+  vtkSmartPointer<vtkTimerLog> timer3 = vtkSmartPointer<vtkTimerLog>::New();
+  timer3->StartTimer();
+  //
   if (!this->DepthOrder) {
     this->DepthOrder = vtkSmartPointer<vtkIdTypeArray>::New();
     this->DepthOrder->SetName("DepthOrder");
@@ -238,8 +247,8 @@ int vtkDepthSortPolyData2::RequestData(
   output->ShallowCopy(input);
   output->GetCellData()->AddArray(this->DepthOrder);
 
-  timer->StopTimer();
-  std::cout << "Cached " << usingCachedSortOrder << " Elapsed = " << timer->GetElapsedTime() << std::endl;
+  timer3->StopTimer();
+  std::cout << setprecision(6) << "BuildTime : << " <<  buildtime << " Cached " << usingCachedSortOrder << " SortTime " << sorttime << " Finalize = " << timer2->GetElapsedTime() << std::endl;
 
   return 1;
 }

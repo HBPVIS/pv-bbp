@@ -30,6 +30,7 @@
 #include "vtkDepthSortPainter.h"
 
 #include "vtkObjectFactory.h"
+#include "vtkGarbageCollector.h"
 #include "vtkIdTypeArray.h"
 #include "vtkDataSet.h"
 #include "vtkCamera.h"
@@ -82,6 +83,14 @@ vtkDepthSortPainter::~vtkDepthSortPainter()
 {
   this->SetDepthSortPolyData(NULL);
   this->SetOutputData(NULL);
+}
+//----------------------------------------------------------------------------
+void vtkDepthSortPainter::ReportReferences(vtkGarbageCollector *collector)
+{
+  this->Superclass::ReportReferences(collector);
+
+//  vtkGarbageCollectorReport(collector, this->DepthSortPolyData, "DepthSortPolyData");
+//  vtkGarbageCollectorReport(collector, this->OutputData,        "OutputData");
 }
 //-----------------------------------------------------------------------------
 void vtkDepthSortPainter::PrintSelf(ostream &os, vtkIndent indent)

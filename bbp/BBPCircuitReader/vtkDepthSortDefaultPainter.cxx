@@ -52,7 +52,6 @@ vtkDepthSortDefaultPainter::vtkDepthSortDefaultPainter()
   this->DepthSortPainter          = vtkDepthSortPainter::New();
   this->TwoScalarsToColorsPainter = vtkTwoScalarsToColorsPainter::New();
   this->DepthSortPolygonsPainter  = vtkDepthSortPolygonsPainter::New();
-  this->SetScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
 }
 //----------------------------------------------------------------------------
 vtkDepthSortDefaultPainter::~vtkDepthSortDefaultPainter()
@@ -62,9 +61,18 @@ vtkDepthSortDefaultPainter::~vtkDepthSortDefaultPainter()
   this->SetDepthSortPolygonsPainter(NULL);
 }
 //----------------------------------------------------------------------------
+void vtkDepthSortDefaultPainter::ReportReferences(vtkGarbageCollector *collector)
+{
+  this->Superclass::ReportReferences(collector);
+
+//  vtkGarbageCollectorReport(collector, this->DepthSortPainter,          "DepthSortPainter");
+//  vtkGarbageCollectorReport(collector, this->TwoScalarsToColorsPainter, "TwoScalarsToColorsPainter");
+//  vtkGarbageCollectorReport(collector, this->DepthSortPolygonsPainter,  "DepthSortPolygonsPainter");
+}
+//----------------------------------------------------------------------------
 void vtkDepthSortDefaultPainter::BuildPainterChain()
 {
-  // make sure teh scalars to colour is using our painter
+  // make sure the scalars to colour is using our painter
   this->SetScalarsToColorsPainter(this->TwoScalarsToColorsPainter);
   
   // build the superclass painter chain
@@ -79,14 +87,6 @@ void vtkDepthSortDefaultPainter::BuildPainterChain()
   if (chooserPainter) {
     chooserPainter->SetPolyPainter(this->DepthSortPolygonsPainter);
   }
-}
-//----------------------------------------------------------------------------
-void vtkDepthSortDefaultPainter::ReportReferences(vtkGarbageCollector *collector)
-{
-  this->Superclass::ReportReferences(collector);
-
-  vtkGarbageCollectorReport(collector, this->DepthSortPainter,
-      "DepthSortPainter");
 }
 //----------------------------------------------------------------------------
 void vtkDepthSortDefaultPainter::PrintSelf(ostream& os, vtkIndent indent)

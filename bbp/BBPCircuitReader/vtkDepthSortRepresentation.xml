@@ -59,22 +59,22 @@
       </InputProperty>
 
       <!-- The painter chain is setup by our default painter -->
-      <SubProxy>
+      <!--<SubProxy>
         <Proxy name="DepthSortDefaultPainter"
           proxygroup="painters" proxyname="DepthSortDefaultPainter" />
-       </SubProxy>
+       </SubProxy>-->
 
-      <!-- Painter which depth sorts polygons -->
+      <!-- Painter which depth sorts polygons --><!--
       <SubProxy>
         <Proxy name="DepthSortPainter"
           proxygroup="painters" proxyname="DepthSortPainter" />
       </SubProxy>
 
-      <!-- Painter which applies opacity values to the lookup table -->
+      --><!-- Painter which applies opacity values to the lookup table --><!--
       <SubProxy>
         <Proxy name="ScalarsToColorsPainter"
           proxygroup="painters" proxyname="TwoScalarsToColorsPainter" />
-      </SubProxy>
+      </SubProxy>-->
 
       <StringVectorProperty command="SetOpacityArrayName"
                             default_values=""
@@ -148,13 +148,13 @@
 
     <Proxy name="DepthSortDefaultPainter" class="vtkDepthSortDefaultPainter">
 
-      <ProxyProperty name="DepthSortPainter"
+      <!--<ProxyProperty name="DepthSortPainter"
         command="SetDepthSortPainter">
       </ProxyProperty>
 
       <ProxyProperty name="ScalarsToColorsPainter"
         command="SetScalarsToColorsPainter">
-      </ProxyProperty>
+      </ProxyProperty>-->
 
       
     </Proxy>

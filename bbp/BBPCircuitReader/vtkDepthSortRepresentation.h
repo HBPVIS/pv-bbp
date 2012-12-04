@@ -25,6 +25,7 @@
 
 class vtkDepthSortDefaultPainter;
 class vtkDepthSortPainter;
+class vtkDepthSortPolygonsPainter;
 class vtkTwoScalarsToColorsPainter;
 class vtkMultiProcessController;
 class vtkBoundsExtentTranslator;
@@ -65,6 +66,8 @@ protected:
   vtkDepthSortRepresentation();
   ~vtkDepthSortRepresentation();
 
+  virtual void ReportReferences(vtkGarbageCollector *collector);
+
   // Description:
   virtual int RequestData(vtkInformation*,
     vtkInformationVector**, vtkInformationVector*);
@@ -74,10 +77,11 @@ protected:
     vtkInformation* inInfo, vtkInformation* outInfo);
 
 
-  vtkDepthSortDefaultPainter   *DepthSortDefaultPainter;
-  vtkDepthSortPainter          *DepthSortPainter;
-  vtkTwoScalarsToColorsPainter *TwoScalarsToColorsPainter;
-  vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
+  vtkDepthSortDefaultPainter                   *DepthSortDefaultPainter;
+  vtkSmartPointer<vtkDepthSortPainter>          DepthSortPainter;
+  vtkSmartPointer<vtkDepthSortPolygonsPainter>  DepthSortPolygonsPainter;
+  vtkSmartPointer<vtkTwoScalarsToColorsPainter> TwoScalarsToColorsPainter;
+  vtkSmartPointer<vtkBoundsExtentTranslator>    BoundsTranslator;
 
   int UseDataParititions;
   //
