@@ -60,6 +60,8 @@
 //
 // BBP-SDK Morphology Reader
 #include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
+#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
+#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
 #include "BBP/Microcircuit/Readers/compartmentReportReader.h"
 #include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
 #include "BBP/Microcircuit/Soma.h"
@@ -74,6 +76,8 @@
 // Voxelization
 //#include "BBP/Voxelization/voxelization.h"
 //#include "BBP/VtkDebugging/visualization.h"
+
+#define MANUAL_MESH_LOAD
 
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL           "Normal"
@@ -252,18 +256,18 @@ int vtkCircuitReader::RequestInformation(
     }
 
     // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
-    this->Microcircuit->load(this->Target, bbp::NEURONS);
+    this->Microcircuit->load(this->Target, 0); // bbp::NEURONS);
 
 // std::cout <<"Made it past load " << std::endl;
 
     // time steps of reports are in the report file
     if (this->UpdateNumPieces==1) {
-      if (this->OpenReportFile()) {
-        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
-      }
-      else {
+//      if (this->OpenReportFile()) {
+//        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+//      }
+//      else {
         this->NumberOfTimeSteps = 0;
-      }
+//      }
     }
     else {
       this->NumberOfTimeSteps = 0;
@@ -410,8 +414,12 @@ int vtkCircuitReader::RequestData(
 
   vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();        
   load_timer->StartTimer();
-
+ 
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+  if (neurons.size()==0) {
+    // Load neurons for this target so we can partition them
+    this->Microcircuit->load(this->Target, bbp::NEURONS);
+  }
   int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
   if (this->MaximumNumberOfNeurons>0) {
     WholeExtent[1] = std::min(neurons.size(), (size_t)(this->MaximumNumberOfNeurons));
@@ -423,6 +431,8 @@ int vtkCircuitReader::RequestData(
   extTran->SetWholeExtent(WholeExtent);
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
+  //
+  //
   // Create iterators for the begin and end of our partition
   bbp::Neurons::iterator NeuronStart = neurons.begin();
   bbp::Neurons::iterator NeuronEnd   = neurons.begin();
@@ -434,7 +444,11 @@ int vtkCircuitReader::RequestData(
     this->Partitioned_target.insert(neuron->gid());
   }
   // Load morphology and meshes for this subtarget
+#ifdef MANUAL_MESH_LOAD
+  this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES); // | bbp::MESHES);
+#else
   this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
+#endif
   //
   bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime);
   if (NeedToRegenerateMesh) {
@@ -504,7 +518,7 @@ int vtkCircuitReader::RequestData(
   return 1;
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
+void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {  
   bool do_nrm = this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
   bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
@@ -519,13 +533,12 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount,
   vtkSmartPointer<vtkFloatArray> nvectors = do_nrm ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NORMAL)) : NULL;
   vtkSmartPointer<vtkFloatArray> rtneuron = do_rtn ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_RTNEURON_OPACITY)) : NULL;
   //
-  const bbp::Mesh             *sdk_mesh = &neuron->morphology().mesh();
-  bbp::Vertex_Index         vertexCount = sdk_mesh->vertex_count();
-  bbp::Triangle_Index         faceCount = sdk_mesh->triangle_count();
-  const Array<Vector_3D<bbp::Micron> >       &vertices = sdk_mesh->vertices();
-  const Section_ID                        *section_ids = sdk_mesh->vertex_sections().pointer();
-  const float                               *positions = sdk_mesh->vertex_relative_distances().pointer();
-  const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
+  bbp::Vertex_Index         vertexCount = mesh->vertex_count();
+  bbp::Triangle_Index         faceCount = mesh->triangle_count();
+  const Array<Vector_3D<bbp::Micron> >       &vertices = mesh->vertices();
+  const Section_ID                        *section_ids = mesh->vertex_sections().pointer();
+  const float                               *positions = mesh->vertex_relative_distances().pointer();
+  const Array<Vector_3D<bbp::Micron> > &vertex_normals = mesh->normals();
   const bbp::Morphology &morph = neuron->morphology();
     //
   vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
@@ -604,7 +617,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, vtkIdType Ncount,
   //
   // Generate triangles in cell array for each face
   // 
-  const bbp::Vertex_Index* faces2 = sdk_mesh->triangles().pointer();
+  const bbp::Vertex_Index* faces2 = mesh->triangles().pointer();
   for (bbp::Triangle_Index t=0; t<faceCount; ++t)
   {
     cells[offsetC*4 + 0] = 3;
@@ -708,11 +721,43 @@ void vtkCircuitReader::GenerateNeuronMesh(
   // loop over neurons : count up the total vertices and cells so we can allocate memory all in one go
   //
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+
+#ifdef MANUAL_MESH_LOAD
+  //
+  bbp::URI location_m = this->Microcircuit->reader().data_source("mesh");
+  bbp::URI location_c = this->Microcircuit->reader().data_source("circuit");
+  Mesh_Reader_Ptr mesh_reader = Mesh_Reader::create_reader(location_m);
+  Microcircuit_Composition_Reader_Ptr circuit_reader = Microcircuit_Composition_Reader::create_reader(location_c);
+  typedef boost::shared_ptr<bbp::Meshes> Meshes_Ptr;
+
+  bbp::Meshes meshes;
+  // Loading meshes
+  mesh_reader->load(
+      meshes, this->Partitioned_target,
+      circuit_reader->source(),
+      true, // vertices
+      true, // triangles
+      true, // mapping
+      false); // strips
+  
+  // free unwanted memory
+  mesh_reader.reset();
+  circuit_reader.reset();
+#endif
+
   for (bbp::Target::cell_iterator gid=this->Partitioned_target.cell_begin(); gid!=this->Partitioned_target.cell_end(); ++gid) {
     Neurons::iterator neuron = neurons.find( *gid );
-    const bbp::Mesh *sdk_mesh = &neuron->morphology().mesh();
-    maxPoints += sdk_mesh->vertex_count();
-    maxCells += sdk_mesh->triangle_count();
+#ifdef MANUAL_MESH_LOAD
+    const bbp::Morphology *morphology = &(*neuron).morphology();
+    Meshes::iterator mesh = meshes.find(morphology->label());
+    if (mesh != meshes.end()) {
+#else
+    const bbp::Mesh *mesh = &neuron->morphology().mesh(); 
+    {
+#endif
+      maxPoints += mesh->vertex_count();
+      maxCells += mesh->triangle_count();
+    }
   }
   //
   // reserve space for coordinates
@@ -781,8 +826,21 @@ void vtkCircuitReader::GenerateNeuronMesh(
   for (bbp::Target::cell_iterator gid=this->Partitioned_target.cell_begin(); gid!=this->Partitioned_target.cell_end(); ++gid, ++Ncount) {
     Neurons::iterator neuron = neurons.find( *gid );
     //
-    this->AddOneNeuronToMesh(&*neuron, Ncount, points, cells, pointdata, offsetN, offsetC);
+#ifdef MANUAL_MESH_LOAD
+    const bbp::Morphology *morphology = &(*neuron).morphology();
+    Meshes::iterator mesh = meshes.find(morphology->label());
+    if (mesh != meshes.end()) {
+#else
+    const bbp::Mesh *mesh = &neuron->morphology().mesh(); 
+    {
+#endif
+      this->AddOneNeuronToMesh(&*neuron, &*mesh, Ncount, points, cells, pointdata, offsetN, offsetC);
+    }
   }
+
+#ifdef MANUAL_MESH_LOAD
+  meshes.clear();
+#endif
   // get the outputs
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
 //  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
