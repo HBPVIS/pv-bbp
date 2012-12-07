@@ -176,7 +176,7 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
 static inline void vtkMultiplyColorsWithOpacity(vtkDataArray* array, vtkDataArray *opacity, bool multiply_with_alpha)
 {
   vtkUnsignedCharArray* colors = vtkUnsignedCharArray::SafeDownCast(array);
-  if (!colors || colors->GetNumberOfComponents() != 4)
+  if (!opacity || !colors || colors->GetNumberOfComponents() != 4)
     {
     return;
     }
@@ -300,7 +300,7 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   // The LastUsedAlpha checks ensures that opacity changes are reflected
   // correctly when this->MapScalars(..) is called when iterating over a
   // composite dataset.
-  if (colors &&
+  if (colors && opacity && 
     this->LastUsedAlpha == alpha &&
     this->LastUsedMultiplyWithAlpha == multiply_with_alpha)
     {
