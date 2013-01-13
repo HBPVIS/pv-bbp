@@ -42,12 +42,12 @@
 //
 #include "vtkTransform.h"
 #include "vtkPolyDataNormals.h"
-#include "vtkDistributedDataFilter.h"
 //
 #include "vtkDummyController.h"
 //
 #include "vtkPKdTree.h"
 #include "vtkBoundsExtentTranslator.h"
+#include "vtkMeshPartitionFilter.h"
 //
 #include <vtksys/SystemTools.hxx>
 //
@@ -77,7 +77,7 @@
 //#include "BBP/Voxelization/voxelization.h"
 //#include "BBP/VtkDebugging/visualization.h"
 
-#define MANUAL_MESH_LOAD
+//#define MANUAL_MESH_LOAD
 
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL           "Normal"
@@ -132,7 +132,7 @@ vtkCircuitReader::vtkCircuitReader()
   //
   this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
-  this->DistributedDataFilter         = NULL;
+  this->MeshPartitionFilter         = NULL;
   this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
 }
 //----------------------------------------------------------------------------
@@ -141,7 +141,7 @@ vtkCircuitReader::~vtkCircuitReader()
   this->SIL                           = NULL;
   this->CachedNeuronMesh              = NULL;
   this->CachedMorphologySkeleton      = NULL;
-  this->DistributedDataFilter         = NULL;
+  this->MeshPartitionFilter         = NULL;
   //
   this->PointDataArraySelection->Delete();
   this->TargetsSelection->Delete();
@@ -249,25 +249,28 @@ int vtkCircuitReader::RequestInformation(
     }
 
     try {
-      this->Target = this->Experiment.user_targets().get_target(this->TargetName);
+      this->PrimaryTarget = this->Experiment.user_targets().get_target(this->TargetName);
     }
     catch (...) {
-      this->Target = this->Experiment.targets().get_target(this->TargetName);
+      this->PrimaryTarget = this->Experiment.targets().get_target(this->TargetName);
     }
 
     // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
-    this->Microcircuit->load(this->Target, 0); // bbp::NEURONS);
+    this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
+    bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
+
+    std::cout << cellTarget << std::endl;
 
 // std::cout <<"Made it past load " << std::endl;
 
     // time steps of reports are in the report file
     if (this->UpdateNumPieces==1) {
-//      if (this->OpenReportFile()) {
-//        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
-//      }
-//      else {
+      if (this->OpenReportFile()) {
+        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+      }
+      else {
         this->NumberOfTimeSteps = 0;
-//      }
+      }
     }
     else {
       this->NumberOfTimeSteps = 0;
@@ -324,36 +327,18 @@ int vtkCircuitReader::OpenReportFile()
   bbp::Reports_Specification &reports = this->Experiment.reports();
   for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
     reportname = (*ri).label();
+    break;
   }                                          
   if (reports.size()==0) {
     return 0;
   }
   bbp::Reports_Specification::iterator ri=reports.find(reportname);
   this->ReportReader = bbp::CompartmentReportReader::createReader(*ri);
-  this->ReportReader->updateMapping(Target);
+  this->ReportReader->getCellTarget();
   //
   this->startTime = (*ri).start_time();
   this->stopTime  = (*ri).end_time();
   this->timestep  = (*ri).timestep();
-
-  // the mapping array(s) provided by the report reader
-  this->ReportMapping = this->ReportReader->getMapping();  
-
-  // we need a cell Target object (another neuron list), so get one from the neuron list (waste of memory?)
-  bbp::Cell_Target ctarget = this->Target.cell_target();
-  if (ctarget.size() != 0) {
-    Cell_Index index = 0;
-    for (Cell_Target::const_iterator i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
-      this->OffsetMapping[*i] = index;
-    }
-  } else {
-    bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-    Cell_Index j = 0;
-    for (bbp::Neurons::const_iterator i = neurons.begin(); i != neurons.end(); ++i,++j) {
-      std::cerr << "We must provide some kind of mapping for neuron list " << std::endl;
-      //            (*i)->setSimulationBufferIndex(j);
-    }
-  }
 
   return 1;
 }
@@ -415,10 +400,13 @@ int vtkCircuitReader::RequestData(
   vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();        
   load_timer->StartTimer();
  
+  bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime);
+  if (NeedToRegenerateMesh) {
+    //
   bbp::Neurons &neurons = this->Microcircuit->neurons(); 
   if (neurons.size()==0) {
     // Load neurons for this target so we can partition them
-    this->Microcircuit->load(this->Target, bbp::NEURONS);
+      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
   }
   int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
   if (this->MaximumNumberOfNeurons>0) {
@@ -436,13 +424,31 @@ int vtkCircuitReader::RequestData(
   // Create iterators for the begin and end of our partition
   bbp::Neurons::iterator NeuronStart = neurons.begin();
   bbp::Neurons::iterator NeuronEnd   = neurons.begin();
-  std::advance(NeuronStart,PartitionExtents[0]);
-  std::advance(NeuronEnd,PartitionExtents[1]);
+  if (PartitionExtents[1]>0) {
+    std::advance(NeuronStart,PartitionExtents[0]);
+    std::advance(NeuronEnd,PartitionExtents[1]);
+  }
+  //
+/*
+    bbp::Target::cell_iterator b = this->Target.cell_begin();
+    bbp::Target::cell_iterator e = this->Target.cell_end();
+    std::advance(b,PartitionExtents[0]);
+    std::advance(e,PartitionExtents[1]);
+    for (bbp::Target::cell_iterator cell=b; cell!=e; ++cell) {
+      this->Partitioned_target.insert(*cell);
+    }
+*/
+
   // create a new target based on our subrange of neurons, clear any contests first.
   this->Partitioned_target = bbp::Target();
   for (bbp::Neurons::iterator neuron=NeuronStart; neuron!=NeuronEnd; ++neuron) {
     this->Partitioned_target.insert(neuron->gid());
+    Neurons::iterator ni = neurons.find( neuron->gid() );
+    Cell_Index cell_index = ni->index();
+    if (cell_index==UNDEFINED_CELL_INDEX) {
+    }
   }
+
   // Load morphology and meshes for this subtarget
 #ifdef MANUAL_MESH_LOAD
   this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES); // | bbp::MESHES);
@@ -450,8 +456,6 @@ int vtkCircuitReader::RequestData(
   this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
 #endif
   //
-  bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime);
-  if (NeedToRegenerateMesh) {
     if (this->ExportNeuronMesh) {
       this->GenerateNeuronMesh(request, inputVector, outputVector);
     }
@@ -469,17 +473,16 @@ int vtkCircuitReader::RequestData(
       vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
       redist_timer->StartTimer();
       //
-      this->DistributedDataFilter = vtkSmartPointer<vtkDistributedDataFilter>::New();
-      this->DistributedDataFilter->SetInputData(this->CachedNeuronMesh);
-      this->DistributedDataFilter->SetBoundaryModeToAssignToOneRegion();
-      this->DistributedDataFilter->SetClipCells(0);
-      this->DistributedDataFilter->SetUseMinimalMemory(1);
-      this->DistributedDataFilter->Update();
+      this->MeshPartitionFilter = vtkSmartPointer<vtkMeshPartitionFilter>::New();
+      this->MeshPartitionFilter->SetInputData(this->CachedNeuronMesh);
+      vtkStreamingDemandDrivenPipeline::SafeDownCast(this->MeshPartitionFilter->GetExecutive())
+        ->SetUpdateExtent(0, this->UpdatePiece, this->UpdateNumPieces, 0);
+      this->MeshPartitionFilter->Update();
 
       // setup bounds for future use
-      this->BoundsTranslator->SetKdTree(this->DistributedDataFilter->GetKdtree());
+      this->BoundsTranslator->SetKdTree(this->MeshPartitionFilter->GetKdtree());
 
-      vtkDataSet *dataset = vtkDataSet::SafeDownCast(this->DistributedDataFilter->GetOutput());
+      vtkDataSet *dataset = vtkDataSet::SafeDownCast(this->MeshPartitionFilter->GetOutput());
       double bounds[6];
       dataset->GetBounds(bounds);
       this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, bounds);
@@ -487,9 +490,10 @@ int vtkCircuitReader::RequestData(
       int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
       this->BoundsTranslator->SetWholeExtent(whole_extent);
 
-      this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->DistributedDataFilter->GetOutput()), this->CachedNeuronMesh);
-      this->DistributedDataFilter->SetInputData(NULL);
-      this->DistributedDataFilter = NULL;
+//      this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->MeshPartitionFilter->GetOutput()), this->CachedNeuronMesh);
+      this->CachedNeuronMesh = vtkPolyData::SafeDownCast(this->MeshPartitionFilter->GetOutput());
+      this->MeshPartitionFilter->SetInputData((vtkPolyData*)NULL);
+      this->MeshPartitionFilter = NULL;
       //
       redist_timer->StopTimer();
       if (this->UpdatePiece==0) {
@@ -980,6 +984,28 @@ void vtkCircuitReader::CreateReportScalars(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
+  std::cout << this->ReportReader->getCellTarget() << std::endl;
+
+  this->ReportReader->updateMapping(this->Partitioned_target);
+  // the mapping array(s) provided by the report reader
+  this->ReportMapping = this->ReportReader->getMapping();  
+
+  // we need a cell Target object (another neuron list), so get one from the neuron list (waste of memory?)
+  bbp::Cell_Target ctarget = this->Partitioned_target.cell_target();
+  if (ctarget.size() != 0) {
+    Cell_Index index = 0;
+    for (Cell_Target::const_iterator i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
+      this->OffsetMapping[*i] = index;
+    }
+  } else {
+    bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+    Cell_Index j = 0;
+    for (bbp::Neurons::const_iterator i = neurons.begin(); i != neurons.end(); ++i,++j) {
+      std::cerr << "We must provide some kind of mapping for neuron list " << std::endl;
+      //            (*i)->setSimulationBufferIndex(j);
+    }
+  }
+
   this->ReportReader->loadFrame(this->CurrentTime, this->_currentFrame);
   // bind the current frame to the microcircuit
   this->Microcircuit->update( this->_currentFrame );

@@ -21,7 +21,7 @@ class vtkDataArraySelection;
 class vtkMultiProcessController;
 class vtkFloatArray;
 class vtkMutableDirectedGraph;
-class vtkDistributedDataFilter;
+class vtkMeshPartitionFilter;
 class vtkUnstructuredGrid;
 class vtkBoundsExtentTranslator;
 // BBP-SDK
@@ -195,7 +195,7 @@ protected:
 
   bbp::Experiment                           Experiment;
   std::string                               TargetName;
-  bbp::Target                               Target;
+  bbp::Target                               PrimaryTarget;
   bbp::Target                               Partitioned_target;
   int                                       PartitionExtents[6];
   bbp::Millisecond                          startTime;
@@ -217,7 +217,7 @@ protected:
 
   vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
   vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
-  vtkSmartPointer<vtkDistributedDataFilter>  DistributedDataFilter;
+  vtkSmartPointer<vtkMeshPartitionFilter>    MeshPartitionFilter;
   vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
 
 private:
