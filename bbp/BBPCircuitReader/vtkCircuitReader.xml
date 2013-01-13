@@ -35,7 +35,7 @@
          name="DefaultTarget"
          command="SetDefaultTarget"
          label="Default Target"
-         default_values="1KAllCompartments"
+         default_values="1K"
          number_of_elements="1">
       </StringVectorProperty>
 
