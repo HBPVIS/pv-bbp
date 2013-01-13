@@ -3,7 +3,8 @@
     <Proxy group="sources" name="CircuitReader" />
     <Proxy group="filters" name="TemporalDifferenceFilter" />
     <Proxy group="filters" name="PartitionOutline" />
-    <Proxy group="filters" name="ParticlePartitionFilter" />    
+    <Proxy group="filters" name="ParticlePartitionFilter" />
+    <Proxy group="filters" name="ParticleTrails" />   
   </Category>
 </ParaViewFilters>
 

@@ -22,9 +22,9 @@
  </ProxyGroup>
   
  <ProxyGroup name="filters">
-     <SourceProxy name="ParticlePathLines"
+     <SourceProxy name="ParticleTrails"
              class="vtkTemporalPathLineFilter"
-             label="Particle Pathlines">
+             label="Particle Trails">
      <Documentation
         long_help="Creates polylines representing pathlines of animating particles"
         short_help="Particle Pathlines">
@@ -83,6 +83,7 @@
          command="SetMaskPoints"
          number_of_elements="1"
          default_values="100" >
+       <IntRangeDomain name="range"/>
        <Documentation>
          Set the number of particles to track as a ratio of the input.
          Example: setting MaskPoints to 10 will track every 10th point.
@@ -94,6 +95,7 @@
          command="SetMaxTrackLength"
          number_of_elements="1"
          default_values="25" >
+       <IntRangeDomain name="range"/>
        <Documentation>
          If the Particles being traced animate for a long time, the trails
          or traces will become long and stringy. Setting the
