@@ -49,14 +49,14 @@ include_directories(${HDF5_INCLUDE_DIR}
 # If (paraview) using system H5FDdsm
 #--------------------------------------------------
 IF (NOT TARGET "H5FDdsm")
-  FIND_PACKAGE(H5FDdsm REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/H5FDdsm")
-  INCLUDE_DIRECTORIES(${H5FDdsm_INCLUDE_DIR} ${H5FD_DSM_INCLUDE_DIR})
+#  FIND_PACKAGE(H5FDdsm REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/H5FDdsm")
+#  INCLUDE_DIRECTORIES(${H5FDdsm_INCLUDE_DIR} ${H5FD_DSM_INCLUDE_DIR})
 ENDIF (NOT TARGET "H5FDdsm")
 
 # CMake 2.6+ specific
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPCircuitReader)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/proj/cmake)

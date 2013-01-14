@@ -104,7 +104,7 @@ if(BBP_SDK_ROOT STREQUAL "")
 
   # search again in latest version
   if(NOT BBP_SDK_ROOT)
-    find_path(BBP_SDK_ROOT include/BBP/bbp.h
+    find_path(BBP_SDK_ROOT include/BBP/common.h
       NO_DEFAULT_PATH PATHS ${BBP_SDK_SEARCH_PATHS})
   endif()
 endif()
@@ -112,7 +112,7 @@ endif()
 if(NOT BBP_SDK_ROOT)
     set(BBP_SDK_FAIL TRUE)
     message( ${BBP_SDK_VERSION_OUTPUT_TYPE}
-        "ERROR: Can't find BBP-SDK header file bbp.h. Please provide a valid BBP_SDK_ROOT.")
+        "ERROR: Can't find BBP-SDK header file common.h. Please provide a valid BBP_SDK_ROOT.")
 endif()
 
 # find BBP-SDK include directory
@@ -208,13 +208,20 @@ endforeach()
 
 # For each component, find the library
 set(index 0)
+if(NOT WIN32)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".so" )
+ENDIF(NOT WIN32)
 foreach(COMPONENT ${BBP-SDK_FIND_LIBS})
   list(GET BBP-SDK_FIND_LIBS_NAMES ${index} COMPONENT_NAME)
   string(TOUPPER ${COMPONENT_NAME} UPPERCOMPONENT)
   unset(BBP_SDK_${UPPERCOMPONENT}_LIBRARY CACHE)
+  message("Looking for  ${COMPONENT} lib${COMPONENT}${CMAKE_SHARED_LIBRARY_SUFFIX} in ${BBP_SDK_ROOT}/lib"   )
   find_library(BBP_SDK_${UPPERCOMPONENT}_LIBRARY
-    NAMES ${COMPONENT} lib${COMPONENT}
-    NO_DEFAULT_PATH PATHS ${BBP_SDK_ROOT}/lib ${BBP_SDK_ROOT}/lib/Release)
+    NAMES ${COMPONENT} lib${COMPONENT} lib${COMPONENT}${CMAKE_SHARED_LIBRARY_SUFFIX} lib${COMPONENT}.${CMAKE_SHARED_LIBRARY_SUFFIX}
+    PATHS ${BBP_SDK_ROOT}/lib ${BBP_SDK_ROOT}/lib/ ${BBP_SDK_ROOT}/lib/Release
+    NO_DEFAULT_PATH 
+    )
+  message("result is ${BBP_SDK_${UPPERCOMPONENT}_LIBRARY}")
   # Keep track of the found components
   list(APPEND BBP_SDK_LIBRARIES "${BBP_SDK_${UPPERCOMPONENT}_LIBRARY}")
   list(APPEND BBP_SDK_COMPONENTS_FOUND "BBP_SDK_${UPPERCOMPONENT}_FOUND")

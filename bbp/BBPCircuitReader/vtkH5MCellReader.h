@@ -30,7 +30,7 @@
 #include "vtkSmartPointer.h"
 #include <string>
 #include <vector>
-#include "HDF5.h"
+#include "hdf5.h"
 
 class vtkDataArraySelection;
 class vtkMultiProcessController;

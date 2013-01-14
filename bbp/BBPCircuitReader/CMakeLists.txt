@@ -56,9 +56,13 @@ if (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
   include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-zoltan
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-zoltan/trilinos/packages/zoltan/src/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-zoltan/trilinos/cmake/tribits/common_tools/win_interface/include
     ${CMAKE_CURRENT_BINARY_DIR}/../../../pv-zoltan/trilinos/packages/zoltan/src
   )
+  if(WIN32)
+    include_directories(
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-zoltan/trilinos/cmake/tribits/common_tools/win_interface/include
+   )
+  endif(WIN32)
   ADD_DEFINITIONS(-DZOLTAN_SUPPORT)
   set(ZOLTAN_LIBS pv_zoltan)
   message("Zoltan support enabled")
