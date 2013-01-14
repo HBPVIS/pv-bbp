@@ -123,6 +123,12 @@ void vtkDepthSortRepresentation::SetUseCachedSortOrder(int mode)
   this->MarkModified();
 }
 //----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetDirection(int dir)
+{
+  this->DepthSortPainter->SetDirection(dir);
+  this->MarkModified();
+}
+//----------------------------------------------------------------------------
 int vtkDepthSortRepresentation::RequestData(vtkInformation* request,
                                             vtkInformationVector** inputVector, vtkInformationVector* outputVector)
 {

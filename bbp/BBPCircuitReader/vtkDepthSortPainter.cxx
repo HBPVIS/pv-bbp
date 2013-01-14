@@ -72,6 +72,7 @@ vtkDepthSortPainter::vtkDepthSortPainter()
   this->DepthSortEnableMode             = ENABLE_SORT_IF_NO_DEPTH_PEELING;
   this->DepthSortMode                   = VTK_SORT_FIRST_POINT;
   this->UseCachedSortOrder              = true;
+  this->Direction                       = VTK_DIRECTION_BACK_TO_FRONT;
   this->CachedIsTextureSemiTranslucent  = 1;
   this->CachedIsColorSemiTranslucent    = 1;
   this->DepthSortPolyData               = vtkDepthSortPolyData2::New();
@@ -171,6 +172,7 @@ void vtkDepthSortPainter::Sort(vtkDataSet* output,
   this->DepthSortPolyData->SetDirectionToBackToFront();
   this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
   this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
+  this->DepthSortPolyData->SetDirection(this->Direction);
   this->DepthSortPolyData->Update();
   output->ShallowCopy(this->DepthSortPolyData->GetOutput());
 }

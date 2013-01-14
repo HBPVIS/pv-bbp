@@ -96,6 +96,10 @@ public:
   vtkGetMacro(UseCachedSortOrder, int);
   vtkBooleanMacro(UseCachedSortOrder, int);
 
+  vtkSetMacro(Direction, int);
+  vtkGetMacro(Direction, int);
+  vtkBooleanMacro(Direction, int);
+
   // Description:
   // Get the output data object from this painter.
   // If Enabled, the output, the points will be ordered by
@@ -168,6 +172,7 @@ protected:
   int                   DepthSortMode;
   vtkTimeStamp          SortTime;
   int                   UseCachedSortOrder;
+  int                   Direction;
   //
   int                   CachedIsTextureSemiTranslucent;
   vtkTimeStamp          CachedIsTextureSemiTranslucentTime;

@@ -217,12 +217,22 @@ int vtkDepthSortPolyData2::RequestData(
   timer2->StartTimer();
   // Sort the tuples, using std::sort (quicksort?) if not cached, shellsort if cached
   if (!usingCachedSortOrder) {
-    std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+    if (this->Direction==VTK_DIRECTION_BACK_TO_FRONT) {
+      std::sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+    }
+    else {
+      std::sort(ListToSort->begin(), ListToSort->end(), std::less<depthInfo>());
+    }
   }
   else {
-//    insertionSort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
-//    shellsort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
-    std::stable_sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+    //    insertionSort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
+    //    shellsort<depthInfo>(&ListToSort->operator[](0), ListToSort->size());
+    if (this->Direction==VTK_DIRECTION_BACK_TO_FRONT) {
+      std::stable_sort(ListToSort->begin(), ListToSort->end(), std::greater<depthInfo>());
+    }
+    else {
+      std::stable_sort(ListToSort->begin(), ListToSort->end(), std::less<depthInfo>());
+    }
   }
   timer2->StopTimer();
   double sorttime = timer2->GetElapsedTime();

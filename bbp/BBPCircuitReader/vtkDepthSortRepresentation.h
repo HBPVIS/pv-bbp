@@ -61,6 +61,7 @@ public:
   void SetDepthSortEnableMode(int mode);
   void SetDepthSortMode(int mode);
   void SetUseCachedSortOrder(int mode);
+  void SetDirection(int dir);
 
 protected:
   vtkDepthSortRepresentation();

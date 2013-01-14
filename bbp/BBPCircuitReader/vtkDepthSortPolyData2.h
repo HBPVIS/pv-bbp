@@ -56,7 +56,6 @@ public:
   vtkSetMacro(FastPolygonMode, int);
   vtkGetMacro(FastPolygonMode, int);
   vtkBooleanMacro(FastPolygonMode, int);
-
   
   // Description:
   // When UseCachedSortOrder is set, the sorted depth order is reused
