@@ -132,7 +132,7 @@ vtkCircuitReader::vtkCircuitReader()
   //
   this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
-  this->MeshPartitionFilter         = NULL;
+  this->MeshPartitionFilter           = NULL;
   this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
 }
 //----------------------------------------------------------------------------
@@ -141,7 +141,7 @@ vtkCircuitReader::~vtkCircuitReader()
   this->SIL                           = NULL;
   this->CachedNeuronMesh              = NULL;
   this->CachedMorphologySkeleton      = NULL;
-  this->MeshPartitionFilter         = NULL;
+  this->MeshPartitionFilter           = NULL;
   //
   this->PointDataArraySelection->Delete();
   this->TargetsSelection->Delete();
@@ -505,7 +505,12 @@ int vtkCircuitReader::RequestData(
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
     bool do_rep = (this->NumberOfTimeSteps>0) && this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
     if (do_rep && this->UpdateNumPieces==1) {
-     this->CreateReportScalars(request, inputVector, outputVector);
+      try {
+       this->CreateReportScalars(request, inputVector, outputVector);
+      }
+      catch (...) {
+         vtkErrorMacro(<<"Exception caught during creation of report scalars");
+      }
     }
     else {
       this->CachedNeuronMesh->GetPointData()->RemoveArray(BBP_ARRAY_NAME_VOLTAGE);
