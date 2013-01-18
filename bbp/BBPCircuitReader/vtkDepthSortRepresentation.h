@@ -63,6 +63,12 @@ public:
   void SetUseCachedSortOrder(int mode);
   void SetDirection(int dir);
 
+  // Description:
+  // Adds the representation to the view.  This is called from
+  // vtkView::AddRepresentation().  Subclasses should override this method.
+  // Returns true if the addition succeeds.
+  virtual bool AddToView(vtkView* view);
+
 protected:
   vtkDepthSortRepresentation();
   ~vtkDepthSortRepresentation();

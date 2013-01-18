@@ -37,6 +37,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTwoScalarsToColorsPainter.h"
 #include "vtkBoundsExtentTranslator.h"
 //
+#include "vtkPistonMapper.h"
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDepthSortRepresentation);
 vtkCxxSetObjectMacro(vtkDepthSortRepresentation, Controller, vtkMultiProcessController);
@@ -76,6 +77,15 @@ void vtkDepthSortRepresentation::ReportReferences(vtkGarbageCollector *collector
   //vtkGarbageCollectorReport(collector, this->DepthSortPainter,          "DepthSortPainter");
   //vtkGarbageCollectorReport(collector, this->TwoScalarsToColorsPainter, "TwoScalarsToColorsPainter");
   //vtkGarbageCollectorReport(collector, this->Controller,                "Controller");
+}
+//----------------------------------------------------------------------------
+bool vtkDepthSortRepresentation::AddToView(vtkView* view)
+{
+  vtkPVRenderView* rview = vtkPVRenderView::SafeDownCast(view);
+  if (rview) {
+    vtkPistonMapper::InitCudaGL(rview->GetRenderWindow());
+  }
+  return this->Superclass::AddToView(view);
 }
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetUseDataParititions(bool val)

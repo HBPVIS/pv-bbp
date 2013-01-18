@@ -8,8 +8,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 # Find BBP-SDK
 # --------------------------------------------------------------
 SET(BBP_SDK_USE_STATIC_LIBS ON)
-find_package(BBP-SDK 0.14 REQUIRED common io model)
-include_directories(${BBP_SDK_INCLUDE_DIRS}  ${BBP_SDK_PATH}/include)
+#find_package(BBP-SDK 0.14 REQUIRED common io model)
+#include_directories(${BBP_SDK_INCLUDE_DIRS}  ${BBP_SDK_PATH}/include)
 
 message("BBP_SDK_INCLUDE_DIRS are ${BBP_SDK_INCLUDE_DIRS}")
 
@@ -25,25 +25,25 @@ IF (MSVC)
 	set(Boost_USE_STATIC_RUNTIME    OFF)
 ENDIF (MSVC)
 
-find_package(Boost 1.49 REQUIRED
-  thread
-  filesystem
-  system
-  serialization
-  program_options
-  date_time
-  regex
-  unit_test_framework
-)
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
+#find_package(Boost 1.49 REQUIRED
+#  thread
+#  filesystem
+#  system
+#  serialization
+#  program_options
+#  date_time
+#  regex
+#  unit_test_framework
+#)
+#link_directories(${Boost_LIBRARY_DIRS})
+#include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
 
 # --------------------------------------------------------------
 # Find HDF5
 # --------------------------------------------------------------
-find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
-include_directories(${HDF5_INCLUDE_DIR}
-                    ${HDF5_INCLUDE_DIR}/cpp)
+#find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+#include_directories(${HDF5_INCLUDE_DIR}
+#                    ${HDF5_INCLUDE_DIR}/cpp)
 
 #--------------------------------------------------
 # If (paraview) using system H5FDdsm

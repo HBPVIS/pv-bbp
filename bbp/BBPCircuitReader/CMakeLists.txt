@@ -44,8 +44,8 @@ set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 #--------------------------------------------------
 # HDF5
 #--------------------------------------------------
-FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
-INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR})
+#FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+#INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR})
 
 #--------------------------------------------------
 # pv-zoltan
@@ -74,14 +74,14 @@ endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
 #--------------------------------------------------
 include_directories(
   ${PLUGIN_PATH}
-  ${BBP_SDK_INCLUDE_DIRS}
+#  ${BBP_SDK_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIR}/cpp
 )
 
 #--------------------------------------------------
 # CONDITIONAL : Setup Qt/GUI panel sources/wrapping
 #--------------------------------------------------
-IF(PARAVIEW_BUILD_QT_GUI)
+IF(0 AND PARAVIEW_BUILD_QT_GUI)
 
   QT4_WRAP_CPP(
     BBP_MOC_SRCS 
@@ -104,7 +104,7 @@ IF(PARAVIEW_BUILD_QT_GUI)
     ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
   )
 
-ENDIF(PARAVIEW_BUILD_QT_GUI)
+ENDIF(0 AND PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
 # Define plugin sources
@@ -116,15 +116,15 @@ ADD_PARAVIEW_PLUGIN(
   "1.0" 
 
   SERVER_MANAGER_XML     
-    ${XML_PATH}/vtkCircuitReader.xml
+#    ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
     ${XML_PATH}/vtkDepthSortRepresentation.xml
-    ${XML_PATH}/vtkMorphologyReader.xml
-    ${XML_PATH}/vtkMeshBinReader.xml
-    ${XML_PATH}/vtkH5MCellReader.xml
+#    ${XML_PATH}/vtkMorphologyReader.xml
+#    ${XML_PATH}/vtkMeshBinReader.xml
+#    ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortRepresentation.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
@@ -132,9 +132,9 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPolyData2.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPolygonsPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTwoScalarsToColorsPainter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
 
@@ -142,7 +142,7 @@ ADD_PARAVIEW_PLUGIN(
     ${BBP_IFACE}
 
   GUI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.cxx
     ${BBP_IFACE_SRCS}
     ${BBP_MOC_SRCS}
     ${BBP_UI_SOURCES}
