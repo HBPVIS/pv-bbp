@@ -31,8 +31,18 @@ get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 #INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
+include(vtkModuleAPI)
+include(vtkModuleMacros)
+include(ParaViewMacros)
 
 find_package(Qt4 )
+
+find_package(CUDA REQUIRED)
+
+find_path(PISTON_INCLUDE
+  PistonCodingStyle.xml
+  "/Source/PISTON/github/PISTON"
+  DOC "PISTON library's source directory")
 
 # --------------------------------------------------
 # Plugin config
@@ -74,6 +84,7 @@ endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
 #--------------------------------------------------
 include_directories(
   ${PLUGIN_PATH}
+  ${CMAKE_CURRENT_SOURCE_DIR}/Piston
 #  ${BBP_SDK_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIR}/cpp
 )
@@ -107,6 +118,65 @@ IF(0 AND PARAVIEW_BUILD_QT_GUI)
 ENDIF(0 AND PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
+# Define PISTON sources
+#--------------------------------------------------
+set(Module_SRCS
+  Piston/vtkDataSetToPiston.cxx
+  Piston/vtkPistonAlgorithm.cxx
+  Piston/vtkPistonDataObject.cxx
+  Piston/vtkPistonContour.cxx
+  Piston/vtkPistonMapper.cxx
+  Piston/vtkPistonToDataSet.cxx
+  Piston/vtkPistonScalarsColors.cxx
+  Piston/vtkPistonSlice.cxx
+  Piston/vtkPistonSort.cxx
+  Piston/vtkPistonThreshold.cxx
+)
+
+set( Module_CUDA_SRCS
+  Piston/vtkPistonConverters.cu
+  Piston/vtkPistonContour.cu
+  Piston/vtkPistonMapper.cu
+  Piston/vtkPistonSlice.cu
+  Piston/vtkPistonSort.cu
+  Piston/vtkPistonThreshold.cu
+)
+
+#--------------------------------------------------
+# Define CUDA sources
+#--------------------------------------------------
+if(BUILD_SHARED_LIBS)
+  set(GPGPU_BUILD_TYPE SHARED)
+endif()
+
+set(BBP_CUDA_SRCS
+  ${Module_CUDA_SRCS}
+)
+
+# set this, otherwise C_SOURCES is empty in VS
+set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
+# generate the list of dependencies based on our module definition file
+vtk_module_impl()
+# remove a bunch of cruft that VTK adds in here about modules autoinit
+set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
+# shorten the include dirs so nvcc doesn't crumble under the entire VTK/ParaView/Qt path
+# first get the old setting and store it
+get_directory_property(TEMPBBP_INCLUDE_DIRECTORIES INCLUDE_DIRECTORIES)
+# now set our shorter include dirs list
+set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "${${vtk-module}_DEPENDS_INCLUDE_DIRS};${PISTON_INCLUDE}")
+# call the cuda wrapper
+cuda_compile(BBP_CUDA_C_SRCS ${BBP_CUDA_SRCS} ${GPGPU_BUILD_TYPE})
+# put the include dirs back to what they were
+set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "${TEMPBBP_INCLUDE_DIRECTORIES}")
+
+set_source_files_properties(
+  ${BBP_CUDA_C_SRCS}
+  WRAP_EXCLUDE
+  )
+
+message("Generated include dirs ${${vtk-module}_DEPENDS_INCLUDE_DIRS}")
+
+#--------------------------------------------------
 # Define plugin sources
 #--------------------------------------------------
 
@@ -114,6 +184,7 @@ SET(PLUGIN_NAME pv_BBP)
 ADD_PARAVIEW_PLUGIN(
   ${PLUGIN_NAME}
   "1.0" 
+  REQUIRED_PLUGINS pv_zoltan
 
   SERVER_MANAGER_XML     
 #    ${XML_PATH}/vtkCircuitReader.xml
@@ -137,6 +208,8 @@ ADD_PARAVIEW_PLUGIN(
 #    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
+    ${BBP_CUDA_C_SRCS}
+    ${Module_SRCS}
 
   GUI_INTERFACES 
     ${BBP_IFACE}
@@ -156,8 +229,13 @@ ADD_PARAVIEW_PLUGIN(
 #--------------------------------------------------
 # setup plugin linking
 #--------------------------------------------------
+#get_filename_component(location "${VTK_CONFIG_FILE}" PATH)
+#set(piston_plugin ${location}/../lib/${CMAKE_CFG_INTDIR})
+#message("Piston lib file is here ${piston_plugin}")
+
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
     ${BBP_SDK_LIBRARIES}
+    ${CUDA_LIBRARIES}
     ${ZOLTAN_LIBS}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 

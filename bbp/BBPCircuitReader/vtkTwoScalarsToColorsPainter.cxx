@@ -240,7 +240,7 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
     }
 
   vtkPointData* oppd = output->GetPointData();
-  vtkCellData* opcd  = output->GetCellData();
+  vtkCellData*  opcd = output->GetCellData();
   vtkFieldData* opfd = output->GetFieldData();
 
   int arraycomponent = this->ArrayComponent;
