@@ -61,6 +61,9 @@
 #include "vtkCellData.h"
 #include "vtkPolyData.h"
 
+#include "vtkDataSetToPiston.h"
+#include "vtkPistonDataObject.h"
+
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDepthSortPainter)
 //-----------------------------------------------------------------------------
@@ -78,6 +81,7 @@ vtkDepthSortPainter::vtkDepthSortPainter()
   this->DepthSortPolyData               = vtkDepthSortPolyData2::New();
   this->OutputData                      = NULL;
   this->DepthSortOverrideFlag           = 0;
+  this->EnablePiston                    = 0;
 }
 //-----------------------------------------------------------------------------
 vtkDepthSortPainter::~vtkDepthSortPainter()
@@ -117,50 +121,43 @@ void vtkDepthSortPainter::PrepareForRendering(vtkRenderer* renderer,
   // check if we need to update
   if (this->GetMTime() < this->SortTime && this->DepthSortPolyData->GetMTime()
       < this->SortTime && this->GetInput()->GetMTime() < this->SortTime)
-    {
+  {
     return;
-    }
+  }
 
   // update the OutputData, initialize it with a shallow copy of the input
   this->SetOutputData(NULL);
   vtkDataObject * input = this->GetInput();
-  if (!input)
+  if (!input) {
     return;
-
+  }
   vtkDataObject* output = input->NewInstance();
   output->ShallowCopy(input);
   this->SetOutputData(output);
-  output->Delete();
+  output->FastDelete();
 
   if (this->DepthSortPolyData != NULL && this->NeedSorting(renderer, actor))
     {
-    if (input->IsA("vtkCompositeDataSet"))
-      {
+    if (input->IsA("vtkCompositeDataSet")) {
       vtkCompositeDataSet* cdInput = vtkCompositeDataSet::SafeDownCast(input);
-      vtkCompositeDataSet* cdOutput = vtkCompositeDataSet::SafeDownCast(
-          this->OutputData);
+      vtkCompositeDataSet* cdOutput = vtkCompositeDataSet::SafeDownCast(this->OutputData);
       vtkCompositeDataIterator* iter = cdInput->NewIterator();
-      for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
-        {
-        vtkDataSet* pdInput = vtkDataSet::SafeDownCast(
-            iter->GetCurrentDataObject());
-        vtkDataSet* pdOutput = vtkDataSet::SafeDownCast(cdOutput->GetDataSet(
-            iter));
-        if (pdInput && pdOutput)
-          {
+      for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem()) {
+        vtkDataSet* pdInput = vtkDataSet::SafeDownCast(iter->GetCurrentDataObject());
+        vtkDataSet* pdOutput = vtkDataSet::SafeDownCast(cdOutput->GetDataSet(iter));
+        if (pdInput && pdOutput) {
           this->Sort(pdOutput, pdInput, renderer, actor);
-          }
         }
+      }
 
       iter->Delete();
-      }
-    else
-      {
+    }
+    else {
       this->Sort(vtkDataSet::SafeDownCast(this->OutputData),
           vtkDataSet::SafeDownCast(input), renderer, actor);
-      }
-    this->SortTime.Modified();
     }
+    this->SortTime.Modified();
+  }
 }
 //-----------------------------------------------------------------------------
 void vtkDepthSortPainter::Sort(vtkDataSet* output,
@@ -168,13 +165,22 @@ void vtkDepthSortPainter::Sort(vtkDataSet* output,
     vtkRenderer* vtkNotUsed(renderer),
     vtkActor* vtkNotUsed(actor))
 {
-  this->DepthSortPolyData->SetInputData(input);
-  this->DepthSortPolyData->SetDirectionToBackToFront();
-  this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
-  this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
-  this->DepthSortPolyData->SetDirection(this->Direction);
-  this->DepthSortPolyData->Update();
-  output->ShallowCopy(this->DepthSortPolyData->GetOutput());
+  if (!this->EnablePiston) {
+    this->DepthSortPolyData->SetInputData(input);
+    this->DepthSortPolyData->SetDirectionToBackToFront();
+    this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
+    this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
+    this->DepthSortPolyData->SetDirection(this->Direction);
+    this->DepthSortPolyData->Update();
+    output->ShallowCopy(this->DepthSortPolyData->GetOutput());
+  }
+  else {
+    if (!this->DataSetToPiston) {
+      this->DataSetToPiston = vtkSmartPointer<vtkDataSetToPiston>::New();
+    }
+    this->DataSetToPiston->SetInputData(input);
+    this->DataSetToPiston->Update();
+  }
 }
 //-----------------------------------------------------------------------------
 int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
@@ -207,7 +213,7 @@ int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
 
   // this next code never caled because the input is always composite in new ParaView versions
   // Shall we remove it or keep it. DepthSortOverrideFlag is set by owner and saves us the need
-  // to checl color arrays by hand.
+  // to check color arrays by hand.
 
   vtkPolyData* input = vtkPolyData::SafeDownCast(this->GetInput());
   if (input)
@@ -358,5 +364,13 @@ int vtkDepthSortPainter::IsColorSemiTranslucent(vtkUnsignedCharArray* color)
 vtkDataObject* vtkDepthSortPainter::GetOutput()
 {
   return vtkDataObject::SafeDownCast(this->OutputData);
+}
+//-----------------------------------------------------------------------------
+vtkDataSetToPiston* vtkDepthSortPainter::GetDataSetToPiston()
+{
+  if (!this->DataSetToPiston) {
+    this->DataSetToPiston = vtkSmartPointer<vtkDataSetToPiston>::New();
+  }
+  return this->DataSetToPiston;
 }
 //-----------------------------------------------------------------------------

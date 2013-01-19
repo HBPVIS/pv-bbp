@@ -102,6 +102,8 @@ public:
   vtkSetMacro(GhostLevel, int);
   vtkGetMacro(GhostLevel, int);
 
+  void RenderOnGPU();
+
 protected:
   vtkPistonMapper();
   ~vtkPistonMapper();
@@ -113,7 +115,6 @@ protected:
   // Description:
   // Internal render methods
   void RenderOnCPU();
-  void RenderOnGPU();
   void RenderImageDataOutline();
 
   int Piece;

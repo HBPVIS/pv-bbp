@@ -38,7 +38,8 @@
 
 
 #include "vtkPainter.h"
-#include "vtkWeakPointer.h" // Needed
+#include "vtkSmartPointer.h"      // Needed
+#include "vtkWeakPointer.h"       // Needed
 #include "vtkDepthSortPolyData.h" // for #defines of sort modes
 
 class vtkFloatArray;
@@ -50,6 +51,8 @@ class vtkDataObject;
 class vtkTexture;
 class vtkDepthSortPolyData2;
 class vtkUnsignedCharArray;
+class vtkDataSetToPiston;
+class vtkPistonDataObject;
 
 class VTK_EXPORT vtkDepthSortPainter : public vtkPainter
 {
@@ -100,13 +103,18 @@ public:
   vtkGetMacro(Direction, int);
   vtkBooleanMacro(Direction, int);
 
+  vtkSetMacro(EnablePiston, int);
+  vtkGetMacro(EnablePiston, int);
+  vtkBooleanMacro(EnablePiston, int);
+
+  vtkDataSetToPiston *GetDataSetToPiston();
+
   // Description:
   // Get the output data object from this painter.
   // If Enabled, the output, the points will be ordered by
   // their depth in the camera direction.
   // If disabled, this painter only shallow copies the input.
   virtual vtkDataObject* GetOutput();
-
   
   // Description:
   // Under certain circumstances, we may know that depth sorting is required
@@ -167,24 +175,26 @@ protected:
 
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
-  vtkDataObject*        OutputData;
-  int                   DepthSortEnableMode;
-  int                   DepthSortMode;
-  vtkTimeStamp          SortTime;
-  int                   UseCachedSortOrder;
-  int                   Direction;
+  vtkDataObject*         OutputData;
+  int                    DepthSortEnableMode;
+  int                    DepthSortMode;
+  vtkTimeStamp            SortTime;
+  int                    UseCachedSortOrder;
+  int                    Direction;
+  int                    EnablePiston;
   //
-  int                   CachedIsTextureSemiTranslucent;
-  vtkTimeStamp          CachedIsTextureSemiTranslucentTime;
-  vtkTimeStamp          CachedIsColorSemiTranslucentTime;
-  int                   CachedIsColorSemiTranslucent;
+  int                    CachedIsTextureSemiTranslucent;
+  vtkTimeStamp           CachedIsTextureSemiTranslucentTime;
+  vtkTimeStamp           CachedIsColorSemiTranslucentTime;
+  int                    CachedIsColorSemiTranslucent;
   vtkDepthSortPolyData2* DepthSortPolyData;
-  int                   DepthSortOverrideFlag;
+  int                    DepthSortOverrideFlag;
 
   //BTX
-  vtkWeakPointer<vtkDataObject> PrevInput;
-  vtkWeakPointer<vtkTexture> CachedTexture;
+  vtkWeakPointer<vtkDataObject>        PrevInput;
+  vtkWeakPointer<vtkTexture>           CachedTexture;
   vtkWeakPointer<vtkUnsignedCharArray> CachedColors;
+  vtkSmartPointer<vtkDataSetToPiston>  DataSetToPiston;
   //ETX
 
 private:

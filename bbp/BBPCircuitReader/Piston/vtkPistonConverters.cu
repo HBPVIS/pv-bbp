@@ -6,6 +6,7 @@
 #include "vtkCellArray.h"
 #include "vtkFloatArray.h"
 #include "vtkIdTypeArray.h"
+#include "vtkUnsignedCharArray.h"
 #include "vtkImageData.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
@@ -51,6 +52,11 @@ void DeleteData(vtkPistonReference *tr)
       oldD->scalars->clear();
       }
     delete oldD->scalars;
+    if (oldD->colors)
+      {
+      oldD->colors->clear();
+      }
+    delete oldD->colors;
     if (oldD->opacities)
       {
       oldD->opacities->clear();
@@ -111,6 +117,8 @@ void DeepCopy(vtkPistonReference *tr, vtkPistonReference *other)
     thrust::copy(oldD->points->begin(), oldD->points->end(), newD->points->begin());
     newD->scalars = new thrust::device_vector<float>(oldD->scalars->size());
     thrust::copy(oldD->scalars->begin(), oldD->scalars->end(), newD->scalars->begin());
+    newD->colors = new thrust::device_vector<unsigned char>(oldD->colors->size());
+    thrust::copy(oldD->colors->begin(), oldD->colors->end(), newD->colors->begin());
     if (oldD->opacities) {
       newD->opacities = new thrust::device_vector<float>(oldD->opacities->size());
       thrust::copy(oldD->opacities->begin(), oldD->opacities->end(), newD->opacities->begin());
@@ -155,6 +163,22 @@ vtkFloatArray *makeScalars(thrust::host_vector<float> *D)
   outfloats->SetNumberOfComponents(1);
   outfloats->SetArray(toArray, nPoints, 0); //0 let vtkArray delete[] toArray
   return outfloats;
+}
+
+//-----------------------------------------------------------------------------
+vtkUnsignedCharArray *makeScalars(thrust::host_vector<unsigned char> *D)
+{
+  //copy from thrust to C
+  int nPoints = D->size();
+  unsigned char *raw_ptr = thrust::raw_pointer_cast(&*(D->begin()));
+  unsigned char *toArray = new unsigned char[nPoints];
+  memcpy(toArray, raw_ptr, nPoints*sizeof(unsigned char));
+
+  //wrap result in vtkArray container
+  vtkUnsignedCharArray *outvals = vtkUnsignedCharArray::New();
+  outvals->SetNumberOfComponents(1);
+  outvals->SetArray(toArray, nPoints, 0); //0 let vtkArray delete[] toArray
+  return outvals;
 }
 
 //-----------------------------------------------------------------------------
@@ -219,7 +243,7 @@ void CopyToGPU(vtkImageData *id, vtkPistonDataObject *od)
 }
 
 //-----------------------------------------------------------------------------
-void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od)
+void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, char *scalarname)
 {
   vtkPistonReference *tr = od->GetReference();
   if (CheckDirty(id, tr))
@@ -249,7 +273,7 @@ void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od)
     newD->vertsPer = 3;
 
     vtkFloatArray *inscalars = vtkFloatArray::SafeDownCast(
-      id->GetPointData()->GetArray("Color")
+      id->GetPointData()->GetArray(scalarname)
       );
     if (inscalars)
       {
@@ -268,6 +292,30 @@ void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od)
     else
       {
       newD->scalars = NULL;
+      }
+
+    vtkUnsignedCharArray *incolors = vtkUnsignedCharArray::SafeDownCast(
+      id->GetPointData()->GetArray("Color")
+      );
+    if (incolors)
+      {
+      thrust::host_vector<unsigned char> hA(nPoints*4);
+      for (vtkIdType i=0; i<nPoints; i++)
+        {
+        unsigned char *next = incolors->GetPointer(i);
+        for (int c=0; c<4; c++) {
+          hA[i+c] = next[c];
+          }
+        }
+      thrust::device_vector<unsigned char> *dA =
+        new thrust::device_vector<unsigned char>(nPoints);
+      *dA = hA;
+      newD->colors = dA;
+//      od->SetScalarsArrayName(incolors->GetName());
+      }
+    else
+      {
+      newD->colors = NULL;
       }
 
     vtkFloatArray *inopacities = vtkFloatArray::SafeDownCast(
@@ -415,6 +463,19 @@ void CopyFromGPU(vtkPistonDataObject *id, vtkPolyData *od)
     outScalars->SetName(id->GetScalarsArrayName());
     od->GetPointData()->SetScalars(outScalars);
     outScalars->Delete();
+    }
+
+  //attributes
+  //colors
+  if (pD->colors)
+    {
+    thrust::host_vector<unsigned char> V(nPoints);
+    thrust::copy(pD->colors->begin(), pD->colors->end(), V.begin());
+    //assign that to the output dataset
+    vtkUnsignedCharArray *outColors = makeScalars(&V);
+    outColors->SetName(id->GetScalarsArrayName());
+    od->GetPointData()->AddArray(outColors);
+    outColors->Delete();
     }
   if (pD->opacities)
     {

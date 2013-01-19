@@ -34,6 +34,7 @@
           <Property name="DepthSortMode"/>
           <Property name="UseCachedSortOrder"/>
           <Property name="Direction"/>
+          <Property name="EnablePiston"/>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -148,6 +149,14 @@
           <Entry value="0" text="Back to Front"/>
           <Entry value="1" text="Front to Back"/>
         </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="EnablePiston"
+         command="SetEnablePiston"
+         number_of_elements="1"
+         default_values="0" >
+        <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
       <!-- End of DepthSortRepresentation -->

@@ -21,6 +21,10 @@
 #define __vtkDepthSortPolygonsPainter_h
 
 #include "vtkPolygonsPainter.h"
+#include "vtkSmartPointer.h"
+#include "vtkDataSetToPiston.h"
+
+class vtkPistonMapper;
 
 class VTK_EXPORT vtkDepthSortPolygonsPainter : public vtkPolygonsPainter
 {
@@ -28,6 +32,14 @@ public:
   static vtkDepthSortPolygonsPainter* New();
   vtkTypeMacro(vtkDepthSortPolygonsPainter, vtkPolygonsPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  vtkSetMacro(EnablePiston, int);
+  vtkGetMacro(EnablePiston, int);
+  vtkBooleanMacro(EnablePiston, int);
+
+  void SetDataSetToPiston(vtkDataSetToPiston *dsp) {
+    this->DataSetToPiston = dsp;
+  }
 
 protected:
   vtkDepthSortPolygonsPainter();
@@ -38,6 +50,10 @@ protected:
   // SupportedPrimitive is present in typeflags when Render() is invoked.
   virtual int RenderPrimitive(unsigned long flags, vtkDataArray* n,
     vtkUnsignedCharArray* c, vtkDataArray* t, vtkRenderer* ren);
+
+  vtkSmartPointer<vtkDataSetToPiston>  DataSetToPiston;
+  vtkSmartPointer<vtkPistonMapper>     PistonMapper;
+  int EnablePiston;
 
 private:
   vtkDepthSortPolygonsPainter(const vtkDepthSortPolygonsPainter&); // Not implemented.

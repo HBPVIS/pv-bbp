@@ -124,22 +124,22 @@ set(Module_SRCS
   Piston/vtkDataSetToPiston.cxx
   Piston/vtkPistonAlgorithm.cxx
   Piston/vtkPistonDataObject.cxx
-  Piston/vtkPistonContour.cxx
-  Piston/vtkPistonMapper.cxx
   Piston/vtkPistonToDataSet.cxx
+  Piston/vtkPistonMapper.cxx
   Piston/vtkPistonScalarsColors.cxx
-  Piston/vtkPistonSlice.cxx
   Piston/vtkPistonSort.cxx
-  Piston/vtkPistonThreshold.cxx
+#  Piston/vtkPistonSlice.cxx
+#  Piston/vtkPistonContour.cxx
+#  Piston/vtkPistonThreshold.cxx
 )
 
 set( Module_CUDA_SRCS
   Piston/vtkPistonConverters.cu
-  Piston/vtkPistonContour.cu
   Piston/vtkPistonMapper.cu
-  Piston/vtkPistonSlice.cu
   Piston/vtkPistonSort.cu
-  Piston/vtkPistonThreshold.cu
+#  Piston/vtkPistonContour.cu
+#  Piston/vtkPistonSlice.cu
+#  Piston/vtkPistonThreshold.cu
 )
 
 #--------------------------------------------------

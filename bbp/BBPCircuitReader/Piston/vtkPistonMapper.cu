@@ -198,6 +198,13 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     }
   hasColors = false;
 
+/*
+  if (pD->colors)
+  {
+
+  }
+  else 
+*/
   if (pD->scalars)
     {
     double scalarRange[2];
@@ -246,8 +253,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
       }
 
     color_map<float> colorMap(raw_ptr, onGPU.size(), VTK_RGB, tempRange[0], tempRange[1]);
-    thrust::copy(thrust::make_transform_iterator(pD->scalars->begin(),
-                                                 colorMap),
+    thrust::copy(thrust::make_transform_iterator(pD->scalars->begin(), colorMap),
                  thrust::make_transform_iterator(pD->scalars->end(), colorMap),
                  thrust::device_ptr<float3>(colorsBufferData));
     }

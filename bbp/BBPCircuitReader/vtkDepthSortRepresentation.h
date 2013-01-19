@@ -57,11 +57,11 @@ public:
   void SetEnableOpacity(int enable);
   int  GetEnableOpacity();
 
-
   void SetDepthSortEnableMode(int mode);
   void SetDepthSortMode(int mode);
   void SetUseCachedSortOrder(int mode);
   void SetDirection(int dir);
+  void SetEnablePiston(int mode);
 
   // Description:
   // Adds the representation to the view.  This is called from

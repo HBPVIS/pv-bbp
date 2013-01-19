@@ -325,13 +325,17 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   // colors. In which case, we allocate a new array to ensure
   // that we don't modify the array in the input.
   if (scalars == colors)
-    {
+  {
     // Since we will be changing the colors array
     // we create a copy.
     colors->Delete();
     colors = scalars->NewInstance();
     colors->DeepCopy(scalars);
-    }
+    colors->SetName("Color");
+  }
+  else {
+    colors->SetName("Color");
+  }
   vtkMultiplyColorsWithOpacity(colors, opacity, multiply_with_alpha);
 
   if (cellFlag == 0)

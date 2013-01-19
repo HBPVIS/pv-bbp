@@ -443,6 +443,9 @@ void vtkPistonMapper::RenderOnGPU()
   glDisableClientState(GL_VERTEX_ARRAY);
   if (hasNormals) glDisableClientState(GL_NORMAL_ARRAY);
   if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
+
+  // Update object modified time
+  this->Internal->DataObjectMTimeCache = id->GetMTime();
 }
 
 //-----------------------------------------------------------------------------

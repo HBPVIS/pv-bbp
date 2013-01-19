@@ -115,6 +115,17 @@ int vtkDepthSortRepresentation::GetEnableOpacity()
   return this->TwoScalarsToColorsPainter->GetEnableOpacity();
 }
 //----------------------------------------------------------------------------
+void vtkDepthSortRepresentation::SetEnablePiston(int mode)
+{
+  this->DepthSortPainter->SetEnablePiston(mode);
+  this->DepthSortPolygonsPainter->SetEnablePiston(mode);
+  if (mode) {
+   this->DepthSortPolygonsPainter->SetDataSetToPiston(
+     this->DepthSortPainter->GetDataSetToPiston());
+  }
+  this->MarkModified();
+}
+//----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetDepthSortEnableMode(int mode)
 {
   this->DepthSortPainter->SetDepthSortEnableMode(mode);
