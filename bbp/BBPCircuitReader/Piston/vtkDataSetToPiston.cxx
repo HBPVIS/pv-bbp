@@ -28,7 +28,7 @@
 namespace vtkpiston {
   //forward declarations of methods defined in the cuda implementation
   void CopyToGPU(vtkImageData *id, vtkPistonDataObject *od);
-  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, char *scalarname);
+  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer, char *scalarname);
 }
 
 //----------------------------------------------------------------------------
@@ -126,7 +126,7 @@ int vtkDataSetToPiston::RequestData(vtkInformation *request,
       {
       vtkPolyData *id = vtkPolyData::GetData(inputVector[0]);
 
-#define triangulate
+//#define triangulate
 #ifdef triangulate
       //convert to simplices that piston can handle
       //TODO: support points, lines and tets in addition to triangles
@@ -170,10 +170,10 @@ int vtkDataSetToPiston::RequestData(vtkInformation *request,
           triangulated->GetPointData()->CopyData(id->GetPointData(), triangle[2], opnt++);
         }
       }
-      vtkpiston::CopyToGPU(triangulated, od, "RTNeuron Opacity");
+      vtkpiston::CopyToGPU(triangulated, od, false, "RTNeuron Opacity");
       triangulated->Delete();
 #else
-      vtkpiston::CopyToGPU(id, od, "RTNeuron Opacity");
+      vtkpiston::CopyToGPU(id, od, true, "RTNeuron Opacity");
 #endif
       }
       break;

@@ -47,6 +47,11 @@ void DeleteData(vtkPistonReference *tr)
       oldD->points->clear();
       }
     delete oldD->points;
+    if (oldD->cells)
+      {
+      oldD->cells->clear();
+      }
+    delete oldD->cells;
     if (oldD->scalars)
       {
       oldD->scalars->clear();
@@ -115,10 +120,20 @@ void DeepCopy(vtkPistonReference *tr, vtkPistonReference *other)
     newD->vertsPer = oldD->vertsPer;
     newD->points = new thrust::device_vector<float>(oldD->points->size());
     thrust::copy(oldD->points->begin(), oldD->points->end(), newD->points->begin());
+
+    if (oldD->cells) {
+      newD->cells = new thrust::device_vector<int>(oldD->cells->size());
+      thrust::copy(oldD->cells->begin(), oldD->cells->end(), newD->cells->begin());
+    }
+    else {
+      newD->cells = NULL;
+    }
+
     newD->scalars = new thrust::device_vector<float>(oldD->scalars->size());
     thrust::copy(oldD->scalars->begin(), oldD->scalars->end(), newD->scalars->begin());
     newD->colors = new thrust::device_vector<unsigned char>(oldD->colors->size());
     thrust::copy(oldD->colors->begin(), oldD->colors->end(), newD->colors->begin());
+
     if (oldD->opacities) {
       newD->opacities = new thrust::device_vector<float>(oldD->opacities->size());
       thrust::copy(oldD->opacities->begin(), oldD->opacities->end(), newD->opacities->begin());
@@ -126,6 +141,7 @@ void DeepCopy(vtkPistonReference *tr, vtkPistonReference *other)
     else {
       newD->opacities = NULL;
     }
+
     newD->normals = new thrust::device_vector<float>(oldD->normals->size());
     thrust::copy(oldD->normals->begin(), oldD->normals->end(), newD->normals->begin());
     tr->data = (void*)newD;
@@ -212,6 +228,19 @@ int QueryNumVerts(vtkPistonDataObject *id)
 }
 
 //-----------------------------------------------------------------------------
+int QueryNumCells(vtkPistonDataObject *id)
+{
+  vtkPistonReference *tr = id->GetReference();
+  if (tr->type != VTK_POLY_DATA || tr->data == NULL)
+    {
+    //type mismatch, don't bother trying
+    return 0;
+    }
+  vtk_polydata *pD = (vtk_polydata *)tr->data;
+  return pD->nCells;
+}
+
+//-----------------------------------------------------------------------------
 int QueryVertsPer(vtkPistonDataObject *id)
 {
   vtkPistonReference *tr = id->GetReference();
@@ -243,7 +272,7 @@ void CopyToGPU(vtkImageData *id, vtkPistonDataObject *od)
 }
 
 //-----------------------------------------------------------------------------
-void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, char *scalarname)
+void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer,  char *scalarname)
 {
   vtkPistonReference *tr = od->GetReference();
   if (CheckDirty(id, tr))
@@ -271,6 +300,31 @@ void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, char *scalarname)
     newD->points = dG;
 
     newD->vertsPer = 3;
+
+    //
+    // This routine assumes that only triangles exist in the polydata
+    //
+    vtkCellArray *cells = vtkCellArray::SafeDownCast(id->GetPolys());
+    if (useindexbuffer && cells) {
+      vtkIdType ncells = cells->GetNumberOfCells();
+      newD->nCells = ncells;
+      thrust::host_vector<int> hA(ncells*3);
+      vtkIdType   npts = 0;
+      vtkIdType *index = 0;
+      vtkIdType   opnt = 0;
+      for (cells->InitTraversal(); cells->GetNextCell(npts, index); ) {
+        hA[opnt++] = index[0];
+        hA[opnt++] = index[1];
+        hA[opnt++] = index[2];
+      }
+      thrust::device_vector<int> *dA = new thrust::device_vector<int>(ncells*3);
+      *dA = hA;
+      newD->cells = dA;
+    }
+    else {
+      newD->nCells = 0;
+      newD->cells = NULL;
+    }
 
     vtkFloatArray *inscalars = vtkFloatArray::SafeDownCast(
       id->GetPointData()->GetArray(scalarname)

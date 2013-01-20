@@ -27,6 +27,8 @@
 #include "vtkPistonScalarsColors.h"
 #include "vtkScalarsToColors.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSmartPointer.h"
+#include "vtkTimerLog.h"
 
 #include <limits>
 
@@ -39,12 +41,13 @@ namespace vtkpiston {
   void CopyFromGPU(vtkPistonDataObject *id, vtkPolyData *pd);
   int QueryNumVerts(vtkPistonDataObject *id);
   int QueryVertsPer(vtkPistonDataObject *id);
+  int QueryNumCells(vtkPistonDataObject *id);
   void CudaRegisterBuffer(struct cudaGraphicsResource **vboResource,
                           GLuint vboBuffer);
   void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCache,
                         vtkPistonScalarsColors *psc,
                         struct cudaGraphicsResource **vboResources,
-                        bool &hasNormals, bool &hasColors);
+                        bool &hasNormals, bool &hasColors, bool &useindexbuffers);
   bool AlmostEqualRelativeAndAbs(float A, float B,
                                  float maxDiff, float maxRelDiff);
 
@@ -63,20 +66,23 @@ namespace vtkpiston {
 }
 
 //-----------------------------------------------------------------------------
+#define NUM_INTEROP_BUFFERS 4
+//-----------------------------------------------------------------------------
 class vtkPistonMapper::InternalInfo
 {
 public:
   InternalInfo()
     {
     this->BufferSize = 0;
+    this->CellCount = 0;
     this->PistonScalarsColors = 0;
-
     this->DataObjectMTimeCache = 0;
     }
 
   int BufferSize;
-  GLuint vboBuffers[3];
-  struct cudaGraphicsResource* vboResources[3];
+  int CellCount;
+  GLuint vboBuffers[NUM_INTEROP_BUFFERS];
+  struct cudaGraphicsResource* vboResources[NUM_INTEROP_BUFFERS];
 
   unsigned long DataObjectMTimeCache;
   vtkPistonScalarsColors *PistonScalarsColors;
@@ -128,46 +134,60 @@ vtkPistonMapper::vtkPistonMapper()
 vtkPistonMapper::~vtkPistonMapper()
 {
   //cerr << "PM(" << this << ") destroy" << endl;
-  this->PrepareDirectRenderBuffers(0);
+  this->PrepareDirectRenderBuffers(0, 0);
   this->Internal->PistonScalarsColors->Delete();
   delete this->Internal;
 }
 
 //-----------------------------------------------------------------------------
-void vtkPistonMapper::PrepareDirectRenderBuffers(int nPoints)
+void vtkPistonMapper::PrepareDirectRenderBuffers(int nPoints, int nCells)
 {
-  if (nPoints==this->Internal->BufferSize)
+  if (nPoints==this->Internal->BufferSize && nCells==this->Internal->CellCount)
     {
     return;
     }
   if (this->Internal->BufferSize != 0)
     {
     // Release old buffer
-    vtkgl::DeleteBuffers(3, this->Internal->vboBuffers);
+    vtkgl::DeleteBuffers(NUM_INTEROP_BUFFERS, this->Internal->vboBuffers);
     }
 
   this->Internal->BufferSize = nPoints;
+  this->Internal->CellCount  = nCells;
   if (this->Internal->BufferSize == 0)
     {
     return;
     }
 
   // Prep shared mem buffer between gl and cuda
-  vtkgl::GenBuffers(3, this->Internal->vboBuffers);
+  vtkgl::GenBuffers(NUM_INTEROP_BUFFERS, this->Internal->vboBuffers);
+
+  // points 3*n float {x,y,z}
   vtkgl::BindBuffer(vtkgl::ARRAY_BUFFER,
                     this->Internal->vboBuffers[0]);
   vtkgl::BufferData(vtkgl::ARRAY_BUFFER,
                     this->Internal->BufferSize*3*sizeof(float), 0,
                     vtkgl::DYNAMIC_DRAW);
+
+  // normals 3*n float {n0,n1,n2}
   vtkgl::BindBuffer(vtkgl::ARRAY_BUFFER,
                     this->Internal->vboBuffers[1]);
   vtkgl::BufferData(vtkgl::ARRAY_BUFFER,
-                    this->Internal->BufferSize*3*3*sizeof(float), 0,
+                    this->Internal->BufferSize*3*sizeof(float), 0,
                     vtkgl::DYNAMIC_DRAW);
+
+  // colors 3*n float {R,G,B} 
   vtkgl::BindBuffer(vtkgl::ARRAY_BUFFER,
                     this->Internal->vboBuffers[2]);
   vtkgl::BufferData(vtkgl::ARRAY_BUFFER,
                     this->Internal->BufferSize*3*sizeof(float), 0,
+                    vtkgl::DYNAMIC_DRAW);
+
+  // indexes 3*nCells int : triangles assumed {a,b,c} 
+  vtkgl::BindBuffer(vtkgl::ELEMENT_ARRAY_BUFFER,
+                    this->Internal->vboBuffers[3]);
+  vtkgl::BufferData(vtkgl::ELEMENT_ARRAY_BUFFER,
+                    this->Internal->CellCount*3*sizeof(int), 0,
                     vtkgl::DYNAMIC_DRAW);
 
   vtkpiston::CudaRegisterBuffer(&this->Internal->vboResources[0],
@@ -176,6 +196,8 @@ void vtkPistonMapper::PrepareDirectRenderBuffers(int nPoints)
                                this->Internal->vboBuffers[1]);
   vtkpiston::CudaRegisterBuffer(&this->Internal->vboResources[2],
                                this->Internal->vboBuffers[2]);
+  vtkpiston::CudaRegisterBuffer(&this->Internal->vboResources[3],
+                               this->Internal->vboBuffers[3]);
 }
 
 //-----------------------------------------------------------------------------
@@ -394,18 +416,23 @@ void vtkPistonMapper::RenderOnCPU()
 //-----------------------------------------------------------------------------
 void vtkPistonMapper::RenderOnGPU()
 {
+  vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
+  timer->StartTimer();
+
   vtkPistonDataObject *id = this->GetPistonDataObjectInput(0);
 
   int nPoints = vtkpiston::QueryNumVerts(id);
-  this->PrepareDirectRenderBuffers(nPoints);
+  int nCells = vtkpiston::QueryNumCells(id);
+  this->PrepareDirectRenderBuffers(nPoints, nCells);
 
   // Transfer what is in tdo to buffer and render it directly on card
   bool hasNormals = false;
   bool hasColors = false;
+  bool useindexbuffers = false;
 
   vtkpiston::CudaTransferToGL(id, this->Internal->DataObjectMTimeCache,
     this->Internal->PistonScalarsColors,
-    this->Internal->vboResources, hasNormals, hasColors);
+    this->Internal->vboResources, hasNormals, hasColors, useindexbuffers);
 
   // Draw the result
   glEnableClientState(GL_VERTEX_ARRAY);
@@ -428,16 +455,32 @@ void vtkPistonMapper::RenderOnGPU()
     glColorPointer(3, GL_FLOAT, 0, 0);
     }
 
-  int vertsPer = vtkpiston::QueryVertsPer(id);
-  switch (vertsPer) {
-    case 4:
-      glDrawArrays(GL_QUADS, 0, nPoints);
-      break;
-    case 3:
-      glDrawArrays(GL_TRIANGLES, 0, nPoints);
-      break;
-    default:
-      glDrawArrays(GL_POINTS, 0, nPoints);
+  if (useindexbuffers) {
+    int vertsPer = vtkpiston::QueryVertsPer(id);
+    vtkgl::BindBuffer(vtkgl::ELEMENT_ARRAY_BUFFER, this->Internal->vboBuffers[3]);
+    switch (vertsPer) {
+      case 4:
+        glDrawElements(GL_QUADS, nCells*4, GL_UNSIGNED_INT, (GLvoid*)0);
+        break;
+      case 3:
+        glDrawElements(GL_TRIANGLES, nCells*3, GL_UNSIGNED_INT, (GLvoid*)0);
+        break;
+      default:
+        glDrawElements(GL_POINTS, nCells*1, GL_UNSIGNED_INT, (GLvoid*)0);
+    }
+  }
+  else {
+    int vertsPer = vtkpiston::QueryVertsPer(id);
+    switch (vertsPer) {
+      case 4:
+        glDrawArrays(GL_QUADS, 0, nPoints);
+        break;
+      case 3:
+        glDrawArrays(GL_TRIANGLES, 0, nPoints);
+        break;
+      default:
+        glDrawArrays(GL_POINTS, 0, nPoints);
+    }
   }
 
   glDisableClientState(GL_VERTEX_ARRAY);
@@ -446,6 +489,10 @@ void vtkPistonMapper::RenderOnGPU()
 
   // Update object modified time
   this->Internal->DataObjectMTimeCache = id->GetMTime();
+
+  timer->StopTimer();
+  double rendertime = timer->GetElapsedTime();
+//  std::cout << setprecision(6) << "RenderTime : << " <<  rendertime << std::endl;
 }
 
 //-----------------------------------------------------------------------------

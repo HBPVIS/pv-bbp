@@ -33,7 +33,9 @@ typedef struct
   //this is the sibling of vtk_image3D in piston
   int nPoints;
   int vertsPer;
+  int nCells;
   thrust::device_vector<float>         *points;
+  thrust::device_vector<int>           *cells;
   thrust::device_vector<float>         *scalars;
   thrust::device_vector<unsigned char> *colors;
   thrust::device_vector<float>         *opacities;

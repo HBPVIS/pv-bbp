@@ -128,7 +128,7 @@ private:
 protected:
   // Description:
   // Allocates buffers that are shared between CUDA and GL
-  void PrepareDirectRenderBuffers(int nPoints);
+  void PrepareDirectRenderBuffers(int nPoints, int nCells);
 
   static bool CudaGLInitted;
 

@@ -135,7 +135,7 @@ void CudaRegisterBuffer(struct cudaGraphicsResource **vboResource,
 void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCache,
                       vtkPistonScalarsColors *psc,
                       cudaGraphicsResource **vboResources,
-                      bool &hasNormals, bool &hasColors)
+                      bool &hasNormals, bool &hasColors, bool &useindexbuffers)
 {
   vtkPistonReference *tr = id->GetReference();
   if (tr->type != VTK_POLY_DATA || tr->data == NULL)
@@ -148,7 +148,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
 
   // Claim access to buffer for cuda
   cudaError_t res;
-  res = cudaGraphicsMapResources(3, vboResources, 0);
+  res = cudaGraphicsMapResources(4, vboResources, 0);
   if (res != cudaSuccess)
   {
     cerr << "Claim for CUDA failed ... " << cudaGetErrorString(res) << endl;
@@ -156,20 +156,21 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
   }
 
   size_t num_bytes;
-  float *vertexBufferData, *normalsBufferData;
+  float  *vertexBufferData;
+  int    *cellsBufferData;
+  float  *normalsBufferData;
   float3 *colorsBufferData;
+
   res = cudaGraphicsResourceGetMappedPointer
       ((void **)&vertexBufferData, &num_bytes, vboResources[0]);
-  if(res != cudaSuccess)
-  {
+  if(res != cudaSuccess) {
     cerr << "Get mappedpointer for vertices failed ... "
          << cudaGetErrorString(res) << endl;
     return;
   }
   res = cudaGraphicsResourceGetMappedPointer
       ((void **)&normalsBufferData, &num_bytes, vboResources[1]);
-  if(res != cudaSuccess)
-  {
+  if(res != cudaSuccess) {
     cerr << "Get mappedpointer for normals failed ... "
          << cudaGetErrorString(res) << endl;
     return;
@@ -183,9 +184,26 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     return;
   }
 
+  res = cudaGraphicsResourceGetMappedPointer
+      ((void **)&cellsBufferData, &num_bytes, vboResources[3]);
+  if(res != cudaSuccess)
+  {
+    std::string errormsg = cudaGetErrorString(res);
+    cerr << "Get mappedpointer for cell indices failed ... "
+         << cudaGetErrorString(res) << endl;
+    return;
+  }
+
   // Copy on card verts to the shared on card gl buffer
   thrust::copy(pD->points->begin(), pD->points->end(),
                thrust::device_ptr<float>(vertexBufferData));
+
+  // Copy on card cell indices to the shared on card gl buffer
+  if (pD->cells) {
+    useindexbuffers = true;
+    thrust::copy(pD->cells->begin(), pD->cells->end(),
+                 thrust::device_ptr<int>(cellsBufferData));
+  }
 
   hasNormals = false;
   if (pD->normals)
@@ -259,7 +277,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     }
 
   // Allow GL to access again
-  res = cudaGraphicsUnmapResources(3, vboResources, 0);
+  res = cudaGraphicsUnmapResources(4, vboResources, 0);
   if (res != cudaSuccess)
   {
     cerr << "Release from CUDA failed ... " << cudaGetErrorString(res) << endl;
