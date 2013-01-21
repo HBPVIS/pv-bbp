@@ -4,6 +4,12 @@
 
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
+#include <thrust/inner_product.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/iterator/permutation_iterator.h>
+#include <thrust/functional.h>
+#include <thrust/sort.h>
 
 #include <cuda_gl_interop.h>
 
@@ -13,6 +19,7 @@
 #include "vtkPistonScalarsColors.h"
 #include "vtkPistonMinMax.h"
 #include "vtkPistonReference.h"
+#include "piston/piston_math.h"
 
 #include "vtkgl.h"
 
@@ -131,11 +138,105 @@ void CudaRegisterBuffer(struct cudaGraphicsResource **vboResource,
   }
 }
 
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+struct distance_functor 
+{
+  float3 cameravector;
+
+  // construct with a constant camera vector
+  __host__ __device__ distance_functor(float3 &cam) : cameravector(cam) {}
+
+  template <typename Tuple>
+  __host__ __device__
+  void operator()(Tuple t)
+  {
+    thrust::get<1>(t) = dot(thrust::get<0>(t), cameravector);  
+  }
+};
+//------------------------------------------------------------------------------
+struct celldistance_functor 
+{
+  const float *vertex_distances;
+  
+  // construct with a precomputed distance vector for every vertex
+  __host__ __device__ celldistance_functor(float *v) : vertex_distances(v) {}
+  
+  template <typename Tuple>
+  __host__ __device__
+  void operator()(Tuple t)
+  { 
+    thrust::get<1>(t) = (vertex_distances[thrust::get<0>(t).x] + 
+                         vertex_distances[thrust::get<0>(t).y] +
+                         vertex_distances[thrust::get<0>(t).z])/3.0;
+  }
+};
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec)
+{
+  vtkPistonReference *tr = id->GetReference();
+  if (tr->type != VTK_POLY_DATA || tr->data == NULL) {
+    // Type mismatch, don't bother trying
+    return;
+  }
+  vtk_polydata *pD = (vtk_polydata *)tr->data;
+
+  //
+  // we need to compute the distance to the camera for each cell.
+  // Perform a dot product of each vertex with the supplied camera vector
+  //
+
+  // prepare an array for the distances
+  thrust::device_vector<float> distances(pD->points->size());
+
+  // initialize our functor which will compute distance and store in a vector
+  float3 cam = make_float3(cameravec[0], cameravec[1], cameravec[2]);
+  distance_functor distance(cam);
+
+  // apply distance functor using input and output arrays using zip_iterator
+  thrust::for_each(
+    thrust::make_zip_iterator(thrust::make_tuple(pD->points->begin(), distances.begin())),
+    thrust::make_zip_iterator(thrust::make_tuple(pD->points->end(),   distances.end())),
+    distance);
+
+  // to test if it is working, copy the distances into the scalars
+  // so we can colour by scalar values
+//  thrust::copy(distances.begin(), distances.end(), pD->scalars->begin());
+  
+  //
+  // To compute the average distance for each cell, we must
+  // sum/gather 3 distances (one for each vertex) for every cell by
+  // looking up the vertex indices from the cell array tuples
+  //
+
+  // prepare an array for the distances
+  thrust::device_vector<float> cell_distances(pD->nCells);
+
+  celldistance_functor celldist(thrust::raw_pointer_cast(distances.data()));
+
+  thrust::for_each(
+    thrust::make_zip_iterator(thrust::make_tuple(pD->cells->begin(), cell_distances.begin())),
+    thrust::make_zip_iterator(thrust::make_tuple(pD->cells->end(),   cell_distances.end())),
+    celldist);
+
+  //
+  // now we want to sort the cells using the average distance
+  // we must copy the cell vertex index tuple during the sort
+  //
+  thrust::sort_by_key(cell_distances.begin(), cell_distances.end(), pD->cells->begin(), 
+    thrust::greater<float>());
+}
+
 //------------------------------------------------------------------------------
 void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCache,
                       vtkPistonScalarsColors *psc,
                       cudaGraphicsResource **vboResources,
-                      bool &hasNormals, bool &hasColors, bool &useindexbuffers)
+                      bool &hasNormals, bool &hasColors, 
+                      bool &useindexbuffers)
 {
   vtkPistonReference *tr = id->GetReference();
   if (tr->type != VTK_POLY_DATA || tr->data == NULL)
@@ -156,10 +257,11 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
   }
 
   size_t num_bytes;
-  float  *vertexBufferData;
-  int    *cellsBufferData;
+  float3 *vertexBufferData;
+  uint3  *cellsBufferData;
   float  *normalsBufferData;
-  float3 *colorsBufferData;
+  // float3 *colorsBufferData;
+  float4  *colorbufferdata; 
 
   res = cudaGraphicsResourceGetMappedPointer
       ((void **)&vertexBufferData, &num_bytes, vboResources[0]);
@@ -176,7 +278,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     return;
   }
   res = cudaGraphicsResourceGetMappedPointer
-      ((void **)&colorsBufferData, &num_bytes, vboResources[2]);
+      ((void **)&colorbufferdata, &num_bytes, vboResources[2]);
   if(res != cudaSuccess)
   {
     cerr << "Get mappedpointer for colors failed ... "
@@ -196,13 +298,13 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
 
   // Copy on card verts to the shared on card gl buffer
   thrust::copy(pD->points->begin(), pD->points->end(),
-               thrust::device_ptr<float>(vertexBufferData));
+               thrust::device_ptr<float3>(vertexBufferData));
 
   // Copy on card cell indices to the shared on card gl buffer
   if (pD->cells) {
     useindexbuffers = true;
     thrust::copy(pD->cells->begin(), pD->cells->end(),
-                 thrust::device_ptr<int>(cellsBufferData));
+                 thrust::device_ptr<uint3>(cellsBufferData));
   }
 
   hasNormals = false;
@@ -216,13 +318,15 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     }
   hasColors = false;
 
-/*
+
   if (pD->colors)
   {
-
+//    thrust::fill(pD->colors->begin(), pD->colors->end(), 127);
+    thrust::copy(pD->colors->begin(), pD->colors->end(), 
+      thrust::device_ptr<float4>(colorbufferdata));
   }
-  else 
-*/
+//  else 
+/*
   if (pD->scalars)
     {
     double scalarRange[2];
@@ -230,7 +334,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
 
     hasColors = true;
 
-    if(id->GetMTime() > dataObjectMTimeCache)
+//    if(id->GetMTime() > dataObjectMTimeCache)
       {
       vtkPiston::minmax_pair<float> result = vtkPiston::find_min_max(
                                               pD->scalars);
@@ -275,7 +379,7 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
                  thrust::make_transform_iterator(pD->scalars->end(), colorMap),
                  thrust::device_ptr<float3>(colorsBufferData));
     }
-
+*/
   // Allow GL to access again
   res = cudaGraphicsUnmapResources(4, vboResources, 0);
   if (res != cudaSuccess)
@@ -286,5 +390,5 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
 
   return;
 }
-
+//------------------------------------------------------------------------------
 } //namespace

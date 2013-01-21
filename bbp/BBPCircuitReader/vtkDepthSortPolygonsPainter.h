@@ -23,8 +23,11 @@
 #include "vtkPolygonsPainter.h"
 #include "vtkSmartPointer.h"
 #include "vtkDataSetToPiston.h"
+#include "vtkScalarsToColors.h"
 
 class vtkPistonMapper;
+class vtkCamera;
+class vtkActor;
 
 class VTK_EXPORT vtkDepthSortPolygonsPainter : public vtkPolygonsPainter
 {
@@ -41,9 +44,15 @@ public:
     this->DataSetToPiston = dsp;
   }
 
+  void SetPistonLUT(vtkScalarsToColors *stc) {
+    this->ScalarsToColors = stc;
+  }
+
 protected:
   vtkDepthSortPolygonsPainter();
   ~vtkDepthSortPolygonsPainter();
+
+  void PrepareForRendering(vtkRenderer* renderer, vtkActor* actor);
 
   // Description:
   // The actual rendering happens here. This method is called only when
@@ -53,6 +62,9 @@ protected:
 
   vtkSmartPointer<vtkDataSetToPiston>  DataSetToPiston;
   vtkSmartPointer<vtkPistonMapper>     PistonMapper;
+  vtkSmartPointer<vtkScalarsToColors>  ScalarsToColors;
+  vtkCamera                           *Camera;
+  vtkActor                            *Actor;
   int EnablePiston;
 
 private:

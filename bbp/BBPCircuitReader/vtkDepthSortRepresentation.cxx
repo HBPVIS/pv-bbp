@@ -122,6 +122,8 @@ void vtkDepthSortRepresentation::SetEnablePiston(int mode)
   if (mode) {
    this->DepthSortPolygonsPainter->SetDataSetToPiston(
      this->DepthSortPainter->GetDataSetToPiston());
+   this->DepthSortPolygonsPainter->SetPistonLUT(
+     this->TwoScalarsToColorsPainter->GetLookupTable());
   }
   this->MarkModified();
 }

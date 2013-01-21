@@ -46,6 +46,14 @@ vtkDepthSortPolygonsPainter::~vtkDepthSortPolygonsPainter()
 }
 
 //-----------------------------------------------------------------------------
+void vtkDepthSortPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
+{
+  this->Superclass::PrepareForRendering(renderer, actor);
+  this->Camera = renderer->GetActiveCamera();
+  this->Actor  = actor;
+}
+
+//-----------------------------------------------------------------------------
 //
 // Helper routine which starts a poly, triangle or quad based upon
 // the number of points in the polygon and whether triangles or quads
@@ -185,7 +193,8 @@ int vtkDepthSortPolygonsPainter::RenderPrimitive(unsigned long idx, vtkDataArray
       this->PistonMapper = vtkSmartPointer<vtkPistonMapper>::New();
     }
     this->PistonMapper->SetInputConnection(this->DataSetToPiston->GetOutputPort());
-    this->PistonMapper->RenderOnGPU();
+    this->PistonMapper->SetLookupTable(this->ScalarsToColors);
+    this->PistonMapper->RenderOnGPU(this->Camera, this->Actor);
     return 1;
   }  
   

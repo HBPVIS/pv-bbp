@@ -25,6 +25,7 @@
 #include "vtkMapper.h"
 
 class vtkActor;
+class vtkCamera;
 class vtkRenderer;
 class vtkPistonDataObject;
 class vtkPistonScalarsColors;
@@ -102,7 +103,10 @@ public:
   vtkSetMacro(GhostLevel, int);
   vtkGetMacro(GhostLevel, int);
 
-  void RenderOnGPU();
+  void RenderOnGPU(vtkCamera *cam, vtkActor *act);
+  void ComputeProjectionVector(
+    vtkCamera *cam, vtkActor *act, 
+    double vector[3], double origin[3]);
 
 protected:
   vtkPistonMapper();

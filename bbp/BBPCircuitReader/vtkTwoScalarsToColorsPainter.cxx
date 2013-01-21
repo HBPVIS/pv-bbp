@@ -1,15 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    vtkTwoScalarsToColorsPainter.cxx
+Program:   Visualization Toolkit
+Module:    vtkTwoScalarsToColorsPainter.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 
@@ -46,8 +46,8 @@
 #include "vtkMapper.h"
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkTwoScalarsToColorsPainter)
-//-----------------------------------------------------------------------------
-vtkTwoScalarsToColorsPainter::vtkTwoScalarsToColorsPainter()
+  //-----------------------------------------------------------------------------
+  vtkTwoScalarsToColorsPainter::vtkTwoScalarsToColorsPainter()
 {
   this->OpacityArrayName  = NULL;
   this->EnableOpacity     = false;
@@ -92,33 +92,33 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
 
   vtkDataObject* input = this->GetInput();
   if (!input)
-    {
+  {
     vtkErrorMacro("No input present.");
     return;
-    }
+  }
 
   // If the input polydata has changed, the output should also reflect
   if (!this->OutputData ||
     !this->OutputData->IsA(input->GetClassName()) ||
     this->OutputUpdateTime < this->MTime ||
     this->OutputUpdateTime < this->GetInput()->GetMTime())
-    {
+  {
     if (this->OutputData)
-      {
+    {
       this->OutputData->Delete();
       this->OutputData = 0;
-      }
+    }
     // Create a shallow-copied clone with no output scalars.
     this->OutputData = this->NewClone(input);
     this->OutputUpdateTime.Modified();
-    }
+  }
 
   if (!this->ScalarVisibility && !this->EnableOpacity)
-    {
+  {
     // Nothing to do here.
     this->ColorTextureMap = 0;
     return;
-    }
+  }
 
   // Build the colors.
   // As per the vtkOpenGLPolyDataMapper's claim, this
@@ -137,33 +137,29 @@ void vtkTwoScalarsToColorsPainter::PrepareForRendering(
 
   // Now if we have composite data, we need to MapScalars for all leaves.
   if (input->IsA("vtkCompositeDataSet"))
-    {
+  {
     vtkCompositeDataSet* cdInput = vtkCompositeDataSet::SafeDownCast(input);
-    vtkCompositeDataSet* cdOutput = vtkCompositeDataSet::SafeDownCast(
-        this->OutputData);
+    vtkCompositeDataSet* cdOutput = vtkCompositeDataSet::SafeDownCast(this->OutputData);
     vtkCompositeDataIterator* iter = cdInput->NewIterator();
     for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
-      {
-      vtkDataSet* pdInput = vtkDataSet::SafeDownCast(
-          iter->GetCurrentDataObject());
-      vtkDataSet* pdOutput = vtkDataSet::SafeDownCast(
-          cdOutput->GetDataSet(iter));
-      if (pdInput && pdOutput)
-        {
+    {
+      vtkDataSet* pdInput = vtkDataSet::SafeDownCast(iter->GetCurrentDataObject());
+      vtkDataSet* pdOutput = vtkDataSet::SafeDownCast(cdOutput->GetDataSet(iter));
+      if (pdInput && pdOutput) {
         this->MapScalars(pdOutput, actor->GetProperty()->GetOpacity(),
-            this->GetPremultiplyColorsWithAlpha(actor), pdInput);
-        }
+          this->GetPremultiplyColorsWithAlpha(actor), pdInput);
       }
+    }
 
     iter->Delete();
-    }
+  }
   else
-    {
+  {
     this->MapScalars(vtkDataSet::SafeDownCast(this->OutputData),
-        actor->GetProperty()->GetOpacity(),
-        this->GetPremultiplyColorsWithAlpha(actor), vtkDataSet::SafeDownCast(
-            input));
-    }
+      actor->GetProperty()->GetOpacity(),
+      this->GetPremultiplyColorsWithAlpha(actor), vtkDataSet::SafeDownCast(
+      input));
+  }
   this->LastUsedAlpha = actor->GetProperty()->GetOpacity();
   this->GetLookupTable()->SetAlpha(this->LastUsedAlpha);
   this->LastUsedMultiplyWithAlpha = this->GetPremultiplyColorsWithAlpha(actor);
@@ -177,11 +173,11 @@ static inline void vtkMultiplyColorsWithOpacity(vtkDataArray* array, vtkDataArra
 {
   vtkUnsignedCharArray* colors = vtkUnsignedCharArray::SafeDownCast(array);
   if (!opacity || !colors || colors->GetNumberOfComponents() != 4)
-    {
+  {
     return;
-    }
+  }
   unsigned char* ptr = colors->GetPointer(0);
-  
+
   vtkIdType numValues = colors->GetNumberOfTuples() * colors->GetNumberOfComponents();
   if (numValues < 4) {
     return;
@@ -225,19 +221,19 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   // if no colours ... then a blank LUT with just opacity per vertex/cell
   vtkDataArray* opacity;
   if (this->ScalarVisibility)
-    {
+  {
     // if we map scalars to colors, then the opacity array has to
     // have the same scalarmode.
     opacity = vtkAbstractMapper::GetScalars(input, this->ScalarMode,
-        VTK_GET_ARRAY_BY_NAME, -1, this->OpacityArrayName, cellFlag);
+      VTK_GET_ARRAY_BY_NAME, -1, this->OpacityArrayName, cellFlag);
 
-    }
+  }
   else
-    { // no scalar color array, let us build one with constant color
+  { // no scalar color array, let us build one with constant color
     opacity = vtkAbstractMapper::GetScalars(input, this->OpacityScalarMode,
-        VTK_GET_ARRAY_BY_NAME, -1, this->OpacityArrayName, cellFlag);
+      VTK_GET_ARRAY_BY_NAME, -1, this->OpacityArrayName, cellFlag);
 
-    }
+  }
 
   vtkPointData* oppd = output->GetPointData();
   vtkCellData*  opcd = output->GetCellData();
@@ -248,14 +244,14 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   // from the mapper.  It is now in the lookuptable.  When this feature
   // is removed, we can remove this condition.
   if (scalars == 0 || scalars->GetNumberOfComponents() <= this->ArrayComponent)
-    {
+  {
     arraycomponent = 0;
-    }
+  }
 
   if (!this->ScalarVisibility || scalars == 0 || input == 0)
-    {
+  {
     return;
-    }
+  }
 
   // Let subclasses know that scalar coloring was employed in the current pass.
   // it is used in opengl scalars to colours as follows :
@@ -268,34 +264,34 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   vtkScalarsToColors* lut = 0;
   // Get the lookup table.
   if (scalars->GetLookupTable())
-    {
+  {
     lut = scalars->GetLookupTable();
-    }
+  }
   else
-    {
+  {
     lut = this->GetLookupTable();
     lut->Build();
-    }
+  }
 
   if (!this->UseLookupTableScalarRange)
-    {
+  {
     lut->SetRange(this->ScalarRange);
-    }
+  }
 
   // Try to reuse the old colors.
   vtkDataArray* colors;
   if (cellFlag == 0)
-    {
+  {
     colors = oppd->GetScalars();
-    }
+  }
   else if (cellFlag == 1)
-    {
+  {
     colors = opcd->GetScalars();
-    }
+  }
   else
-    {
+  {
     colors = opfd->GetArray("Color");
-    }
+  }
 
   // The LastUsedAlpha checks ensures that opacity changes are reflected
   // correctly when this->MapScalars(..) is called when iterating over a
@@ -303,16 +299,16 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   if (colors && opacity && 
     this->LastUsedAlpha == alpha &&
     this->LastUsedMultiplyWithAlpha == multiply_with_alpha)
-    {
+  {
     if (this->GetMTime() < colors->GetMTime() &&
       input->GetMTime() < colors->GetMTime() &&
       lut->GetMTime() < colors->GetMTime() &&
       opacity->GetMTime() < colors->GetMTime())
-      {
+    {
       // using old colors.
       return;
-      }
     }
+  }
 
   // Get rid of old colors.
   colors = 0;
@@ -339,15 +335,15 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
   vtkMultiplyColorsWithOpacity(colors, opacity, multiply_with_alpha);
 
   if (cellFlag == 0)
-    {
+  {
     oppd->SetScalars(colors);
-    }
+  }
   else if (cellFlag == 1)
-    {
+  {
     opcd->SetScalars(colors);
-    }
+  }
   else
-    {
+  {
     // Typically, when a name is assigned of the scalars array in PointData or CellData
     // it implies 3 component colors. This implication does not hold for FieldData.
     // For colors in field data, we use the component count of the color array
@@ -357,7 +353,7 @@ void vtkTwoScalarsToColorsPainter::MapScalars(vtkDataSet* output, double alpha,
     // the triange colors.
     colors->SetName("Color");
     opfd->AddArray(colors);
-    }
+  }
   colors->Delete();
 }
 //-----------------------------------------------------------------------------

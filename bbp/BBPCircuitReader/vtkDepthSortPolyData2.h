@@ -63,7 +63,7 @@ public:
   // instead of quicksort (or std::sort default sort algorithm).
   // The reason is that when the points are already nearly sorted, the insertion
   // sort algorithm is ver fast and for small camera movments this is beneficial.
-  // Ideial usage is that when the camera movement is less than delta, use insertion
+  // Ideal usage is that when the camera movement is less than delta, use insertion
   // otherwise, use quicksort.
   vtkSetMacro(UseCachedSortOrder, int);
   vtkGetMacro(UseCachedSortOrder, int);

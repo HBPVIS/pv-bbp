@@ -34,10 +34,11 @@ typedef struct
   int nPoints;
   int vertsPer;
   int nCells;
-  thrust::device_vector<float>         *points;
-  thrust::device_vector<int>           *cells;
+  thrust::device_vector<float3>        *points;
+  thrust::device_vector<uint3>         *cells;
+  thrust::device_vector<uint3>         *originalcells;
   thrust::device_vector<float>         *scalars;
-  thrust::device_vector<unsigned char> *colors;
+  thrust::device_vector<float4>        *colors;
   thrust::device_vector<float>         *opacities;
   thrust::device_vector<float>         *normals;
 } vtk_polydata;
