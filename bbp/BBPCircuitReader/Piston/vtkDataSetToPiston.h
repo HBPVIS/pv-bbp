@@ -35,6 +35,16 @@ public:
   vtkTypeMacro(vtkDataSetToPiston,vtkPistonAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Set/Get the name of the color array to blend with.
+  vtkSetStringMacro(ScalarArrayName);
+  vtkGetStringMacro(ScalarArrayName);
+
+  // Description:
+  // Set/Get the name of the opacity array to blend with.
+  vtkSetStringMacro(OpacityArrayName);
+  vtkGetStringMacro(OpacityArrayName);
+
 protected:
   vtkDataSetToPiston();
   ~vtkDataSetToPiston();
@@ -48,6 +58,9 @@ protected:
   // Description:
   // Overridden to say that we require vtkDataSet inputs
   virtual int FillInputPortInformation(int, vtkInformation*);
+
+  char *ScalarArrayName;
+  char *OpacityArrayName;
 
 private:
   vtkDataSetToPiston(const vtkDataSetToPiston&);  // Not implemented.

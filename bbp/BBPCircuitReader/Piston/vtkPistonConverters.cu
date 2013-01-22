@@ -281,7 +281,7 @@ namespace vtkpiston {
   }
 
   //-----------------------------------------------------------------------------
-  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer, char *scalarname)
+  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer, char *scalarname, char *opacityname)
   {
     vtkPistonReference *tr = od->GetReference();
     if (CheckDirty(id, tr))
@@ -381,7 +381,7 @@ namespace vtkpiston {
       }
 
       vtkFloatArray *inopacities = vtkFloatArray::SafeDownCast(
-        id->GetPointData()->GetArray("Opacity")
+        id->GetPointData()->GetArray(opacityname)
         );
       if (inopacities)
       {

@@ -33,8 +33,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include <functional>
 #include <tuple>
 //
-#include "vtkPistonDeclarations.h"
-//
 // depth, cellId, pts_offset
 //
 typedef std::tuple<double, vtkIdType, vtkIdType> depthInfo;

@@ -36,19 +36,20 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkDepthSortPolygonsPainter.h"
 #include "vtkTwoScalarsToColorsPainter.h"
 #include "vtkBoundsExtentTranslator.h"
-//
-#include "vtkPistonMapper.h"
+#include "vtkPistonPolygonsPainter.h"
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDepthSortRepresentation);
 vtkCxxSetObjectMacro(vtkDepthSortRepresentation, Controller, vtkMultiProcessController);
 //----------------------------------------------------------------------------
 vtkDepthSortRepresentation::vtkDepthSortRepresentation()
 {
-  this->UseDataParititions        = 1;
+  this->UseDataPartitions         = 1;
   this->DepthSortDefaultPainter   = vtkDepthSortDefaultPainter::New();
   this->DepthSortPainter          = this->DepthSortDefaultPainter->GetDepthSortPainter();
   this->TwoScalarsToColorsPainter = this->DepthSortDefaultPainter->GetTwoScalarsToColorsPainter();
   this->DepthSortPolygonsPainter  = this->DepthSortDefaultPainter->GetDepthSortPolygonsPainter();
+  this->PistonPolygonsPainter     = this->DepthSortDefaultPainter->GetPistonPolygonsPainter();
+
   //
   vtkMath::UninitializeBounds(this->GlobalDataBounds);
   //
@@ -72,27 +73,22 @@ vtkDepthSortRepresentation::~vtkDepthSortRepresentation()
 void vtkDepthSortRepresentation::ReportReferences(vtkGarbageCollector *collector)
 {
   this->Superclass::ReportReferences(collector);
-
-  //vtkGarbageCollectorReport(collector, this->DepthSortDefaultPainter,   "DepthSortDefaultPainter");
-  //vtkGarbageCollectorReport(collector, this->DepthSortPainter,          "DepthSortPainter");
-  //vtkGarbageCollectorReport(collector, this->TwoScalarsToColorsPainter, "TwoScalarsToColorsPainter");
-  //vtkGarbageCollectorReport(collector, this->Controller,                "Controller");
 }
 //----------------------------------------------------------------------------
 bool vtkDepthSortRepresentation::AddToView(vtkView* view)
 {
   vtkPVRenderView* rview = vtkPVRenderView::SafeDownCast(view);
   if (rview) {
-    vtkPistonMapper::InitCudaGL(rview->GetRenderWindow());
+    vtkPistonPolygonsPainter::InitCudaGL(rview->GetRenderWindow());
   }
   return this->Superclass::AddToView(view);
 }
 //----------------------------------------------------------------------------
-void vtkDepthSortRepresentation::SetUseDataParititions(bool val)
+void vtkDepthSortRepresentation::SetUseDataPartitions(bool val)
 {
-  if (this->UseDataParititions != val)
+  if (this->UseDataPartitions != val)
   {
-    this->UseDataParititions = val;
+    this->UseDataPartitions = val;
     this->MarkModified();
   }
 }
@@ -100,6 +96,7 @@ void vtkDepthSortRepresentation::SetUseDataParititions(bool val)
 void vtkDepthSortRepresentation::SetOpacityArrayName(const char* opacity)
 {
   this->TwoScalarsToColorsPainter->SetOpacityArrayName(opacity);
+  this->PistonPolygonsPainter->SetOpacityArrayName(opacity);
   this->MarkModified();
 }
 //----------------------------------------------------------------------------
@@ -107,6 +104,7 @@ void vtkDepthSortRepresentation::SetEnableOpacity(int enable)
 {
   this->TwoScalarsToColorsPainter->SetEnableOpacity(enable);
   this->DepthSortPainter->SetDepthSortRequired(enable);
+  this->PistonPolygonsPainter->SetEnableOpacity(enable);
   this->MarkModified();
 }
 //----------------------------------------------------------------------------
@@ -117,13 +115,10 @@ int vtkDepthSortRepresentation::GetEnableOpacity()
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetEnablePiston(int mode)
 {
-  this->DepthSortPainter->SetEnablePiston(mode);
-  this->DepthSortPolygonsPainter->SetEnablePiston(mode);
+  this->DepthSortDefaultPainter->SetEnablePiston(mode);
   if (mode) {
-   this->DepthSortPolygonsPainter->SetDataSetToPiston(
-     this->DepthSortPainter->GetDataSetToPiston());
-   this->DepthSortPolygonsPainter->SetPistonLUT(
-     this->TwoScalarsToColorsPainter->GetLookupTable());
+    this->PistonPolygonsPainter->SetScalarsToColors(this->TwoScalarsToColorsPainter);
+    // swap the painter chain
   }
   this->MarkModified();
 }
@@ -160,7 +155,7 @@ int vtkDepthSortRepresentation::RequestData(vtkInformation* request,
     return 0;
   }
 
-  if (inputVector[0]->GetNumberOfInformationObjects()==1 && this->UseDataParititions) {
+  if (inputVector[0]->GetNumberOfInformationObjects()==1 && this->UseDataPartitions) {
     // reduce bounds across processes in parallel.
     if (this->Controller->GetNumberOfProcesses() > 1)
     {
@@ -211,7 +206,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
     // because we assume that the data has been partitioned
     vtkPVRenderView::MarkAsRedistributable(inInfo, this, false);
 
-    if (this->GetNumberOfInputConnections(0) == 1 && this->UseDataParititions) {
+    if (this->GetNumberOfInputConnections(0) == 1 && this->UseDataPartitions) {
       vtkAlgorithmOutput* connection = this->GetInputConnection(0, 0);
       vtkAlgorithm* inputAlgo = connection->GetProducer();
       vtkStreamingDemandDrivenPipeline* sddp = vtkStreamingDemandDrivenPipeline::SafeDownCast(inputAlgo->GetExecutive());
@@ -277,7 +272,7 @@ int vtkDepthSortRepresentation::ProcessViewRequest(
           translator, whole_extent, origin, spacing, this->BoundsTranslator->GetKdTree());
       }
     }
-    else if (!this->UseDataParititions) {
+    else if (!this->UseDataPartitions) {
       double origin[3] = {0, 0, 0};
       double spacing[3] = {1, 1, 1};
       int whole_extent[6] = {1, -1, 1, -1, 1, -1};

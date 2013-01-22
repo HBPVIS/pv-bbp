@@ -103,12 +103,6 @@ public:
   vtkGetMacro(Direction, int);
   vtkBooleanMacro(Direction, int);
 
-  vtkSetMacro(EnablePiston, int);
-  vtkGetMacro(EnablePiston, int);
-  vtkBooleanMacro(EnablePiston, int);
-
-  vtkDataSetToPiston *GetDataSetToPiston();
-
   // Description:
   // Get the output data object from this painter.
   // If Enabled, the output, the points will be ordered by
@@ -133,7 +127,6 @@ public:
   // 5. false if the texture is either fully opaque or fully transparent (alpha = 0 or 255) (this result is cached)
   // 6. the result of actor->HasTranslucentPolygonalGeometry
   virtual int NeedSorting(vtkRenderer* renderer, vtkActor* actor);
-
 
   // Description:
   // Set/Get the internal vtkDepthSortPolyData2 algorithm
@@ -160,42 +153,19 @@ protected:
   // Thisis called during the PrepareForRendering method to update the
   // OutputData ivar. This data is either the output of the DepthSortPolyData filter
   // if not NULL and NeedsSorting returns true, or a shallow copy of the input.
-  virtual void  SetOutputData(vtkDataObject*);
-
-  // Description:
-  // This is a helper method that detects if the used texture is semi-translucent :
-  // returns true only if there is a texture and this texture has alpha values
-  // not equal to 0 or 255
-  // This class caches the results so that this test is not done at each rendering.
-  virtual int IsTextureSemiTranslucent(vtkTexture*);
-
-  // Description:
-  // This is a helper method that tells if the color has some opacity (alpha values != 0 and != 255)
-  virtual int IsColorSemiTranslucent(vtkUnsignedCharArray* color);
+  virtual void SetOutputData(vtkDataObject*);
 
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
   vtkDataObject*         OutputData;
   int                    DepthSortEnableMode;
   int                    DepthSortMode;
-  vtkTimeStamp            SortTime;
+  vtkTimeStamp           SortTime;
   int                    UseCachedSortOrder;
   int                    Direction;
-  int                    EnablePiston;
   //
-  int                    CachedIsTextureSemiTranslucent;
-  vtkTimeStamp           CachedIsTextureSemiTranslucentTime;
-  vtkTimeStamp           CachedIsColorSemiTranslucentTime;
-  int                    CachedIsColorSemiTranslucent;
   vtkDepthSortPolyData2* DepthSortPolyData;
   int                    DepthSortOverrideFlag;
-
-  //BTX
-  vtkWeakPointer<vtkDataObject>        PrevInput;
-  vtkWeakPointer<vtkTexture>           CachedTexture;
-  vtkWeakPointer<vtkUnsignedCharArray> CachedColors;
-  vtkSmartPointer<vtkDataSetToPiston>  DataSetToPiston;
-  //ETX
 
 private:
   vtkDepthSortPainter(const vtkDepthSortPainter &);  // Not implemented.

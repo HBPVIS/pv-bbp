@@ -28,7 +28,7 @@
 namespace vtkpiston {
   //forward declarations of methods defined in the cuda implementation
   void CopyToGPU(vtkImageData *id, vtkPistonDataObject *od);
-  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer, char *scalarname);
+  void CopyToGPU(vtkPolyData *id, vtkPistonDataObject *od, bool useindexbuffer, char *scalarname, char *opacityname);
 }
 
 //----------------------------------------------------------------------------
@@ -37,11 +37,15 @@ vtkStandardNewMacro(vtkDataSetToPiston);
 //----------------------------------------------------------------------------
 vtkDataSetToPiston::vtkDataSetToPiston()
 {
+  this->ScalarArrayName  = NULL;
+  this->OpacityArrayName = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkDataSetToPiston::~vtkDataSetToPiston()
 {
+  delete []this->ScalarArrayName;
+  delete []this->OpacityArrayName;
 }
 
 //----------------------------------------------------------------------------
@@ -51,9 +55,7 @@ void vtkDataSetToPiston::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-int
-vtkDataSetToPiston
-::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
+int vtkDataSetToPiston::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
@@ -170,10 +172,10 @@ int vtkDataSetToPiston::RequestData(vtkInformation *request,
           triangulated->GetPointData()->CopyData(id->GetPointData(), triangle[2], opnt++);
         }
       }
-      vtkpiston::CopyToGPU(triangulated, od, false, "RTNeuron Opacity");
+      vtkpiston::CopyToGPU(triangulated, od, false, this->ScalarArrayName, this->OpacityArrayName);
       triangulated->Delete();
 #else
-      vtkpiston::CopyToGPU(id, od, true, "RTNeuron Opacity");
+      vtkpiston::CopyToGPU(id, od, true, this->ScalarArrayName, this->OpacityArrayName);
 #endif
       }
       break;

@@ -38,9 +38,9 @@ typedef struct
   thrust::device_vector<uint3>         *cells;
   thrust::device_vector<uint3>         *originalcells;
   thrust::device_vector<float>         *scalars;
-  thrust::device_vector<float4>        *colors;
   thrust::device_vector<float>         *opacities;
   thrust::device_vector<float>         *normals;
+  thrust::device_vector<float4>        *colors;
 } vtk_polydata;
 
 struct tuple2float3 :

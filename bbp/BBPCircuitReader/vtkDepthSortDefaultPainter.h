@@ -38,6 +38,7 @@
 class vtkDepthSortPainter;
 class vtkTwoScalarsToColorsPainter;
 class vtkDepthSortPolygonsPainter;
+class vtkPistonPolygonsPainter;
 
 class VTK_EXPORT vtkDepthSortDefaultPainter : public vtkDefaultPainter
 {
@@ -67,6 +68,19 @@ public :
   void SetDepthSortPolygonsPainter(vtkDepthSortPolygonsPainter*);
   vtkGetObjectMacro(DepthSortPolygonsPainter, vtkDepthSortPolygonsPainter);
 
+  // Description:
+  // Get/Set the PistonPolygonsPainter. 
+  // The PistonPolygonsPainter is a primitive painter which paints
+  // using the piston library on the GPU and performs depth sorting
+  // of cells on the fly as well as verex opacity blending
+  void SetPistonPolygonsPainter(vtkPistonPolygonsPainter*);
+  vtkGetObjectMacro(PistonPolygonsPainter, vtkPistonPolygonsPainter);
+
+  // Description:
+  // Enable/disble the use of GPU rendering with Piston
+  vtkSetMacro(EnablePiston, int);
+  vtkGetMacro(EnablePiston, int);
+
 protected:
   // Description:
   // Setups the the painter chain.
@@ -79,8 +93,11 @@ protected:
   vtkDepthSortPainter          *DepthSortPainter;
   vtkTwoScalarsToColorsPainter *TwoScalarsToColorsPainter;
   vtkDepthSortPolygonsPainter  *DepthSortPolygonsPainter;
+  vtkPistonPolygonsPainter     *PistonPolygonsPainter;
+  int EnablePiston;
 
-  vtkDepthSortDefaultPainter();
+protected:
+   vtkDepthSortDefaultPainter();
   ~vtkDepthSortDefaultPainter();
 
 private:

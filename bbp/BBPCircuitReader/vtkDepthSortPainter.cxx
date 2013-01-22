@@ -28,46 +28,22 @@ PURPOSE.  See the above copyright notice for more information.
 // </verbatim>
 
 #include "vtkDepthSortPainter.h"
-
+//
 #include "vtkObjectFactory.h"
 #include "vtkGarbageCollector.h"
-#include "vtkIdTypeArray.h"
 #include "vtkDataSet.h"
 #include "vtkCamera.h"
-#include "vtkMatrix4x4.h"
-#include "vtkFloatArray.h"
-#include "vtkCell.h"
-#include "vtkMath.h"
-#include "vtkSortDataArray.h"
-#include "vtkPoints.h"
 #include "vtkRenderer.h"
 #include "vtkPolyData.h"
-#include "vtkCellArray.h"
 #include "vtkCompositeDataSet.h"
 #include "vtkCompositeDataIterator.h"
-#include "vtkTexture.h"
 #include "vtkProperty.h"
 #include "vtkDepthSortPolyData2.h"
-#include "vtkScalarsToColors.h"
-
-#include <vector>
-#include <algorithm>
-#include <functional>
-
-#include <cmath>
-#include "vtkImageData.h"
-#include "vtkPNGWriter.h"
-#include "vtkPointData.h"
-#include "vtkCellData.h"
-#include "vtkPolyData.h"
-
-#include "vtkDataSetToPiston.h"
-#include "vtkPistonDataObject.h"
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDepthSortPainter)
-  //-----------------------------------------------------------------------------
-  vtkCxxSetObjectMacro(vtkDepthSortPainter,DepthSortPolyData,vtkDepthSortPolyData2);
+//-----------------------------------------------------------------------------
+vtkCxxSetObjectMacro(vtkDepthSortPainter,DepthSortPolyData,vtkDepthSortPolyData2);
 vtkCxxSetObjectMacro(vtkDepthSortPainter,OutputData,vtkDataObject);
 //-----------------------------------------------------------------------------
 vtkDepthSortPainter::vtkDepthSortPainter()
@@ -76,12 +52,9 @@ vtkDepthSortPainter::vtkDepthSortPainter()
   this->DepthSortMode                   = VTK_SORT_FIRST_POINT;
   this->UseCachedSortOrder              = true;
   this->Direction                       = VTK_DIRECTION_BACK_TO_FRONT;
-  this->CachedIsTextureSemiTranslucent  = 1;
-  this->CachedIsColorSemiTranslucent    = 1;
   this->DepthSortPolyData               = vtkDepthSortPolyData2::New();
   this->OutputData                      = NULL;
   this->DepthSortOverrideFlag           = 0;
-  this->EnablePiston                    = 0;
 }
 //-----------------------------------------------------------------------------
 vtkDepthSortPainter::~vtkDepthSortPainter()
@@ -162,22 +135,13 @@ void vtkDepthSortPainter::Sort(vtkDataSet* output,
   vtkRenderer* vtkNotUsed(renderer),
   vtkActor* vtkNotUsed(actor))
 {
-  if (!this->EnablePiston) {
-    this->DepthSortPolyData->SetInputData(input);
-    this->DepthSortPolyData->SetDirectionToBackToFront();
-    this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
-    this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
-    this->DepthSortPolyData->SetDirection(this->Direction);
-    this->DepthSortPolyData->Update();
-    output->ShallowCopy(this->DepthSortPolyData->GetOutput());
-  }
-  else {
-    if (!this->DataSetToPiston) {
-      this->DataSetToPiston = vtkSmartPointer<vtkDataSetToPiston>::New();
-    }
-    this->DataSetToPiston->SetInputData(input);
-    this->DataSetToPiston->Update();
-  }
+  this->DepthSortPolyData->SetInputData(input);
+  this->DepthSortPolyData->SetDirectionToBackToFront();
+  this->DepthSortPolyData->SetDepthSortMode(this->DepthSortMode);
+  this->DepthSortPolyData->SetUseCachedSortOrder(this->UseCachedSortOrder);
+  this->DepthSortPolyData->SetDirection(this->Direction);
+  this->DepthSortPolyData->Update();
+  output->ShallowCopy(this->DepthSortPolyData->GetOutput());
 }
 //-----------------------------------------------------------------------------
 int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
@@ -203,171 +167,14 @@ int vtkDepthSortPainter::NeedSorting(vtkRenderer* renderer, vtkActor* actor)
   if (actor->GetProperty()->GetOpacity() < 1)
     return true;
 
-  // if the color array has an alpha component, return true.
-  // rem : this alpha component can come from the vtkTwoScalarsToColors painter,
-  // and thus cannot be simply deduced from the opacity and lut.
-  vtkUnsignedCharArray* colors = NULL; 
-
-  // this next code never caled because the input is always composite in new ParaView versions
-  // Shall we remove it or keep it. DepthSortOverrideFlag is set by owner and saves us the need
-  // to check color arrays by hand.
-
-  vtkPolyData* input = vtkPolyData::SafeDownCast(this->GetInput());
-  if (input)
-  {
-    colors = vtkUnsignedCharArray::SafeDownCast(
-      input->GetPointData()->GetScalars());
-    if (!colors)
-    {
-      colors = vtkUnsignedCharArray::SafeDownCast(
-        input->GetCellData()->GetScalars());
-    }
-    if (!colors)
-    {
-      colors = vtkUnsignedCharArray::SafeDownCast(
-        input->GetFieldData()->GetArray("Color"));
-    }
-    if (colors && this->IsColorSemiTranslucent(colors))
-      return true;
-  }
-
-  // if the texture is either fully opaque or fully transparent, return false
-  if (actor->GetTexture() != NULL && !this->IsTextureSemiTranslucent(
-    actor->GetTexture()))
-    return false;
+  // if the color table is translucent, then whoever is calling
+  // this painter, should set DepthSortOverride flag to true
 
   return actor->HasTranslucentPolygonalGeometry();
-}
-//-----------------------------------------------------------------------------
-int vtkDepthSortPainter::IsTextureSemiTranslucent(vtkTexture* tex)
-{
-  if (tex == NULL)
-  {
-    return -1; //undetermined
-  }
-  if (tex == this->CachedTexture && this->CachedIsTextureSemiTranslucentTime
-  > tex->GetMTime() && this->CachedIsTextureSemiTranslucentTime
-    > this->GetMTime())
-  {
-    return this->CachedIsTextureSemiTranslucent;
-  }
-  this->CachedIsTextureSemiTranslucent = 1;
-  this->CachedTexture = tex;
-  this->CachedIsTextureSemiTranslucentTime.Modified();
-
-  if (!tex->GetMapColorScalarsThroughLookupTable() && tex->GetInput())
-  {
-    vtkImageData* image = tex->GetInput();
-    vtkUnsignedCharArray* data = vtkUnsignedCharArray::SafeDownCast(
-      image->GetPointData()->GetScalars());
-    if (data)
-    {
-      int ncomp = data->GetNumberOfComponents();
-      if (ncomp % 2 == 0)
-      {
-        int partiallyTranslucent = false;
-        unsigned char* ptr = data->GetPointer(0);
-        for (vtkIdType i = 0; i < data->GetNumberOfTuples(); i++)
-        {
-          unsigned char alpha = ptr[i * ncomp + ncomp - 1];
-          // the texture is not translucent if it is either
-          // fully transparent (alpha=0) or fully opaque (alpha = 255)
-          if (alpha != 0 && alpha != 255)
-          {
-            partiallyTranslucent = true;
-            break;
-          }
-        }
-        if (!partiallyTranslucent)
-        {
-          this->CachedIsTextureSemiTranslucent = 0;
-          return 0;
-        }
-        else
-        {
-          return 1;
-        }
-      }
-      else
-      {
-        return 1;
-      }
-    }
-    else //if(data)
-    {
-      this->CachedIsTextureSemiTranslucent = -1;
-      return -1; //undetermined
-    }
-  }
-  else
-  {
-    vtkScalarsToColors* lut = tex->GetLookupTable();
-    if (lut && lut->IsOpaque())
-    {
-      this->CachedIsTextureSemiTranslucent = 0;
-      return 0;
-    }
-    else
-    {
-      this->CachedIsTextureSemiTranslucent = 1;
-      return 1;
-    }
-  }
-  /*
-  this->CachedIsTextureSemiTranslucent = -1;
-  return -1;
-  */
-}
-//-----------------------------------------------------------------------------
-int vtkDepthSortPainter::IsColorSemiTranslucent(vtkUnsignedCharArray* color)
-{
-  if (color == this->CachedColors && color->GetMTime()
-    < this->CachedIsColorSemiTranslucentTime && this->GetMTime()
-    < this->CachedIsColorSemiTranslucentTime)
-  {
-    return this->CachedIsColorSemiTranslucent;
-  }
-  this->CachedColors = color;
-  this->CachedIsColorSemiTranslucentTime.Modified();
-  if (color == NULL)
-  {
-    this->CachedIsColorSemiTranslucent = -1;
-    return -1;
-  }
-
-  int ncomp = color->GetNumberOfComponents();
-  vtkIdType ntuples = color->GetNumberOfTuples();
-
-  if (ncomp % 2 != 0)
-  {
-    this->CachedIsColorSemiTranslucent = 0;
-    return 0;
-  }
-  vtkIdType i;
-  unsigned char* values = color->GetPointer(0);
-  for (i = 0; i < ntuples; i++)
-  {
-    if (values[ncomp - 1] != 0 || values[ncomp - 1] != 255)
-    {
-      this->CachedIsColorSemiTranslucent = 1;
-      return 1;
-    }
-    values += ncomp;
-  }
-  this->CachedIsColorSemiTranslucent = 0;
-  return 0;
 }
 //-----------------------------------------------------------------------------
 vtkDataObject* vtkDepthSortPainter::GetOutput()
 {
   return vtkDataObject::SafeDownCast(this->OutputData);
-}
-//-----------------------------------------------------------------------------
-vtkDataSetToPiston* vtkDepthSortPainter::GetDataSetToPiston()
-{
-  if (!this->DataSetToPiston) {
-    this->DataSetToPiston = vtkSmartPointer<vtkDataSetToPiston>::New();
-  }
-  return this->DataSetToPiston;
 }
 //-----------------------------------------------------------------------------

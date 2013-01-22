@@ -27,9 +27,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkUnsignedCharArray.h"
 //
-#include "vtkPistonDataObject.h"
-#include "vtkPistonMapper.h"
-//
 vtkStandardNewMacro(vtkDepthSortPolygonsPainter);
 
 #define VTK_PP_INVALID_TYPE -1
@@ -37,7 +34,6 @@ vtkStandardNewMacro(vtkDepthSortPolygonsPainter);
 vtkDepthSortPolygonsPainter::vtkDepthSortPolygonsPainter()
 {
   this->SetSupportedPrimitive(vtkPainter::POLYS);
-  this->EnablePiston = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -49,8 +45,6 @@ vtkDepthSortPolygonsPainter::~vtkDepthSortPolygonsPainter()
 void vtkDepthSortPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
 {
   this->Superclass::PrepareForRendering(renderer, actor);
-  this->Camera = renderer->GetActiveCamera();
-  this->Actor  = actor;
 }
 
 //-----------------------------------------------------------------------------
@@ -188,16 +182,6 @@ static inline void vtkOpenGLBeginPolyTriangleOrQuad(int aPrimitive,
 int vtkDepthSortPolygonsPainter::RenderPrimitive(unsigned long idx, vtkDataArray* n,
     vtkUnsignedCharArray* c, vtkDataArray* t, vtkRenderer* ren)
 {
-  if (this->EnablePiston) {
-    if (!this->PistonMapper) {
-      this->PistonMapper = vtkSmartPointer<vtkPistonMapper>::New();
-    }
-    this->PistonMapper->SetInputConnection(this->DataSetToPiston->GetOutputPort());
-    this->PistonMapper->SetLookupTable(this->ScalarsToColors);
-    this->PistonMapper->RenderOnGPU(this->Camera, this->Actor);
-    return 1;
-  }  
-  
   vtkPolyData* pd = this->GetInputAsPolyData();
   vtkIdType cellNum = pd->GetVerts()->GetNumberOfCells() + pd->GetLines()->GetNumberOfCells();
   vtkIdTypeArray *DepthOrder = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetArray("DepthOrder"));
@@ -711,10 +695,4 @@ int vtkDepthSortPolygonsPainter::RenderPrimitive(unsigned long idx, vtkDataArray
     }
 
   return 1;
-}
-
-//-----------------------------------------------------------------------------
-void vtkDepthSortPolygonsPainter::PrintSelf(ostream& os, vtkIndent indent)
-{
-  this->Superclass::PrintSelf(os, indent);
 }

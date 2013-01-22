@@ -23,7 +23,7 @@
 #include "vtkPolygonsPainter.h"
 #include "vtkSmartPointer.h"
 #include "vtkDataSetToPiston.h"
-#include "vtkScalarsToColors.h"
+#include "vtkTwoScalarsToColorsPainter.h"
 
 class vtkPistonMapper;
 class vtkCamera;
@@ -34,19 +34,6 @@ class VTK_EXPORT vtkDepthSortPolygonsPainter : public vtkPolygonsPainter
 public:
   static vtkDepthSortPolygonsPainter* New();
   vtkTypeMacro(vtkDepthSortPolygonsPainter, vtkPolygonsPainter);
-  void PrintSelf(ostream& os, vtkIndent indent);
-
-  vtkSetMacro(EnablePiston, int);
-  vtkGetMacro(EnablePiston, int);
-  vtkBooleanMacro(EnablePiston, int);
-
-  void SetDataSetToPiston(vtkDataSetToPiston *dsp) {
-    this->DataSetToPiston = dsp;
-  }
-
-  void SetPistonLUT(vtkScalarsToColors *stc) {
-    this->ScalarsToColors = stc;
-  }
 
 protected:
   vtkDepthSortPolygonsPainter();
@@ -59,13 +46,6 @@ protected:
   // SupportedPrimitive is present in typeflags when Render() is invoked.
   virtual int RenderPrimitive(unsigned long flags, vtkDataArray* n,
     vtkUnsignedCharArray* c, vtkDataArray* t, vtkRenderer* ren);
-
-  vtkSmartPointer<vtkDataSetToPiston>  DataSetToPiston;
-  vtkSmartPointer<vtkPistonMapper>     PistonMapper;
-  vtkSmartPointer<vtkScalarsToColors>  ScalarsToColors;
-  vtkCamera                           *Camera;
-  vtkActor                            *Actor;
-  int EnablePiston;
 
 private:
   vtkDepthSortPolygonsPainter(const vtkDepthSortPolygonsPainter&); // Not implemented.

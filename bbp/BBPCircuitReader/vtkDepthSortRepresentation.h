@@ -29,6 +29,7 @@ class vtkDepthSortPolygonsPainter;
 class vtkTwoScalarsToColorsPainter;
 class vtkMultiProcessController;
 class vtkBoundsExtentTranslator;
+class vtkPistonPolygonsPainter;
 
 class VTK_EXPORT vtkDepthSortRepresentation : public vtkGeometryRepresentation
 {
@@ -42,8 +43,8 @@ public:
   // partitioning information from the input structured grid for ordered
   // compositing. When off we let the view build its own ordering and
   // redistribute data as needed.
-  void SetUseDataParititions(bool);
-  vtkGetMacro(UseDataParititions, bool);
+  void SetUseDataPartitions(bool);
+  vtkGetMacro(UseDataPartitions, bool);
 
   // Description:
   // By default this filter uses the global controller,
@@ -83,14 +84,15 @@ protected:
     vtkInformationRequestKey* request_type,
     vtkInformation* inInfo, vtkInformation* outInfo);
 
-
+  //
   vtkDepthSortDefaultPainter                   *DepthSortDefaultPainter;
   vtkSmartPointer<vtkDepthSortPainter>          DepthSortPainter;
   vtkSmartPointer<vtkDepthSortPolygonsPainter>  DepthSortPolygonsPainter;
   vtkSmartPointer<vtkTwoScalarsToColorsPainter> TwoScalarsToColorsPainter;
+  vtkSmartPointer<vtkPistonPolygonsPainter>     PistonPolygonsPainter;
   vtkSmartPointer<vtkBoundsExtentTranslator>    BoundsTranslator;
 
-  int UseDataParititions;
+  int UseDataPartitions;
   //
   vtkMultiProcessController *Controller;
   //

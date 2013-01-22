@@ -37,6 +37,7 @@
 #define __vtkTwoScalarsToColorsPainter_h__
 
 #include "vtkOpenGLScalarsToColorsPainter.h"
+#include <vector>
 
 class VTK_EXPORT vtkTwoScalarsToColorsPainter : public vtkOpenGLScalarsToColorsPainter
 {
@@ -62,6 +63,7 @@ public :
   vtkSetMacro(OpacityScalarMode, int);
   vtkGetMacro(OpacityScalarMode, int);
 
+  const char *GetArrayName() { return this->ArrayName; }
   // Description:
   // For alpha blending, we sometime premultiply the colors
   // with alpha and change the alpha blending function.
@@ -74,6 +76,12 @@ public :
   // that makes a more informed decision for alpha blending
   // depending on extensions available, for example.
   virtual int GetPremultiplyColorsWithAlpha(vtkActor* actor);
+
+  //BTX
+  std::vector<float>* ComputeScalarsColorsf();
+  void ComputeValues(float *values);
+  void GetScalarRange(double range[2]);
+  //ETX
 
 protected:
   vtkTwoScalarsToColorsPainter();
@@ -112,16 +120,16 @@ protected:
   // can be handled if required.
   int CanUseTextureMapForColoring(vtkDataObject* input);
 
-
-  // Description:
-  // Should not be called if CanUseTextureMapForColoring() returns 0.
-  void UpdateColorTextureMap(double alpha, int multiply_with_alpha);
-
 protected :
-  char *OpacityArrayName;
-  int EnableOpacity;
-  int OpacityScalarMode;
+  char         *OpacityArrayName;
+  int           EnableOpacity;
+  int           OpacityScalarMode;
   vtkTimeStamp  BlendTime;
+
+  vtkTimeStamp ComputeColorsfTime;
+  //BTX
+  std::vector<float> ScalarsColorsf;
+  //ETX
 
 private:
   vtkTwoScalarsToColorsPainter(const vtkTwoScalarsToColorsPainter&); // Not implemented.
