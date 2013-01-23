@@ -354,7 +354,12 @@ void vtkPistonPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkAct
       if (pdInput && pdOutput) {
         // this will break with real composite data
         this->DataSetToPiston->SetInputData(input);
-        this->DataSetToPiston->SetOpacityArrayName(this->OpacityArrayName);
+        if (this->EnableOpacity) {
+          this->DataSetToPiston->SetOpacityArrayName(this->OpacityArrayName);
+        }
+        else {
+          this->DataSetToPiston->SetOpacityArrayName(NULL);
+        }
         this->DataSetToPiston->SetScalarArrayName(this->ScalarsToColors->GetArrayName());
         this->DataSetToPiston->Update();
         break;
@@ -366,7 +371,12 @@ void vtkPistonPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkAct
   else
   {
     this->DataSetToPiston->SetInputData(input);
-    this->DataSetToPiston->SetOpacityArrayName(this->OpacityArrayName);
+    if (this->EnableOpacity) {
+      this->DataSetToPiston->SetOpacityArrayName(this->OpacityArrayName);
+    }
+    else {
+      this->DataSetToPiston->SetOpacityArrayName(NULL);
+    }
     this->DataSetToPiston->SetScalarArrayName(this->ScalarsToColors->GetArrayName());
     this->DataSetToPiston->Update();
   }
