@@ -143,7 +143,14 @@ void vtkDepthSortRepresentation::SetUseCachedSortOrder(int mode)
 //----------------------------------------------------------------------------
 void vtkDepthSortRepresentation::SetDirection(int dir)
 {
-  this->DepthSortPainter->SetDirection(dir);
+  if (dir>=0) {
+    this->DepthSortPainter->SetDepthSortEnableMode(1); // if no depth peeling
+    this->DepthSortPainter->SetDirection(dir);
+  }
+  else {
+    this->DepthSortPainter->SetDepthSortEnableMode(2); // never
+  }
+  this->PistonPolygonsPainter->SetDirection(dir);
   this->MarkModified();
 }
 //----------------------------------------------------------------------------

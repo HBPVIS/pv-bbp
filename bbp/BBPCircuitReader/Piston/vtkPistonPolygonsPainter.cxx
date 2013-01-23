@@ -57,7 +57,7 @@ namespace vtkpiston {
        struct cudaGraphicsResource **vboResources, double alpha, bool &hasNormals, bool &hasColors, bool &useindexbuffers);
   bool AlmostEqualRelativeAndAbs(float A, float B, float maxDiff, float maxRelDiff);
   //
-  void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec);
+  void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec, int direction);
 }
 //-----------------------------------------------------------------------------
 class vtkPistonPolygonsPainter::InternalInfo {
@@ -98,10 +98,10 @@ vtkPistonPolygonsPainter::vtkPistonPolygonsPainter()
   this->DataSetToPiston  = vtkSmartPointer<vtkDataSetToPiston>::New();
   this->OpacityArrayName = NULL;
   this->EnableOpacity    = 0;
+  this->Direction        = VTK_DIRECTION_BACK_TO_FRONT;
   //
   this->Internal = new vtkPistonPolygonsPainter::InternalInfo();
 }
-
 //-----------------------------------------------------------------------------
 vtkPistonPolygonsPainter::~vtkPistonPolygonsPainter()
 {
@@ -109,13 +109,11 @@ vtkPistonPolygonsPainter::~vtkPistonPolygonsPainter()
   delete this->Internal;
   delete [] this->OpacityArrayName;
 }
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::SetScalarsToColors(vtkTwoScalarsToColorsPainter *painter)
 {
   this->ScalarsToColors = painter;
 }
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::InitCudaGL(vtkRenderWindow *rw)
 {
@@ -136,8 +134,6 @@ void vtkPistonPolygonsPainter::InitCudaGL(vtkRenderWindow *rw)
     vtkpiston::CudaGLInit();
   }
 }
-
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::PrepareDirectRenderBuffers(int nPoints, int nCells)
 {
@@ -194,7 +190,6 @@ void vtkPistonPolygonsPainter::PrepareDirectRenderBuffers(int nPoints, int nCell
   vtkpiston::CudaRegisterBuffer(&this->Internal->vboResources[3],
     this->Internal->vboBuffers[3]);
 }
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
 {
@@ -217,7 +212,9 @@ void vtkPistonPolygonsPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
 
   double cameravec[3], origin[3];
   this->ComputeProjectionVector(cam, act, cameravec, origin);
-  vtkpiston::DepthSortPolygons(id, cameravec);
+  if (this->Direction>=0) {
+    vtkpiston::DepthSortPolygons(id, cameravec, this->Direction);
+  }
   vtkpiston::CudaTransferToGL(id, this->Internal->DataObjectMTimeCache,
     this->ScalarsToColors,
     this->Internal->vboResources, 
@@ -303,7 +300,6 @@ void vtkPistonPolygonsPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
   double rendertime = timer->GetElapsedTime();
   //  std::cout << setprecision(6) << "RenderTime : << " <<  rendertime << std::endl;
 }
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::ComputeProjectionVector(
   vtkCamera *cam, vtkActor *act, 
@@ -325,7 +321,6 @@ void vtkPistonPolygonsPainter::ComputeProjectionVector(
     origin[i] = pos[i];
   }
 }
-
 //-----------------------------------------------------------------------------
 void vtkPistonPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
 {
@@ -384,7 +379,6 @@ void vtkPistonPolygonsPainter::PrepareForRendering(vtkRenderer* renderer, vtkAct
   this->Camera = renderer->GetActiveCamera();
   this->Actor  = actor;
 }
-
 //-----------------------------------------------------------------------------
 int vtkPistonPolygonsPainter::RenderPrimitive(unsigned long idx, vtkDataArray* n,
     vtkUnsignedCharArray* c, vtkDataArray* t, vtkRenderer* ren)

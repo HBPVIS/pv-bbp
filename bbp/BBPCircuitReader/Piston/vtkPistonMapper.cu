@@ -30,49 +30,87 @@ using namespace std;
 
 namespace vtkpiston {
 
-      typedef thrust::device_vector<float>::iterator FloatIterator;
-      typedef thrust::tuple<FloatIterator, FloatIterator> FloatIteratorTuple;
-      typedef thrust::zip_iterator<FloatIteratorTuple> Float2Iterator;
-
-struct color_map : public thrust::unary_function<FloatIteratorTuple, float4>
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+typedef thrust::device_vector<float>::iterator FloatIterator;
+typedef thrust::tuple<FloatIterator, FloatIterator> FloatIteratorTuple;
+typedef thrust::tuple<float&, float&> FloatTuple;
+typedef thrust::zip_iterator<FloatIteratorTuple> Float2Iterator;
+//------------------------------------------------------------------------------
+// The colour map struct is templated (T) over the iterator type that we will use
+// in our transform function.
+//
+// Because we use complicated zip/tuple iterators which are partially dereferenced
+// by the tuple/iterator code inside the transform call, we separately template
+// the operator() over the final dereferenced (element) type that will be passed
+// to the operator().
+//
+// Two specializations are provided for color tables with/without vertex opacity
+// 1) scalars        : T=float(iterator), element=float 
+// 2) scalar/opacity : T=FloatIteratorTuple(iterator), element=FloatTuple 
+template<typename T>
+struct color_map : public thrust::unary_function<T, float4>
 {
-    const float min;
-    const float max;
-    const int   size;
-    float      *table;
-    float       alpha;
-    float      *opacity;
+  const float min;
+  const float max;
+  const int   size;
+  float      *table;
+  float       alpha;
+  float      *opacity;
 
-    color_map(float *table, int arrSize, float rMin, float rMax, double a, float *opacityarray) :
-      min(rMin),
-      max(rMax),
-      size((arrSize / 3) - 1),
-      table(table),
-      alpha(a),
-      opacity(opacityarray)
-      {
-      }
-
-    template <typename Tuple>
-    __host__ __device__
-    float4 operator()(Tuple t)
+  color_map(float *table, int arrSize, float rMin, float rMax, double a, float *opacityarray) :
+    min(rMin),
+    max(rMax),
+    size((arrSize / 3) - 1),
+    table(table),
+    alpha(a),
+    opacity(opacityarray)
     {
-      float val = thrust::get<0>(t);
-      float opacityval = opacity ? thrust::get<1>(t)*alpha : alpha;
-
-      int index = 0;
-      if((max - min) > 0.0) {
-        index = ( (val - min) / (max - min) ) * size;
-      }
-
-      if (index < 0)    index = 0;
-      if (index > size) index = size;
-      index *= 3;
-
-      return make_float4(table[index], table[index + 1], table[index + 2], opacityval);
     }
-};
+  
+  // the internal calculation which is independent of template types
+  __host__ __device__ inline float4 calc(float val, float opac) 
+  { 
+    // convert val to lookuptable index
+    int index = 0;
+    if ((max - min) > 0.0) {
+      index = ( (val - min) / (max - min) ) * size;
+    }
+    if (index < 0)    index = 0;
+    if (index > size) index = size;
+    // convert to RGB tuple index
+    index *= 3; 
+    return make_float4(table[index], table[index + 1], table[index + 2], opac);
+  };
 
+  // declare an empty general templated functor operator which we will specialize later
+  template<typename element>
+  __host__ __device__ float4 operator()(element t) { 
+    throw ("Error");
+  };
+};
+//------------------------------------------------------------------------------
+// doubly templated specialization
+// overload the colormap operator() for tuple iterators which will hold <scalar, opacity>
+template <> template<>
+__host__ __device__ float4 color_map<FloatIteratorTuple>::operator()<FloatTuple>(FloatTuple t)
+{
+  float val  = thrust::get<0>(t);
+  float opac = thrust::get<1>(t)*alpha;
+  return calc(val, opac);
+}
+//------------------------------------------------------------------------------
+// doubly templated specialization
+// overload the colormap operator() for single color array
+template <> template<>
+__host__ __device__ float4 color_map<float>::operator()<float>(float t)
+{
+  float val = t;
+  return calc(val, alpha);
+}
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 void CudaGLInit()
 {
@@ -148,7 +186,7 @@ struct celldistance_functor
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec)
+void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec, int direction)
 {
   vtkPistonReference *tr = id->GetReference();
   if (tr->type != VTK_POLY_DATA || tr->data == NULL) {
@@ -199,8 +237,14 @@ void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec)
   // now we want to sort the cells using the average distance
   // we must copy the cell vertex index tuple during the sort
   //
-  thrust::sort_by_key(cell_distances.begin(), cell_distances.end(), pD->cells->begin(), 
-    thrust::greater<float>());
+  if (direction==0) {
+    thrust::sort_by_key(cell_distances.begin(), cell_distances.end(), pD->cells->begin(), 
+      thrust::greater<float>());
+  }
+  else {
+    thrust::sort_by_key(cell_distances.begin(), cell_distances.end(), pD->cells->begin(), 
+      thrust::less<float>());
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -332,16 +376,21 @@ void CudaTransferToGL(vtkPistonDataObject *id, unsigned long dataObjectMTimeCach
     psc->GetScalarRange(scalarRange);
 
     float * opacitydata = pD->opacities ? thrust::raw_pointer_cast(pD->opacities->data()) : NULL;
-    color_map colorMap(raw_ptr, onGPU.size(), scalarRange[0], scalarRange[1], alpha, opacitydata);
 
     if (opacitydata) {
-
       // Now we'll create some zip_iterators for A and B
-      Float2Iterator _first = thrust::make_zip_iterator(thrust::make_tuple(pD->scalars->begin(), pD->opacities->begin()));
+      Float2Iterator _first = thrust::make_zip_iterator(thrust::make_tuple(pD->scalars->begin(), pD->opacities->begin()));; 
       Float2Iterator  _last = thrust::make_zip_iterator(thrust::make_tuple(pD->scalars->end(),   pD->opacities->end()));
 
+      color_map<FloatIteratorTuple> colorMap(raw_ptr, onGPU.size(), scalarRange[0], scalarRange[1], alpha, opacitydata);
       thrust::copy(thrust::make_transform_iterator(_first, colorMap),
                    thrust::make_transform_iterator(_last,  colorMap),
+                   thrust::device_ptr<float4>(colorsBufferData));
+    }
+    else {
+      color_map<float> colorMap(raw_ptr, onGPU.size(), scalarRange[0], scalarRange[1], alpha, opacitydata);
+      thrust::copy(thrust::make_transform_iterator(pD->scalars->begin(), colorMap),
+                   thrust::make_transform_iterator(pD->scalars->end(),   colorMap),
                    thrust::device_ptr<float4>(colorsBufferData));
     }
   }

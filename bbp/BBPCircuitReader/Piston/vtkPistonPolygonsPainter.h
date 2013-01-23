@@ -29,6 +29,10 @@ class vtkRenderWindow;
 class vtkCamera;
 class vtkActor;
 
+#define VTK_DIRECTION_NO_SORT      -1
+#define VTK_DIRECTION_BACK_TO_FRONT 0
+#define VTK_DIRECTION_FRONT_TO_BACK 1
+
 class VTK_EXPORT vtkPistonPolygonsPainter : public vtkPolygonsPainter
 {
 public:
@@ -71,6 +75,16 @@ public:
   vtkSetMacro(EnableOpacity, int);
   vtkGetMacro(EnableOpacity, int);
 
+  // Description:
+  // Swap sort order 
+  // VTK_DIRECTION_NO_SORT      -1
+  // VTK_DIRECTION_BACK_TO_FRONT 0
+  // VTK_DIRECTION_FRONT_TO_BACK 1
+
+  vtkSetMacro(Direction, int);
+  vtkGetMacro(Direction, int);
+  vtkBooleanMacro(Direction, int);
+
 protected:
   vtkPistonPolygonsPainter();
   ~vtkPistonPolygonsPainter();
@@ -89,6 +103,7 @@ protected:
   vtkActor                                      *Actor;
   char         *OpacityArrayName;
   int           EnableOpacity;
+  int           Direction;
 
 protected:
   // Description:
