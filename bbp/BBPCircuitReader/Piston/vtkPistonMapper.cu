@@ -1,32 +1,29 @@
 #ifdef _WIN32
-#include <windows.h>
+ #include <windows.h>
 #endif
-
-#include <thrust/copy.h>
-#include <thrust/device_vector.h>
-#include <thrust/inner_product.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/iterator/transform_iterator.h>
-#include <thrust/iterator/permutation_iterator.h>
-#include <thrust/functional.h>
-#include <thrust/sort.h>
-
-#include <cuda_gl_interop.h>
-
-#include "vtkScalarsToColors.h"
-#include "vtkPistonDataObject.h"
-#include "vtkPistonDataWrangling.h"
-#include "vtkPistonMinMax.h"
-#include "vtkPistonReference.h"
-#include "piston/piston_math.h"
-
-#include "../vtkTwoScalarsToColorsPainter.h"
-
-#include "vtkgl.h"
 
 #include <iostream>
 
-using namespace std;
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
+#include <thrust/functional.h>
+#include <thrust/sort.h>
+#include <thrust/copy.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/iterator/permutation_iterator.h>
+
+#include "vtkgl.h"
+#include <cuda_gl_interop.h>
+
+#include "piston/piston_math.h"
+//
+#include "vtkPistonDataObject.h"
+#include "vtkPistonDataWrangling.h"
+#include "vtkPistonReference.h"
+
+#include "../vtkTwoScalarsToColorsPainter.h"
 
 namespace vtkpiston {
 
@@ -49,6 +46,7 @@ typedef thrust::zip_iterator<FloatIteratorTuple> Float2Iterator;
 // Two specializations are provided for color tables with/without vertex opacity
 // 1) scalars        : T=float(iterator), element=float 
 // 2) scalar/opacity : T=FloatIteratorTuple(iterator), element=FloatTuple 
+
 template<typename T>
 struct color_map : public thrust::unary_function<T, float4>
 {
@@ -109,6 +107,7 @@ __host__ __device__ float4 color_map<float>::operator()<float>(float t)
   float val = t;
   return calc(val, alpha);
 }
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -129,7 +128,7 @@ void CudaGLInit()
 
   if (res != cudaSuccess)
     {
-    cerr << "Set device failed  ... " << cudaGetErrorString(res) << endl;
+    std::cerr << "Set device failed  ... " << cudaGetErrorString(res) << endl;
     return;
     }
 }
@@ -143,11 +142,10 @@ void CudaRegisterBuffer(struct cudaGraphicsResource **vboResource,
                                 cudaGraphicsMapFlagsWriteDiscard);
   if (res != cudaSuccess)
   {
-    cerr << "Register buffer failed ... " << cudaGetErrorString(res) << endl;
+    std::cerr << "Register buffer failed ... " << cudaGetErrorString(res) << endl;
     return;
   }
 }
-
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -183,6 +181,7 @@ struct celldistance_functor
                          vertex_distances[thrust::get<0>(t).z])/3.0;
   }
 };
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -213,10 +212,6 @@ void DepthSortPolygons(vtkPistonDataObject *id, double *cameravec, int direction
     thrust::make_zip_iterator(thrust::make_tuple(pD->points->end(),   distances.end())),
     distance);
 
-  // to test if it is working, copy the distances into the scalars
-  // so we can colour by scalar values
-//  thrust::copy(distances.begin(), distances.end(), pD->scalars->begin());
-  
   //
   // To compute the average distance for each cell, we must
   // sum/gather 3 distances (one for each vertex) for every cell by

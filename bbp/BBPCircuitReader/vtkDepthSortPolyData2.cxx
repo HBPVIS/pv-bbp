@@ -52,7 +52,7 @@ vtkDepthSortPolyData2::vtkDepthSortPolyData2()
 //-----------------------------------------------------------------------------
 vtkDepthSortPolyData2::~vtkDepthSortPolyData2()
 {
-  delete this->SortingList ;
+  delete reinterpret_cast<depthList*>(this->SortingList);
 }
 //-----------------------------------------------------------------------------
 void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
@@ -134,7 +134,7 @@ int vtkDepthSortPolyData2::RequestData(
     return 0;
   }
   this->ComputeProjectionVector(vectorD, origin);
-  float vectorF[3] = { vectorD[0], vectorD[1], vectorD[2] };
+  float vectorF[3] = { (float)vectorD[0], (float)vectorD[1], (float)vectorD[2] };
   //
   vtkCellArray *polys = input->GetPolys();
   vtkPoints   *points = input->GetPoints();
