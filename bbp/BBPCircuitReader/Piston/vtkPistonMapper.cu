@@ -85,8 +85,8 @@ struct color_map : public thrust::unary_function<T, float4>
   // declare an empty general templated functor operator which we will specialize later
   template<typename element>
   __host__ __device__ float4 operator()(element t) { 
-    throw ("Error");
-  };
+    // should throw ("Error - this function must be specialized for the type used");
+  }
 };
 //------------------------------------------------------------------------------
 // doubly templated specialization

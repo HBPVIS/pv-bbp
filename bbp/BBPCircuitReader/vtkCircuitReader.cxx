@@ -408,7 +408,7 @@ int vtkCircuitReader::RequestData(
     // Load neurons for this target so we can partition them
       this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
   }
-  int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
+  int WholeExtent[6] = { 0, (int)neurons.size(), 0, 0, 0, 0 };
   if (this->MaximumNumberOfNeurons>0) {
     WholeExtent[1] = std::min(neurons.size(), (size_t)(this->MaximumNumberOfNeurons));
   }

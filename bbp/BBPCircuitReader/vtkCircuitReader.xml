@@ -11,9 +11,6 @@
         This reader constructs circuits by reading targets from a BLueConfig and generating the meshes for each morphology.
       </Documentation>
 
-         
- 
-
       <!-- cscs          default_values="/project/csvis/biddisco/bbpdata/bmc-benchmark/blueconfig" -->
       <!-- dino          default_values="C:\data\bbp\bmc-benchmark\blueconfig" -->
       <!-- crusca  SMALL default_values="D:/data/bbp/small/BlueConfig" target="viz1"-->
@@ -23,7 +20,7 @@
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="C:\data\bbp\bmc-benchmark\blueconfig" 
+         default_values="/home/biddisco/data/bbp/bmc-benchmark/blueconfig" 
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>
@@ -39,13 +36,6 @@
          number_of_elements="1">
       </StringVectorProperty>
 
-      <CommandProperty
-        name="FileModified"
-        label="touch file"
-        command="SetFileModified"
-        immediate_update="1"
-        si_class="vtkSIProperty">
-      </CommandProperty>
 
       <StringVectorProperty
          name="TargetsStatus"
