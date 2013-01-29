@@ -247,3 +247,16 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
 )
 
 
+add_executable(test_bbplink test_bbplink.cpp)
+target_link_libraries(test_bbplink 
+    ${PLUGIN_NAME}
+#    ${BBPSDK_LIBRARIES}
+#    ${CUDA_LIBRARIES}
+#    ${ZOLTAN_LIBS}
+#    ${HDF5_C_LIBRARY} 
+#    ${HDF5_CXX_LIBRARY} 
+#    ${Boost_LIBRARIES}
+
+
+)
+
