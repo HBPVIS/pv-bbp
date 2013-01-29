@@ -37,13 +37,6 @@ include(ParaViewMacros)
 
 find_package(Qt4 )
 
-find_package(CUDA REQUIRED)
-
-find_path(PISTON_INCLUDE
-  PistonCodingStyle.xml
-  "/Source/PISTON/github/PISTON"
-  DOC "PISTON library's source directory")
-
 # --------------------------------------------------
 # Plugin config
 # --------------------------------------------------
@@ -55,7 +48,7 @@ set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 # HDF5
 #--------------------------------------------------
 FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
-INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR} ${HDF5_INCLUDE_DIR_CPP})
 
 #--------------------------------------------------
 # pv-zoltan
@@ -118,65 +111,6 @@ IF(PARAVIEW_BUILD_QT_GUI)
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
-# Define PISTON sources
-#--------------------------------------------------
-set(Module_SRCS
-  Piston/vtkDataSetToPiston.cxx
-  Piston/vtkPistonAlgorithm.cxx
-  Piston/vtkPistonDataObject.cxx
-  Piston/vtkPistonPolygonsPainter.cxx
-#  Piston/vtkPistonToDataSet.cxx
-#  Piston/vtkPistonScalarsColors.cxx
-#  Piston/vtkPistonSort.cxx
-#  Piston/vtkPistonSlice.cxx
-#  Piston/vtkPistonContour.cxx
-#  Piston/vtkPistonThreshold.cxx
-)
-
-set( Module_CUDA_SRCS
-  Piston/vtkPistonConverters.cu
-  Piston/vtkPistonMapper.cu
-#  Piston/vtkPistonSort.cu
-#  Piston/vtkPistonContour.cu
-#  Piston/vtkPistonSlice.cu
-#  Piston/vtkPistonThreshold.cu
-)
-
-#--------------------------------------------------
-# Define CUDA sources
-#--------------------------------------------------
-if(BUILD_SHARED_LIBS)
-  set(GPGPU_BUILD_TYPE SHARED)
-endif()
-
-set(BBP_CUDA_SRCS
-  ${Module_CUDA_SRCS}
-)
-
-# set this, otherwise C_SOURCES is empty in VS
-set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
-# generate the list of dependencies based on our module definition file
-vtk_module_impl()
-# remove a bunch of cruft that VTK adds in here about modules autoinit
-set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
-# shorten the include dirs so nvcc doesn't crumble under the entire VTK/ParaView/Qt path
-# first get the old setting and store it
-get_directory_property(TEMPBBP_INCLUDE_DIRECTORIES INCLUDE_DIRECTORIES)
-# now set our shorter include dirs list
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "${${vtk-module}_DEPENDS_INCLUDE_DIRS};${PISTON_INCLUDE}")
-# call the cuda wrapper
-cuda_compile(BBP_CUDA_C_SRCS ${BBP_CUDA_SRCS} ${GPGPU_BUILD_TYPE})
-# put the include dirs back to what they were
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "${TEMPBBP_INCLUDE_DIRECTORIES}")
-
-set_source_files_properties(
-  ${BBP_CUDA_C_SRCS}
-  WRAP_EXCLUDE
-  )
-
-message("Generated include dirs ${${vtk-module}_DEPENDS_INCLUDE_DIRS}")
-
-#--------------------------------------------------
 # Define plugin sources
 #--------------------------------------------------
 
@@ -189,7 +123,6 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
-    ${XML_PATH}/vtkDepthSortRepresentation.xml
     ${XML_PATH}/vtkMorphologyReader.xml
     ${XML_PATH}/vtkMeshBinReader.xml
     ${XML_PATH}/vtkH5MCellReader.xml
@@ -197,19 +130,11 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortRepresentation.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortDefaultPainter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPainter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPolyData2.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkDepthSortPolygonsPainter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTwoScalarsToColorsPainter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
-    ${BBP_CUDA_C_SRCS}
-    ${Module_SRCS}
 
   GUI_INTERFACES 
     ${BBP_IFACE}
@@ -231,9 +156,10 @@ ADD_PARAVIEW_PLUGIN(
 #--------------------------------------------------
 
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
+    pv_zoltan
     ${BBP_SDK_LIBRARIES}
     ${CUDA_LIBRARIES}
-    ${ZOLTAN_LIBS}
+#    ${BBPSDK_LIBRARIES}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 
     ${Boost_SERIALIZATION_LIBRARY} 
@@ -246,6 +172,10 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
     ${Boost_DATE_TIME_LIBRARY}
 )
 
+message(" BOOST LIBS ARE 
+    ${BBPSDK_LIBRARIES}
+    ${Boost_LIBRARIES}
+")
 
 add_executable(test_bbplink test_bbplink.cpp)
 target_link_libraries(test_bbplink 

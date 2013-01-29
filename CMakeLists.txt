@@ -13,7 +13,6 @@ include_directories(${BBP_SDK_INCLUDE_DIRS}  ${BBP_SDK_PATH}/include)
 
 message("BBP_SDK_INCLUDE_DIRS are ${BBP_SDK_INCLUDE_DIRS}")
 
-
 # --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
@@ -25,33 +24,22 @@ IF (MSVC)
 	set(Boost_USE_STATIC_RUNTIME    OFF)
 ENDIF (MSVC)
 
-#find_package(Boost 1.49 REQUIRED
-#  thread
-#  filesystem
-#  system
-#  serialization
-#  program_options
-#  date_time
-#  regex
-#  unit_test_framework
-#)
-#link_directories(${Boost_LIBRARY_DIRS})
-#include_directories(AFTER SYSTEM ${Boost_INCLUDE_DIRS})
-
+find_package(Boost 1.49 REQUIRED 
+  filesystem program_options serialization system thread unit_test_framework NO_MODULE)
+include_directories(
+  ${Boost_INCLUDE_DIR}
+)
+link_directories(${Boost_LIBRARY_DIRS})
 # --------------------------------------------------------------
 # Find HDF5
 # --------------------------------------------------------------
-#find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
-#include_directories(${HDF5_INCLUDE_DIR}
-#                    ${HDF5_INCLUDE_DIR}/cpp)
+find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+include_directories(${HDF5_INCLUDE_DIR}
+                    ${HDF5_INCLUDE_DIR_CPP})
 
 #--------------------------------------------------
-# If (paraview) using system H5FDdsm
+#
 #--------------------------------------------------
-IF (NOT TARGET "H5FDdsm")
-#  FIND_PACKAGE(H5FDdsm REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/H5FDdsm")
-#  INCLUDE_DIRECTORIES(${H5FDdsm_INCLUDE_DIR} ${H5FD_DSM_INCLUDE_DIR})
-ENDIF (NOT TARGET "H5FDdsm")
 
 # CMake 2.6+ specific
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

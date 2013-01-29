@@ -1,5 +1,5 @@
 <ServerManagerConfiguration>
-
+ 
   <ProxyGroup name="sources">
 
     <SourceProxy name="CircuitReader"
@@ -20,7 +20,7 @@
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="/home/biddisco/data/bbp/bmc-benchmark/blueconfig" 
+         default_values="/home/biddisco/bbpdata/bmc-benchmark/blueconfig" 
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>
