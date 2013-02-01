@@ -121,15 +121,19 @@ ADD_PARAVIEW_PLUGIN(
   REQUIRED_PLUGINS pv_zoltan
 
   SERVER_MANAGER_XML     
-    ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
+    ${XML_PATH}/vtkAlphaTransform.xml
+    #
+    ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkMorphologyReader.xml
     ${XML_PATH}/vtkMeshBinReader.xml
     ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
+    ${XML_PATH}/vtkAlphaTransform.cxx
+    #
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
