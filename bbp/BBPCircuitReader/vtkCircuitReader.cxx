@@ -77,7 +77,7 @@
 //#include "BBP/Voxelization/voxelization.h"
 //#include "BBP/VtkDebugging/visualization.h"
 
-//#define MANUAL_MESH_LOAD
+#define MANUAL_MESH_LOAD
 
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL           "Normal"
