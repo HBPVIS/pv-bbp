@@ -419,34 +419,35 @@ int vtkCircuitReader::RequestData(
   extTran->SetWholeExtent(WholeExtent);
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
+
+  // neurons are ordered in layers and higher layers have bigger cell counts
+  // so read them using a random shuffle to avoid one process getting all the 
+  // small ones and another the big ones. We can use an operator[]
+  // to get neurons from the container because it uses a map, with the GID as key
+  // so build a list of all keys and then shuffle that and let each process use
+  // a chunk of the list
+  // NB. we want all processes to have the same sequence, seed fixed num
+  std::srand(12345); 
+  std::vector<bbp::Cell_GID> shufflevector;
+  shufflevector.reserve(neurons.size());
   //
-  //
-  // Create iterators for the begin and end of our partition
-  bbp::Neurons::iterator NeuronStart = neurons.begin();
-  bbp::Neurons::iterator NeuronEnd   = neurons.begin();
-  if (PartitionExtents[1]>0) {
-    std::advance(NeuronStart,PartitionExtents[0]);
-    std::advance(NeuronEnd,PartitionExtents[1]);
+  for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
+    shufflevector.push_back(neuron->gid());
   }
-  //
-/*
-    bbp::Target::cell_iterator b = this->Target.cell_begin();
-    bbp::Target::cell_iterator e = this->Target.cell_end();
-    std::advance(b,PartitionExtents[0]);
-    std::advance(e,PartitionExtents[1]);
-    for (bbp::Target::cell_iterator cell=b; cell!=e; ++cell) {
-      this->Partitioned_target.insert(*cell);
-    }
-*/
+  std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+  //  std::ostream_iterator<vtkIdType> out_it(cout,", ");
+  //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
 
   // create a new target based on our subrange of neurons, clear any contests first.
   this->Partitioned_target = bbp::Target();
-  for (bbp::Neurons::iterator neuron=NeuronStart; neuron!=NeuronEnd; ++neuron) {
-    this->Partitioned_target.insert(neuron->gid());
-    Neurons::iterator ni = neurons.find( neuron->gid() );
-    Cell_Index cell_index = ni->index();
-    if (cell_index==UNDEFINED_CELL_INDEX) {
-    }
+  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
+    bbp::Cell_GID gid = shufflevector[i];
+    Neurons::iterator ni = neurons.find( gid );
+    this->Partitioned_target.insert(gid);
+//    Neurons::iterator ni = neurons.find( gid );
+//    Cell_Index cell_index = ni->index();
+//    if (cell_index==UNDEFINED_CELL_INDEX) {
+//    }
   }
 
   // Load morphology and meshes for this subtarget
