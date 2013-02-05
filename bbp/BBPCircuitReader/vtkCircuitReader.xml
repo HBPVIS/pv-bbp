@@ -130,10 +130,21 @@
           This property lists to select point-centered arrays to read.
         </Documentation>
       </StringVectorProperty>
-    
+
+      <IntVectorProperty
+        name="DeleteExperiment"
+        command="SetDeleteExperiment"
+        number_of_elements="1"
+        default_values="1" >
+        <BooleanDomain name="bool"/>
+        <Documentation>
+          Releases all BBPSDK memory. Cannot be used when loading voltages.
+        </Documentation>
+      </IntVectorProperty>
+
       <Hints>
         <Property name="FileName" show="1"/>
-        <Property name="DefaultTarget" show="0"/>
+        <Property name="DefaultTarget" show="1"/>
         <Property name="TargetsStatus" show="0"/>
       </Hints>
     </SourceProxy>

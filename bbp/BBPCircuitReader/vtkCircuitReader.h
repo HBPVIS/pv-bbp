@@ -88,6 +88,10 @@ public:
   }
   vtkGetMacro(MaximumNumberOfNeurons,int);
 
+  vtkSetMacro(DeleteExperiment,int);
+  vtkGetMacro(DeleteExperiment,int);
+  vtkBooleanMacro(DeleteExperiment,int);
+
   // Description:
   // Set/Get the timestep to be read
   vtkSetMacro(TimeStep,int);
@@ -180,6 +184,7 @@ protected:
   int           UpdatePiece;
   int           UpdateNumPieces;
   int           IntegerTimeStepValues;
+  int           DeleteExperiment;
   //
 //BTX
   std::vector<double> TimeStepValues;

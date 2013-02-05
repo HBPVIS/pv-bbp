@@ -119,6 +119,7 @@ vtkCircuitReader::vtkCircuitReader()
   this->ExportMorphologySkeleton        = 0;
   this->ParallelRedistribution          = 1;
   this->MaximumNumberOfNeurons          = 25;
+  this->DeleteExperiment                = 1;
   //
   this->PointDataArraySelection         = vtkDataArraySelection::New();
   this->TargetsSelection                = vtkDataArraySelection::New();
@@ -259,7 +260,7 @@ int vtkCircuitReader::RequestInformation(
     this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
     bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
 
-    std::cout << cellTarget << std::endl;
+//    std::cout << cellTarget << std::endl;
 
 // std::cout <<"Made it past load " << std::endl;
 
@@ -524,6 +525,15 @@ int vtkCircuitReader::RequestData(
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {
     std::cout << "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds\n";
+  }
+  if (this->DeleteExperiment) {
+    this->PrimaryTarget      = bbp::Target();
+    this->Partitioned_target = bbp::Target();
+    this->Experiment.clear();
+    this->Microcircuit->close();
+    //this->ReportReader->clearCache();
+    //this->ReportMapping      
+    this->OffsetMapping.clear();
   }
   return 1;
 }
@@ -990,7 +1000,7 @@ void vtkCircuitReader::CreateReportScalars(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
-  std::cout << this->ReportReader->getCellTarget() << std::endl;
+  std::cout << "Report Reader Cell Target \n" << this->ReportReader->getCellTarget() << std::endl;
 
   this->ReportReader->updateMapping(this->Partitioned_target);
   // the mapping array(s) provided by the report reader
