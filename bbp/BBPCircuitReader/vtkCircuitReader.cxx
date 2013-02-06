@@ -587,7 +587,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   //
   bbp::Vertex_Index         vertexCount = mesh->vertex_count();
   bbp::Triangle_Index         faceCount = mesh->triangle_count();
-  vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount);
+  vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount << " : Vertices " << vertexCount);
   const Array<Vector_3D<bbp::Micron> >       &vertices = mesh->vertices();
   const Section_ID                        *section_ids = mesh->vertex_sections().pointer();
   const float                               *positions = mesh->vertex_relative_distances().pointer();
@@ -892,9 +892,9 @@ void vtkCircuitReader::GenerateNeuronMesh(
     }
   }
   vtkDebugMacro(<<"Triangles read " << offsetC);
-  vtkIdType GlobalTotalTriangles;
+  vtkIdType GlobalTotalTriangles = offsetC;
   this->Controller->AllReduce(&offsetC, &GlobalTotalTriangles/*(vtkIdType*)MPI_IN_PLACE*/, 1, vtkCommunicator::SUM_OP);
-  vtkDebugMacro(<<"Global number of triangles read " << offsetC);
+  vtkDebugMacro(<<"Global number of triangles read " << GlobalTotalTriangles);
 
 #ifdef MANUAL_MESH_LOAD
   meshes.clear();
@@ -1036,7 +1036,7 @@ void vtkCircuitReader::CreateReportScalars(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
-  vtkDebugMacro(<< "Report Reader Cell Target \n" << this->ReportReader->getCellTarget());
+//  vtkDebugMacro(<< "Report Reader Cell Target \n" << this->ReportReader->getCellTarget());
 
   this->ReportReader->updateMapping(this->Partitioned_target);
   // the mapping array(s) provided by the report reader
