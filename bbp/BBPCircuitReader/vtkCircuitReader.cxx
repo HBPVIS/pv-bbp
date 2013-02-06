@@ -5,7 +5,16 @@
 // _NO_DEBUG_HEAP=1
 // working directory : D:\build\paraview-3.98\bin\Debug
 //
-
+//
+// For PARAVIEW_USE_MPI
+#include "vtkPVConfig.h"
+#ifdef PARAVIEW_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+#include "vtkDummyController.h"
+//
 #include "vtkObjectFactory.h"
 #include "vtkCellArray.h" 
 #include "vtkStreamingDemandDrivenPipeline.h"
@@ -43,8 +52,6 @@
 #include "vtkTransform.h"
 #include "vtkPolyDataNormals.h"
 //
-#include "vtkDummyController.h"
-//
 #include "vtkPKdTree.h"
 #include "vtkBoundsExtentTranslator.h"
 #include "vtkMeshPartitionFilter.h"
@@ -76,9 +83,33 @@
 // Voxelization
 //#include "BBP/Voxelization/voxelization.h"
 //#include "BBP/VtkDebugging/visualization.h"
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+#define JB_DEBUG__
+#ifdef JB_DEBUG__
+  #define OUTPUTTEXT(a) std::cout << (a) << std::endl; std::cout.flush();
 
+    #undef vtkDebugMacro
+    #define vtkDebugMacro(a)  \
+    { \
+      if (this->UpdatePiece>=0) { \
+        vtkOStreamWrapper::EndlType endl; \
+        vtkOStreamWrapper::UseEndl(endl); \
+        vtkOStrStreamWrapper vtkmsg; \
+        vtkmsg << "P(" << this->UpdatePiece << "): " a << "\n"; \
+        OUTPUTTEXT(vtkmsg.str()); \
+        vtkmsg.rdbuf()->freeze(0); \
+      } \
+    }
+
+  #undef vtkErrorMacro
+  #define vtkErrorMacro(a) vtkDebugMacro(a)  
+#endif
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 #define MANUAL_MESH_LOAD
-
+//----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL           "Normal"
 #define BBP_ARRAY_NAME_NEURONGID        "Neuron Gid"
@@ -445,6 +476,7 @@ int vtkCircuitReader::RequestData(
     bbp::Cell_GID gid = shufflevector[i];
     Neurons::iterator ni = neurons.find( gid );
     this->Partitioned_target.insert(gid);
+//    vtkDebugMacro(<< "Adding neuron with GID " << gid);
 //    Neurons::iterator ni = neurons.find( gid );
 //    Cell_Index cell_index = ni->index();
 //    if (cell_index==UNDEFINED_CELL_INDEX) {
@@ -499,7 +531,7 @@ int vtkCircuitReader::RequestData(
       //
       redist_timer->StopTimer();
       if (this->UpdatePiece==0) {
-        std::cout << "ParallelRedistribution : " << redist_timer->GetElapsedTime() << " seconds\n";
+        vtkDebugMacro(<< "ParallelRedistribution : " << redist_timer->GetElapsedTime() << " seconds");
       }
     }
     this->MeshGeneratedTime.Modified();
@@ -524,7 +556,7 @@ int vtkCircuitReader::RequestData(
   //  
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {
-    std::cout << "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds\n";
+    vtkDebugMacro(<< "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds");
   }
   if (this->DeleteExperiment) {
     this->PrimaryTarget      = bbp::Target();
@@ -555,6 +587,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   //
   bbp::Vertex_Index         vertexCount = mesh->vertex_count();
   bbp::Triangle_Index         faceCount = mesh->triangle_count();
+  vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount);
   const Array<Vector_3D<bbp::Micron> >       &vertices = mesh->vertices();
   const Section_ID                        *section_ids = mesh->vertex_sections().pointer();
   const float                               *positions = mesh->vertex_relative_distances().pointer();
@@ -595,38 +628,38 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
       float position = positions[v];
       const Section &section = morph.section(sectionID);
       if (position < 0) {
-              position = 0;
+        position = 0;
       } else if (position > 1) {
-              position = 1;
+        position = 1;
       }
       float width;
       const float trunkWidth = 2;
       if (section.type() == SOMA) {
-          float radius = soma.max_radius() * 0.9;
-          float distance = (vertices[v] - soma.center()).length() - radius;
-          if (distance < 0) {
-              width = radius;
-          } else if (distance > 2) {
-              width = trunkWidth;
-          } else {
-              width = ((1 - distance / 2) * radius + 
-                        distance / 2 * trunkWidth);
-          }
+        float radius = soma.max_radius() * 0.9;
+        float distance = (vertices[v] - soma.center()).length() - radius;
+        if (distance < 0) {
+          width = radius;
+        } else if (distance > 2) {
+          width = trunkWidth;
+        } else {
+          width = ((1 - distance / 2) * radius + 
+            distance / 2 * trunkWidth);
+        }
       } else if (section.parent().type() == SOMA) {
-          float diameter = section.cross_section(position).diameter();
-          float distance = section.length() * position;
-          if (distance > 2)
-              width = diameter;
-          else {
-              if (diameter > trunkWidth) {
-                  width = diameter / 2;
-              } else {
-                  width = trunkWidth * (1 - distance / 2) + 
-                      diameter * distance / 2;
-              }
+        float diameter = section.cross_section(position).diameter();
+        float distance = section.length() * position;
+        if (distance > 2)
+          width = diameter;
+        else {
+          if (diameter > trunkWidth) {
+            width = diameter / 2;
+          } else {
+            width = trunkWidth * (1 - distance / 2) + 
+              diameter * distance / 2;
           }
+        }
       } else {
-          width = section.cross_section(position).diameter();
+        width = section.cross_section(position).diameter();
       }
       float alpha = 0.35 * (1 - exp(-width * 0.3));
       rtneuron->SetValue(offsetN, alpha);
@@ -755,9 +788,9 @@ void vtkCircuitReader::GenerateNeuronMesh(
   mesh_reader->load(
       meshes, this->Partitioned_target,
       circuit_reader->source(),
-      true, // vertices
-      true, // triangles
-      true, // mapping
+      true,   // vertices
+      true,   // triangles
+      true,   // mapping
       false); // strips
   
   // free unwanted memory
@@ -836,6 +869,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   //
   // reserve space for cells
   //
+  vtkDebugMacro(<<"Allocating space for " << maxCells << " triangles");
   vtkIdType *cells = triangles->WritePointer(maxCells, 4*(maxCells));
   //
   // Each neuron counts vertices starting from zero, but we increment one much larger array
@@ -857,6 +891,10 @@ void vtkCircuitReader::GenerateNeuronMesh(
       this->AddOneNeuronToMesh(&*neuron, &*mesh, Ncount, points, cells, pointdata, offsetN, offsetC);
     }
   }
+  vtkDebugMacro(<<"Triangles read " << offsetC);
+  vtkIdType GlobalTotalTriangles;
+  this->Controller->AllReduce(&offsetC, &GlobalTotalTriangles/*(vtkIdType*)MPI_IN_PLACE*/, 1, vtkCommunicator::SUM_OP);
+  vtkDebugMacro(<<"Global number of triangles read " << offsetC);
 
 #ifdef MANUAL_MESH_LOAD
   meshes.clear();
@@ -864,8 +902,6 @@ void vtkCircuitReader::GenerateNeuronMesh(
   // get the outputs
   vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
 //  vtkPolyData *output1 = vtkPolyData::SafeDownCast(outInfo1->Get(vtkDataObject::DATA_OBJECT()));
-
-
   //
   this->CachedNeuronMesh->SetPoints(points);
   this->CachedNeuronMesh->SetPolys(triangles);
@@ -1000,7 +1036,7 @@ void vtkCircuitReader::CreateReportScalars(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
-  std::cout << "Report Reader Cell Target \n" << this->ReportReader->getCellTarget() << std::endl;
+  vtkDebugMacro(<< "Report Reader Cell Target \n" << this->ReportReader->getCellTarget());
 
   this->ReportReader->updateMapping(this->Partitioned_target);
   // the mapping array(s) provided by the report reader
@@ -1067,7 +1103,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
   const bbp::Morphology* morph                    = &neuron->morphology();
   const bbp::Transform_3D<bbp::Micron> &transform = neuron->global_transform();
   const bbp::Count index = this->OffsetMapping[neuron->gid()];
-  std::cout << "Neuron with GID " << neuron->gid() << " has mapping offset " << index << std::endl;
+  vtkDebugMacro(<< "Neuron with GID " << neuron->gid() << " has mapping offset " << index);
 
   Morphology_Dataset dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
   const Section_Type                *section_types = dataset.section_types();
