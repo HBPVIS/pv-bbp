@@ -175,8 +175,8 @@ vtkCircuitReader::~vtkCircuitReader()
   this->CachedMorphologySkeleton      = NULL;
   this->MeshPartitionFilter           = NULL;
   //
-  this->PointDataArraySelection->Delete();
-  this->TargetsSelection->Delete();
+  this->PointDataArraySelection->FastDelete();
+  this->TargetsSelection->FastDelete();
   this->SetController(NULL);
   //
   delete []this->FileName;
@@ -509,6 +509,11 @@ int vtkCircuitReader::RequestData(
       //
       this->MeshPartitionFilter = vtkSmartPointer<vtkMeshPartitionFilter>::New();
       this->MeshPartitionFilter->SetInputData(this->CachedNeuronMesh);
+      // thell the partition filter we can dump the input memory when needed
+      this->MeshPartitionFilter->SetInputDisposable(1);
+      // release any hold we have on it to help save memory
+      this->CachedNeuronMesh = NULL;
+      // Update the partition filter with parallel information
       vtkStreamingDemandDrivenPipeline::SafeDownCast(this->MeshPartitionFilter->GetExecutive())
         ->SetUpdateExtent(0, this->UpdatePiece, this->UpdateNumPieces, 0);
       this->MeshPartitionFilter->Update();
