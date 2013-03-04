@@ -175,7 +175,7 @@ void pqCircuitReaderPanel::updateSIL()
     if (info->GetSIL()) {
       this->UI->SILModel.update(info->GetSIL());
     }
-    info->Delete();
+    info->FastDelete();
   }
 }
 

@@ -186,7 +186,7 @@ vtkH5MCellReader::~vtkH5MCellReader()
   delete [] this->FileName;
   this->FileName = NULL;
  
-  this->PointDataArraySelection->Delete();
+  this->PointDataArraySelection->FastDelete();
   this->PointDataArraySelection = 0;
 
   this->SetController(NULL);
