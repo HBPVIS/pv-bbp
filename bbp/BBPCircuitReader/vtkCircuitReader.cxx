@@ -108,7 +108,7 @@
 #endif
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-#define MANUAL_MESH_LOAD
+//#define MANUAL_MESH_LOAD
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 #define BBP_ARRAY_NAME_NORMAL           "Normal"
@@ -471,7 +471,8 @@ int vtkCircuitReader::RequestData(
   //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
 
   // create a new target based on our subrange of neurons, clear any contests first.
-  this->Partitioned_target = bbp::Target();
+  this->Partitioned_target = bbp::Target("ParaViewCells", Target_Type::CELL_TARGET);
+
   for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
     bbp::Cell_GID gid = shufflevector[i];
     Neurons::iterator ni = neurons.find( gid );
@@ -1196,10 +1197,9 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   const bbp::Morphology *sdk_morph    = &neuron->morphology();
   const bbp::Mesh       *sdk_mesh     = &sdk_morph->mesh();
   //
-  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
+//  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
   const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
   const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
-  const Array<Vector_3D<bbp::Micron> > &vertex_normals = sdk_mesh->normals();
   //
 
   vtkIdType vertexCount = sdk_mesh->vertex_count();
