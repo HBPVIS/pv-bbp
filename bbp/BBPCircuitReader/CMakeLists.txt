@@ -122,6 +122,7 @@ ADD_PARAVIEW_PLUGIN(
 
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
+    ${XML_PATH}/vtkExponentialDecayFilter.xml
     ${XML_PATH}/vtkAlphaTransform.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
@@ -131,7 +132,8 @@ ADD_PARAVIEW_PLUGIN(
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
-    ${XML_PATH}/vtkAlphaTransform.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkExponentialDecayFilter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkAlphaTransform.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
