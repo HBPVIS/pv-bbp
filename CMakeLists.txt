@@ -7,11 +7,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 # --------------------------------------------------------------
 # Find BBP-SDK
 # --------------------------------------------------------------
-SET(BBP_SDK_USE_STATIC_LIBS ON)
-find_package(BBP-SDK 0.14 REQUIRED common io model)
-include_directories(${BBP_SDK_INCLUDE_DIRS}  ${BBP_SDK_PATH}/include)
+SET(BBPSDK_USE_STATIC_LIBS ON)
+find_package(BBPSDK 0.14 REQUIRED NO_MODULE)
+include_directories(${BBPSDK_INCLUDE_DIRS}  ${BBPSDK_PATH}/include)
 
-message("BBP_SDK_INCLUDE_DIRS are ${BBP_SDK_INCLUDE_DIRS}")
+message("BBPSDK_INCLUDE_DIRS are ${BBPSDK_INCLUDE_DIRS}")
 
 # --------------------------------------------------------------
 # Find Boost

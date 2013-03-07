@@ -123,7 +123,7 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkTemporalDifferenceFilter.xml
     ${XML_PATH}/vtkExponentialDecayFilter.xml
-    ${XML_PATH}/vtkAlphaTransform.xml
+    ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
     ${XML_PATH}/vtkMorphologyReader.xml
@@ -133,7 +133,7 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkExponentialDecayFilter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkAlphaTransform.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
@@ -163,7 +163,9 @@ ADD_PARAVIEW_PLUGIN(
 
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
     pv_zoltan
-    ${BBP_SDK_LIBRARIES}
+    ${BBPSDK_LIBRARIES}
+    hdf5_cpp
+    hdf5
     ${CUDA_LIBRARIES}
 #    ${BBPSDK_LIBRARIES}
     ${HDF5_C_LIBRARY} 
@@ -178,10 +180,19 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
     ${Boost_DATE_TIME_LIBRARY}
 )
 
-message(" BOOST LIBS ARE 
+message("BBPSDK LIBS ARE 
     ${BBPSDK_LIBRARIES}
+")
+
+message("BOOST LIBS ARE 
     ${Boost_LIBRARIES}
 ")
+
+message("HDF5 LIBS ARE 
+    ${HDF5_C_LIBRARY} 
+    ${HDF5_CXX_LIBRARY} 
+")
+
 
 add_executable(test_bbplink test_bbplink.cpp)
 target_link_libraries(test_bbplink 

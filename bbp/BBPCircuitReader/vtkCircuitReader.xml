@@ -20,7 +20,7 @@
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="/home/biddisco/bbpdata/bmc-benchmark/blueconfig" 
+         default_values="C:\data\bbp\egpgv\blueconfig.jb" 
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>

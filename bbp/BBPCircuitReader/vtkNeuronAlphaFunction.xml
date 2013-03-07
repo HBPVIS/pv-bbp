@@ -1,0 +1,171 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+
+    <SourceProxy name="NeuronAlphaFunction"
+                 class="vtkNeuronAlphaFunction"
+                 label="Neuron Alpha Function">
+      <Documentation
+         long_help="Adjust alpha"
+         short_help="Adjust alpha">
+      </Documentation>
+
+      <InputProperty
+         name="Input"
+         command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <InputArrayDomain name="input_array"
+                          attribute_type="point"
+                          number_of_components="1">
+        </InputArrayDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkPointSet"/>
+        </DataTypeDomain>
+      </InputProperty>
+
+      <IntVectorProperty
+         name="VoltageTransparencyMode"
+         command="SetVoltageTransparencyMode"
+         number_of_elements="1"
+         default_values="1" >
+        <EnumerationDomain name="enum">
+          <Entry value="0" text="HyperPolarizedTransparent"/>
+          <Entry value="1" text="RestingPotentialTransparent"/>
+        </EnumerationDomain>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty
+         name="HyperPolarizedVoltage"
+         command="SetHyperPolarizedVoltage"
+         number_of_elements="1"
+         default_values="-85.0"
+         label="Hyper-Polarized Voltage ref (mV)">
+        <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+         name="DePolarizedVoltage"
+         command="SetDePolarizedVoltage"
+         number_of_elements="1"
+         default_values="-50.0"
+         label="De-Polarized Voltage ref (mV)">
+        <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+         name="RestingPotentialVoltage"
+         command="SetRestingPotentialVoltage"
+         number_of_elements="1"
+         default_values="-65.0"
+         label="Resting Potential Voltage ref (mV)">
+        <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+         name="PeakDifferentialVoltage"
+         command="SetPeakDifferentialVoltage"
+         number_of_elements="1"
+         default_values="20.0"
+         label="Peak Differential Voltage ref (mV)">
+        <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+         name="DifferentialBlendFactor"
+         command="SetDifferentialBlendFactor"
+         number_of_elements="1"
+         default_values="0.0" >
+        <DoubleRangeDomain name="range" min="0" max="1.0"/>
+        <Documentation>
+          When 1, the actor is opaque, when 0, the alpha value is unmodified
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <StringVectorProperty
+          name="VoltageArray"
+          command="SetArray1Name"
+          number_of_elements="1"
+          default_values="Voltage"
+          label="Voltage Array">
+        <ArrayListDomain
+          name="array_list"
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>
+          The value of this property contains the name of the 1st array to use for alpha.
+        </Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+          name="AnotherArray"
+          command="SetArray2Name"
+          number_of_elements="1"
+          default_values="RTNeuron Opacity"
+          label="Opacity Array">
+        <ArrayListDomain
+          name="array_list"
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>
+          The value of this property contains the name of the 2nd array to use for alpha.
+        </Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+          name="YetAnotherArray"
+          command="SetArray3Name"
+          number_of_elements="1"
+          default_values="Dendrite Radius"
+          label="Radius Array">
+        <ArrayListDomain
+          name="array_list"
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>
+          The value of this property contains the name of the 3rd array to use for alpha.
+        </Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+          name="dvdtArray"
+          command="SetArray4Name"
+          number_of_elements="1"
+          default_values="delta_Voltage"
+          label="Differential Voltage Array">
+        <ArrayListDomain
+          name="array_list"
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <Documentation>
+          Array containing dv/dt values
+        </Documentation>
+      </StringVectorProperty>
+
+    </SourceProxy>
+
+  </ProxyGroup>
+
+</ServerManagerConfiguration>
+
