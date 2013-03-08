@@ -104,7 +104,7 @@
       </StringVectorProperty>
 
       <StringVectorProperty
-          name="AnotherArray"
+          name="RTNeuronOpacity"
           command="SetArray2Name"
           number_of_elements="1"
           default_values="RTNeuron Opacity"
