@@ -63,25 +63,14 @@
         <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
       </DoubleVectorProperty>
 
-      <DoubleVectorProperty
+      <!--<DoubleVectorProperty
          name="PeakDifferentialVoltage"
          command="SetPeakDifferentialVoltage"
          number_of_elements="1"
          default_values="20.0"
          label="Peak Differential Voltage ref (mV)">
         <DoubleRangeDomain name="range" min="-1000" max="1000.0"/>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty
-         name="DifferentialBlendFactor"
-         command="SetDifferentialBlendFactor"
-         number_of_elements="1"
-         default_values="0.0" >
-        <DoubleRangeDomain name="range" min="0" max="1.0"/>
-        <Documentation>
-          When 1, the actor is opaque, when 0, the alpha value is unmodified
-        </Documentation>
-      </DoubleVectorProperty>
+      </DoubleVectorProperty>-->
 
       <StringVectorProperty
           name="VoltageArray"
@@ -124,28 +113,8 @@
       </StringVectorProperty>
 
       <StringVectorProperty
-          name="YetAnotherArray"
-          command="SetArray3Name"
-          number_of_elements="1"
-          default_values="Dendrite Radius"
-          label="Radius Array">
-        <ArrayListDomain
-          name="array_list"
-          attribute_type="Scalars"
-          none_string="Not available"
-          input_domain_name="input_array">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </ArrayListDomain>
-        <Documentation>
-          The value of this property contains the name of the 3rd array to use for alpha.
-        </Documentation>
-      </StringVectorProperty>
-
-      <StringVectorProperty
           name="dvdtArray"
-          command="SetArray4Name"
+          command="SetArray3Name"
           number_of_elements="1"
           default_values="delta_Voltage"
           label="Differential Voltage Array">
@@ -162,6 +131,17 @@
           Array containing dv/dt values
         </Documentation>
       </StringVectorProperty>
+
+      <DoubleVectorProperty
+         name="DifferentialBlendFactor"
+         command="SetDifferentialBlendFactor"
+         number_of_elements="1"
+         default_values="0.0" >
+        <DoubleRangeDomain name="range" min="0" max="1.0"/>
+        <Documentation>
+          When 1, the actor is opaque, when 0, the alpha value is unmodified
+        </Documentation>
+      </DoubleVectorProperty>
 
     </SourceProxy>
 

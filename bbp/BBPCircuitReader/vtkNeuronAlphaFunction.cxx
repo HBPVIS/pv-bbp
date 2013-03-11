@@ -95,13 +95,13 @@ int vtkNeuronAlphaFunction::RequestData(
   vtkDataArray *a1 = this->Array1Name ? input->GetPointData()->GetArray(this->Array1Name) : NULL;
   FloatOrDoubleArrayPointer(a1, a1F, a1D);
 
-  vtkDataArray *a2 = this->Array1Name ? input->GetPointData()->GetArray(this->Array1Name) : NULL;
+  vtkDataArray *a2 = this->Array2Name ? input->GetPointData()->GetArray(this->Array2Name) : NULL;
   FloatOrDoubleArrayPointer(a2, a2F, a2D);
 
-  vtkDataArray *a3 = this->Array1Name ? input->GetPointData()->GetArray(this->Array1Name) : NULL;
+  vtkDataArray *a3 = this->Array3Name ? input->GetPointData()->GetArray(this->Array3Name) : NULL;
   FloatOrDoubleArrayPointer(a3, a3F, a3D);
 
-  vtkDataArray *a4 = this->Array1Name ? input->GetPointData()->GetArray(this->Array1Name) : NULL;
+  vtkDataArray *a4 = this->Array4Name ? input->GetPointData()->GetArray(this->Array4Name) : NULL;
   FloatOrDoubleArrayPointer(a4, a4F, a4D);
 
   vtkSmartPointer<vtkFloatArray> newAlpha = vtkSmartPointer<vtkFloatArray>::New();
@@ -131,6 +131,16 @@ int vtkNeuronAlphaFunction::RequestData(
         double alpha = (value-this->RestingPotentialVoltage)/(this->HyperPolarizedVoltage-this->RestingPotentialVoltage);
         newdata[i] = (alpha<0 ? 0 : (alpha>1.0 ? 1.0 : alpha));
       }
+    }
+  }
+
+  if (a2 && a3) {
+    for (vtkIdType i=0; i<N; i++) {
+      double   rtopacity = FloatOrDouble(a2F,a2D,i);
+      double dvdtopacity = FloatOrDouble(a3F,a3D,i);
+      //
+      double alpha = this->DifferentialBlendFactor*dvdtopacity + (1.0 - this->DifferentialBlendFactor)*rtopacity;
+      newdata[i] = (alpha<0 ? 0 : (alpha>1.0 ? 1.0 : alpha));
     }
   }
 

@@ -47,11 +47,6 @@ public:
   vtkTypeMacro(vtkNeuronAlphaFunction,vtkPointSetAlgorithm);
 
   // Description:
-  // 
-  vtkSetMacro(DifferentialBlendFactor,double);
-  vtkGetMacro(DifferentialBlendFactor,double);
-
-  // Description:
   // hyperpolarized (voltage near -85 mV)
   vtkSetMacro(HyperPolarizedVoltage,double);
   vtkGetMacro(HyperPolarizedVoltage,double);
@@ -88,6 +83,11 @@ public:
 
   vtkSetStringMacro(Array4Name);
   vtkGetStringMacro(Array4Name);
+
+  // Description:
+  // 
+  vtkSetMacro(DifferentialBlendFactor,double);
+  vtkGetMacro(DifferentialBlendFactor,double);
 
 protected:
    vtkNeuronAlphaFunction();
