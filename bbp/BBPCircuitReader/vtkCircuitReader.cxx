@@ -471,7 +471,7 @@ int vtkCircuitReader::RequestData(
   //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
 
   // create a new target based on our subrange of neurons, clear any contests first.
-  this->Partitioned_target = bbp::Target("ParaViewCells", Target_Type::CELL_TARGET);
+  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::CELL_TARGET);
 
   for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
     bbp::Cell_GID gid = shufflevector[i];
