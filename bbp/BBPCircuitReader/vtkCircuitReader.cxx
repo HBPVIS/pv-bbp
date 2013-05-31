@@ -85,9 +85,11 @@
 //#include "BBP/VtkDebugging/visualization.h"
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
+#define BOOL(x) (x!=0)
 //----------------------------------------------------------------------------
 #define JB_DEBUG__
 #ifdef JB_DEBUG__
+  #undef  OUTPUTTEXT
   #define OUTPUTTEXT(a) std::cout << (a) << std::endl; std::cout.flush();
 
     #undef vtkDebugMacro
@@ -166,6 +168,12 @@ vtkCircuitReader::vtkCircuitReader()
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
   this->MeshPartitionFilter           = NULL;
   this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
+  //
+  this->HyperPolarizedVoltage    = -85.0;
+  this->DePolarizedVoltage       = -50.0;
+  this->RestingPotentialVoltage  = -65.0;
+
+  this->NumberOfPointsBeforePartitioning = 0;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
@@ -296,7 +304,7 @@ int vtkCircuitReader::RequestInformation(
 // std::cout <<"Made it past load " << std::endl;
 
     // time steps of reports are in the report file
-    if (this->UpdateNumPieces==1) {
+    if (1 || this->UpdateNumPieces==1) {
       if (this->OpenReportFile()) {
         this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
       }
@@ -347,8 +355,8 @@ int vtkCircuitReader::RequestInformation(
   }
 
   //
-//  this->BuildSIL();
-//  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
+  this->BuildSIL();
+  outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
   //
   return result;
 }
@@ -356,10 +364,13 @@ int vtkCircuitReader::RequestInformation(
 int vtkCircuitReader::OpenReportFile()
 {
   std::string reportname = "";
+  std::string ideal = "voltage1K";
   bbp::Reports_Specification &reports = this->Experiment.reports();
   for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
     reportname = (*ri).label();
-    break;
+    if (ideal==reportname) {
+      break;
+    }
   }                                          
   if (reports.size()==0) {
     return 0;
@@ -504,6 +515,7 @@ int vtkCircuitReader::RequestData(
       this->CachedMorphologySkeleton->Initialize();
     }
   
+    this->NumberOfPointsBeforePartitioning = this->CachedNeuronMesh->GetPoints()->GetNumberOfPoints();
     if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
       vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
       redist_timer->StartTimer();
@@ -512,7 +524,11 @@ int vtkCircuitReader::RequestData(
       this->MeshPartitionFilter->SetInputData(this->CachedNeuronMesh);
       // thell the partition filter we can dump the input memory when needed
       this->MeshPartitionFilter->SetInputDisposable(1);
-      // release any hold we have on it to help save memory
+      // for animation over time, keep the map of point send/receive
+      // @TODO : Only save this if voltage reports are being loaded
+      this->MeshPartitionFilter->SetKeepInversePointLists(1);
+
+      // release our reference count for now
       this->CachedNeuronMesh = NULL;
       // Update the partition filter with parallel information
       vtkStreamingDemandDrivenPipeline::SafeDownCast(this->MeshPartitionFilter->GetExecutive())
@@ -533,7 +549,7 @@ int vtkCircuitReader::RequestData(
 //      this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->MeshPartitionFilter->GetOutput()), this->CachedNeuronMesh);
       this->CachedNeuronMesh = vtkPolyData::SafeDownCast(this->MeshPartitionFilter->GetOutput());
       this->MeshPartitionFilter->SetInputData((vtkPolyData*)NULL);
-      this->MeshPartitionFilter = NULL;
+//      this->MeshPartitionFilter = NULL;
       //
       redist_timer->StopTimer();
       if (this->UpdatePiece==0) {
@@ -544,7 +560,7 @@ int vtkCircuitReader::RequestData(
   }
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
     bool do_rep = (this->NumberOfTimeSteps>0) && this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
-    if (do_rep && this->UpdateNumPieces==1) {
+    if (do_rep /*&& this->UpdateNumPieces==1*/) {
       try {
        this->CreateReportScalars(request, inputVector, outputVector);
       }
@@ -557,8 +573,14 @@ int vtkCircuitReader::RequestData(
     }
     this->TimeModifiedTime.Modified();
   }
+
+  //
+  // copy internal mesh to output
+  //
   output0->ShallowCopy(this->CachedNeuronMesh);
-//  output1->ShallowCopy(this->CachedMorphologySkeleton);
+
+  //
+  //  output1->ShallowCopy(this->CachedMorphologySkeleton);
   //  
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {
@@ -578,11 +600,11 @@ int vtkCircuitReader::RequestData(
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {  
-  bool do_nrm = this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
-  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
-  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID);
-  bool do_nix = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
-  bool do_rtn = this->GetPointArrayStatus(BBP_ARRAY_NAME_RTNEURON_OPACITY);
+  bool do_nrm = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
+  bool do_sid = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
+  bool do_nid = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID);
+  bool do_nix = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
+  bool do_rtn = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_RTNEURON_OPACITY);
   
   //
   vtkSmartPointer<vtkIntArray>   neuronId = do_nid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONGID)) : NULL;
@@ -689,11 +711,11 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {
-  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID); 
-  bool do_nix = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
-  bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
-  bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
-  bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
+  bool do_nid = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID)); 
+  bool do_nix = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX));
+  bool do_sid = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID));
+  bool do_sty = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE));
+  bool do_ddr = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS));
   //
   vtkSmartPointer<vtkIntArray>                neuronId = do_nid ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONGID)) : NULL;
   vtkSmartPointer<vtkIntArray>                neuronIx = do_nix ? vtkIntArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NEURONINDEX)) : NULL;
@@ -1084,8 +1106,8 @@ void vtkCircuitReader::CreateReportScalars(
   if (this->ExportNeuronMesh) {
     voltageN = vtkSmartPointer<vtkFloatArray>::New();
     voltageN->SetName(BBP_ARRAY_NAME_VOLTAGE);
-    this->CachedNeuronMesh->GetPointData()->AddArray(voltageN);
-    vtkIdType maxPointsN = this->CachedNeuronMesh->GetPoints()->GetNumberOfPoints();
+    vtkDebugMacro(<<"Allocating voltage array for N=" << this->CachedNeuronMesh->GetPoints()->GetNumberOfPoints());
+    vtkIdType maxPointsN = this->NumberOfPointsBeforePartitioning;
     voltageN->Resize(maxPointsN);
     voltageN->SetNumberOfTuples(maxPointsN);
   }
@@ -1101,6 +1123,23 @@ void vtkCircuitReader::CreateReportScalars(
     if (this->ExportNeuronMesh) {
       offsetN = this->AddReportScalarsToNeuronMesh(&*neuron, voltageN, offsetN);  
     }
+  }
+
+  if (this->ExportNeuronMesh && this->UpdateNumPieces>1 && this->ParallelRedistribution) {
+    // create tmep data structures for partitioning field data
+    vtkSmartPointer<vtkPointData>         input_scalars = vtkSmartPointer<vtkPointData>::New();
+    vtkSmartPointer<vtkPointData>   partitioned_scalars = vtkSmartPointer<vtkPointData>::New();
+    vtkSmartPointer<vtkFloatArray> partitioned_voltages = vtkSmartPointer<vtkFloatArray>::New();
+    input_scalars->AddArray(voltageN);
+    partitioned_voltages->SetName(voltageN->GetName());
+    partitioned_scalars->AddArray(partitioned_voltages);
+    partitioned_voltages->SetNumberOfTuples(this->CachedNeuronMesh->GetNumberOfPoints());
+    // perform the partitioning using stored partition information
+    this->MeshPartitionFilter->MigratePointData(input_scalars, partitioned_scalars);
+    this->CachedNeuronMesh->GetPointData()->AddArray(partitioned_voltages);
+  }
+  else if (this->ExportNeuronMesh) {
+    this->CachedNeuronMesh->GetPointData()->AddArray(voltageN);
   }
 }
 //-----------------------------------------------------------------------------
@@ -1197,18 +1236,16 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   const bbp::Morphology *sdk_morph    = &neuron->morphology();
   const bbp::Mesh       *sdk_mesh     = &sdk_morph->mesh();
   //
-//  const Array<Vector_3D<bbp::Micron> >      &vertices2 = sdk_mesh->vertices();
-  const Array<Section_ID>                 &section_ids = sdk_mesh->vertex_sections();
-  const Array<float>                &section_distances = sdk_mesh->vertex_relative_distances();
+  const Array<Section_ID>       &section_ids = sdk_mesh->vertex_sections();
+  const Array<float>      &section_distances = sdk_mesh->vertex_relative_distances();
   //
-
   vtkIdType vertexCount = sdk_mesh->vertex_count();
 
   // get the index 
   Cell_Index cell_index = neuron->index();
   if (cell_index==UNDEFINED_CELL_INDEX) {
     for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
-      voltages->SetValue(offsetN + i, -100);
+      voltages->SetValue(offsetN + i, this->RestingPotentialVoltage);
     }
     return offsetN + vertexCount;
   }
@@ -1220,7 +1257,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
 
   const float *buffer = this->_currentFrame.getData<bbp::Voltages>().get();
   float somaVoltage = buffer[offsets[0]];
-  float rvoltage = -70;
+  float rvoltage = this->RestingPotentialVoltage;
 
   // Finding the voltage value of the last compartment of the last axon section. 
   // This is not completely accurate but it's the best we can do to assign some color 
@@ -1244,7 +1281,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
       unsigned long offset = offsets[sectionId];
       rvoltage = buffer[offset + compartment];
     } else {
-        rvoltage = -100;
+        rvoltage = this->RestingPotentialVoltage;
 /*
         if (section->type() == SOMA) {
           rvoltage = somaVoltage;

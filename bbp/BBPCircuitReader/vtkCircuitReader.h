@@ -143,7 +143,21 @@ public:
 
   vtkSmartPointer<vtkMutableDirectedGraph> GetSIL();
 
+  // Description:
+  // hyperpolarized (voltage near -85 mV)
+  vtkSetMacro(HyperPolarizedVoltage,double);
+  vtkGetMacro(HyperPolarizedVoltage,double);
 
+  // Description:
+  // depolarized (voltage near -50 mV)
+  vtkSetMacro(DePolarizedVoltage,double);
+  vtkGetMacro(DePolarizedVoltage,double);
+
+  // Description:
+  // resting potential (voltage near -65 mV)
+  vtkSetMacro(RestingPotentialVoltage,double);
+  vtkGetMacro(RestingPotentialVoltage,double);
+  
 protected:
    vtkCircuitReader();
   ~vtkCircuitReader();
@@ -219,6 +233,12 @@ protected:
   int ExportNeuronMesh;
   int ParallelRedistribution;
   int MaximumNumberOfNeurons;
+
+  double HyperPolarizedVoltage;
+  double DePolarizedVoltage;
+  double RestingPotentialVoltage;
+
+  vtkIdType NumberOfPointsBeforePartitioning;
 
   vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
   vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
