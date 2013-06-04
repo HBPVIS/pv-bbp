@@ -227,7 +227,7 @@ void pqCircuitReaderPanel::linkServerManagerProperties()
     this->proxy()->GetProperty("TargetsStatus"));
 
   // parent class hooks up some of our widgets in the ui
-  this->Superclass::linkServerManagerProperties();
+//  this->Superclass::linkServerManagerProperties();
   // on startup, we want to unselect everything
   pqProxySILModel* targetsProxyModel = (pqProxySILModel*)(this->UI->Targets->model());
   targetsProxyModel->setData(QModelIndex(), Qt::Unchecked, Qt::CheckStateRole);
