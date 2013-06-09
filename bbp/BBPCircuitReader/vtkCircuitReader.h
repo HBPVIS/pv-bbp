@@ -166,6 +166,11 @@ protected:
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   
+  int RequestTimeInformation(
+    vtkInformation *vtkNotUsed(request),
+    vtkInformationVector **vtkNotUsed(inputVector),
+    vtkInformationVector *outputVector);
+
   // top level functions which generate meshes/scalars for the whole data
   void GenerateNeuronMesh(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
@@ -195,6 +200,8 @@ protected:
   vtkTimeStamp  MeshParamsModifiedTime;
   vtkTimeStamp  MeshGeneratedTime;
   vtkTimeStamp  TimeModifiedTime;
+  vtkTimeStamp  TargetsModifiedTime;
+  vtkTimeStamp  InfoGeneratedTime;
   int           UpdatePiece;
   int           UpdateNumPieces;
   int           IntegerTimeStepValues;

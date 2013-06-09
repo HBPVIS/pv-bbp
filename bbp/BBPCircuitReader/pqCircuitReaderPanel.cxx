@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QVector>
 #include <QMap>
 #include <QHeaderView>
+#include <QPushButton>
 
 // VTK includes
 
@@ -103,7 +104,17 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
   frame->setFrameShadow(QFrame::Raised);
   frame->setFrameStyle(QFrame::NoFrame);
   this->UI->setupUi(frame);
-  // add custom panel to the existing auto-generated stuff
+
+  QPushButton *refreshButton = new QPushButton();
+  refreshButton->setText("SUPER Refresh file information");
+
+  //QVBoxLayout* subLayout1 = new QVBoxLayout();
+  //subLayout1->addWidget(refreshButton, 1);
+  //subLayout1->setMargin(0);
+  //subLayout1->setSpacing(0);
+  //this->PanelLayout->addLayout(subLayout1, 0, 0, 1, -1);
+
+  // add the custom panel to the existing auto-generated stuff
   int rows = this->PanelLayout->rowCount();
   int cols = this->PanelLayout->columnCount();
   QVBoxLayout* subLayout = new QVBoxLayout();
@@ -140,6 +151,17 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
 //  QObject::connect(this->UI->Targets,
 //    SIGNAL(clicked(const QModelIndex &)),
 //    this, SLOT(targetItemChanged(const QModelIndex &)));
+
+  //QObject::connect(refreshButton,
+  //                 SIGNAL(clicked()),
+  //                 this,
+  //                 SLOT(refreshFileInfo()));
+
+  pqFileChooserWidget* filename = this->findChild<pqFileChooserWidget*>("FileName");
+  QObject::connect(filename,
+                   SIGNAL(filenameChanged(const QString&)),
+                   this,
+                   SLOT(refreshFileInfo(const QString&)));
 
   QObject::connect(this->UI->Targets->selectionModel(),
     SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)),
@@ -253,5 +275,27 @@ void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const Q
   QVariant value = this->UI->SILModel.data(index , Qt::DisplayRole);
   QString sval = value.toString();
   //
+}
+//----------------------------------------------------------------------------
+void pqCircuitReaderPanel::refreshFileInfo(const QString &newname)
+{
+  vtkSMSourceProxy* reader = vtkSMSourceProxy::SafeDownCast(this->referenceProxy()->getProxy());
+  pqSMAdaptor::setElementProperty(
+    reader->GetProperty("FileName"), newname);
+  reader->UpdateProperty("FileName", true);
+  reader->UpdatePipelineInformation();
+}
+//----------------------------------------------------------------------------
+void pqCircuitReaderPanel::refreshFileInfo()
+{
+//  emit this->preaccept();
+  vtkSMSourceProxy* reader = vtkSMSourceProxy::SafeDownCast(this->referenceProxy()->getProxy());
+  pqFileChooserWidget* name = this->findChild<pqFileChooserWidget*>("FileName");
+  pqSMAdaptor::setElementProperty(
+    reader->GetProperty("FileName"), name->filenames());
+  reader->UpdateProperty("FileName", true);
+  reader->UpdatePipelineInformation();
+//  this->pqObjectInspectorWidget::accept();
+//  emit this->postaccept();
 }
 //----------------------------------------------------------------------------

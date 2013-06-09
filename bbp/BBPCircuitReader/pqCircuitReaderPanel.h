@@ -58,6 +58,8 @@ protected slots:
 
   /// Gets the SIL from the reader and updates the GUI.
   void updateSIL();
+  void refreshFileInfo();
+  void refreshFileInfo(const QString &newname);
 
 //  void targetItemChanged(const QModelIndex &index);
   void targetItemChanged(const QModelIndex &current, const QModelIndex &previous);

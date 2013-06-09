@@ -20,20 +20,13 @@
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="C:\data\bbp\egpgv\blueconfig.jb" 
+         default_values="C:\data\bbp\egpgv\centralV.cfg" 
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>
           This property specifies the BlueConfig file.
         </Documentation>
       </StringVectorProperty>
-
-      <CommandProperty
-        name="Refresh"
-        label="DO NOT CLICK THIS"
-        command="ExecuteInformation"
-        si_class="vtkSIProperty">
-      </CommandProperty>
 
       <StringVectorProperty
          name="DefaultTarget"
@@ -42,7 +35,6 @@
          default_values="1K"
          number_of_elements="1">
       </StringVectorProperty>
-
 
       <StringVectorProperty
          name="TargetsStatus"

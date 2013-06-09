@@ -21,6 +21,13 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Refresh file information</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="pqTreeView" name="Targets">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
