@@ -126,8 +126,8 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
-    ${XML_PATH}/vtkMorphologyReader.xml
-    ${XML_PATH}/vtkMeshBinReader.xml
+#    ${XML_PATH}/vtkMorphologyReader.xml
+#    ${XML_PATH}/vtkMeshBinReader.xml
     ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
@@ -136,8 +136,8 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
+ #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
+ #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES

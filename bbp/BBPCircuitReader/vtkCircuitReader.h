@@ -26,16 +26,17 @@ class vtkUnstructuredGrid;
 class vtkBoundsExtentTranslator;
 // BBP-SDK
 
-#include <BBP/common.h>
-#include "BBP/Microcircuit/Morphology.h"
-#include "BBP/Microcircuit/Experiment.h"
-#include "BBP/Common/Math/Geometry/Rotation.h"
-#include "BBP/Microcircuit/Datasets/compartmentReportFrame.h"
-#include "BBP/Microcircuit/Morphology.h"
-#include "BBP/Microcircuit/Experiment.h"
-#include "BBP/Microcircuit/Targets/Targets.h"
-#include "BBP/Microcircuit/Targets/Cell_Target.h"
-#include <BBP/Microcircuit/Containers/Neurons.h>
+//#include <BBP/common.h>
+//#include "BBP/Microcircuit/Morphology.h"
+#include "BBP/bbp.h"
+#include "BBP/Experiment.h"
+//#include "BBP/Common/Math/Geometry/Rotation.h"
+//#include "BBP/Microcircuit/Datasets/compartmentReportFrame.h"
+//#include "BBP/Microcircuit/Morphology.h"
+//#include "BBP/Microcircuit/Experiment.h"
+//#include "BBP/Microcircuit/Targets/Targets.h"
+//#include "BBP/Microcircuit/Targets/Cell_Target.h"
+//#include <BBP/Microcircuit/Containers/Neurons.h>
 
 class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm 
 {
@@ -224,13 +225,12 @@ protected:
   bbp::Target                               PrimaryTarget;
   bbp::Target                               Partitioned_target;
   int                                       PartitionExtents[6];
-  bbp::Millisecond                          startTime;
-  bbp::Millisecond                          stopTime;
-  bbp::Millisecond                          timestep;
+  float                          startTime;
+  float                          stopTime;
+  float                          timestep;
   bbp::Microcircuit_Ptr                     Microcircuit;
   bbp::CompartmentReportReaderPtr           ReportReader;
-  bbp::Compartment_Report_Mapping_Ptr       ReportMapping;
-  std::map<bbp::Cell_GID, bbp::Cell_Index>  OffsetMapping;
+  std::map<uint32_t, size_t>  OffsetMapping;
 
   // 
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
@@ -249,9 +249,10 @@ protected:
 
   vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
   vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
+#ifdef USE_ZOLTAN
   vtkSmartPointer<vtkMeshPartitionFilter>    MeshPartitionFilter;
   vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
-
+#endif
 private:
   vtkCircuitReader(const vtkCircuitReader&); 
   void operator=(const vtkCircuitReader&); 

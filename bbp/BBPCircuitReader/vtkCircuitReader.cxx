@@ -53,8 +53,10 @@
 #include "vtkPolyDataNormals.h"
 //
 #include "vtkPKdTree.h"
-#include "vtkBoundsExtentTranslator.h"
-#include "vtkMeshPartitionFilter.h"
+#ifdef USE_ZOLTAN
+ #include "vtkBoundsExtentTranslator.h"
+ #include "vtkMeshPartitionFilter.h"
+#endif
 //
 #include <vtksys/SystemTools.hxx>
 //
@@ -66,14 +68,14 @@
 #include <iterator>
 //
 // BBP-SDK Morphology Reader
-#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
-#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
-#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
-#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
-#include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
-#include "BBP/Microcircuit/Soma.h"
-#include "BBP/Microcircuit/Mesh.h"
-#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
+//#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
+//#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
+//#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
+//#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
+//#include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
+//#include "BBP/Microcircuit/Soma.h"
+//#include "BBP/Microcircuit/Mesh.h"
+//#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
 #include "vtkCircuitReader.h"
@@ -132,7 +134,9 @@ vtkStandardNewMacro(vtkCircuitReader);
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkCircuitReader, Controller, vtkMultiProcessController);
 //----------------------------------------------------------------------------
-vtkCircuitReader::vtkCircuitReader()
+vtkCircuitReader::vtkCircuitReader() :
+  PrimaryTarget("dummy", bbp::TARGET_CELL), 
+  Partitioned_target("dummy", bbp::TARGET_CELL)
 {
   this->FileName = NULL;
   this->SetNumberOfInputPorts(0);
@@ -166,8 +170,10 @@ vtkCircuitReader::vtkCircuitReader()
   //
   this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
   this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
+#ifdef USE_ZOLTAN
   this->MeshPartitionFilter           = NULL;
   this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
+#endif
   //
   this->HyperPolarizedVoltage    = -85.0;
   this->DePolarizedVoltage       = -50.0;
@@ -181,7 +187,10 @@ vtkCircuitReader::~vtkCircuitReader()
   this->SIL                           = NULL;
   this->CachedNeuronMesh              = NULL;
   this->CachedMorphologySkeleton      = NULL;
+#ifdef USE_ZOLTAN
   this->MeshPartitionFilter           = NULL;
+  this->BoundsTranslator              = NULL;
+#endif
   //
   this->PointDataArraySelection->FastDelete();
   this->TargetsSelection->FastDelete();
@@ -311,7 +320,7 @@ int vtkCircuitReader::RequestInformation(
     // default Target?
     this->TargetName = this->DefaultTarget ? this->DefaultTarget : this->TargetsSelection->GetArrayName(0);
     //
-    this->PrimaryTarget = bbp::Target();
+    this->PrimaryTarget = bbp::Target("empty",bbp::TARGET_CELL);
     //
     try {
       int N = this->TargetsSelection->GetNumberOfArrays();
@@ -347,7 +356,7 @@ int vtkCircuitReader::RequestInformation(
     }
     catch (...) {
       vtkErrorMacro(<<"Could not open the circuit");
-      this->PrimaryTarget = bbp::Target(); 
+      this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);; 
       ok = false;
     }
     this->InfoGeneratedTime.Modified();
@@ -405,9 +414,11 @@ int vtkCircuitReader::RequestInformation(
     result = 1;
   }
 
+#ifdef USE_ZOLTAN
   if (this->Controller->GetNumberOfProcesses()>1 && this->ParallelRedistribution) {
     outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
   }
+#endif
 
   //
   return result;
@@ -428,8 +439,10 @@ int vtkCircuitReader::OpenReportFile()
     return 0;
   }
   bbp::Reports_Specification::iterator ri=reports.find(reportname);
-  this->ReportReader = bbp::CompartmentReportReader::createReader(*ri);
-  this->ReportReader->getCellTarget();
+  this->ReportReader.reset(new bbp::CompartmentReportReader(*ri, this->Partitioned_target));
+
+
+//  this->ReportReader->getCellTarget();
   //
   this->startTime = (*ri).start_time();
   this->stopTime  = (*ri).end_time();
@@ -527,7 +540,7 @@ int vtkCircuitReader::RequestData(
     // a chunk of the list
     // NB. we want all processes to have the same sequence, seed fixed num
     std::srand(12345); 
-    std::vector<bbp::Cell_GID> shufflevector;
+    std::vector<uint32_t> shufflevector;
     shufflevector.reserve(neurons.size());
     //
     for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
@@ -538,15 +551,15 @@ int vtkCircuitReader::RequestData(
     //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
 
     // create a new target based on our subrange of neurons, clear any contests first.
-    this->Partitioned_target = bbp::Target("ParaViewCells", bbp::CELL_TARGET);
+    this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
 
     for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
-      bbp::Cell_GID gid = shufflevector[i];
+      uint32_t gid = shufflevector[i];
       Neurons::iterator ni = neurons.find( gid );
       this->Partitioned_target.insert(gid);
       //    vtkDebugMacro(<< "Adding neuron with GID " << gid);
       //    Neurons::iterator ni = neurons.find( gid );
-      //    Cell_Index cell_index = ni->index();
+      //    size_t cell_index = ni->index();
       //    if (cell_index==UNDEFINED_CELL_INDEX) {
       //    }
     }
@@ -572,6 +585,7 @@ int vtkCircuitReader::RequestData(
     }
 
     this->NumberOfPointsBeforePartitioning = this->CachedNeuronMesh->GetPoints()->GetNumberOfPoints();
+#ifdef USE_ZOLTAN
     if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
       vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
       redist_timer->StartTimer();
@@ -612,6 +626,7 @@ int vtkCircuitReader::RequestData(
         vtkDebugMacro(<< "ParallelRedistribution : " << redist_timer->GetElapsedTime() << " seconds");
       }
     }
+#endif
     this->MeshGeneratedTime.Modified();
   }
   if (NeedToRegenerateMesh || NeedToRegernerateTime) {
@@ -643,8 +658,8 @@ int vtkCircuitReader::RequestData(
     vtkDebugMacro(<< "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds");
   }
   if (this->DeleteExperiment) {
-    this->PrimaryTarget      = bbp::Target();
-    this->Partitioned_target = bbp::Target();
+    this->PrimaryTarget      = bbp::Target("dumy",bbp::TARGET_CELL);
+    this->Partitioned_target = bbp::Target("dumy",bbp::TARGET_CELL);
     this->Experiment.clear();
     this->Microcircuit->close();
     //this->ReportReader->clearCache();
@@ -669,29 +684,29 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   vtkSmartPointer<vtkFloatArray> nvectors = do_nrm ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_NORMAL)) : NULL;
   vtkSmartPointer<vtkFloatArray> rtneuron = do_rtn ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_RTNEURON_OPACITY)) : NULL;
   //
-  bbp::Vertex_Index         vertexCount = mesh->vertex_count();
-  bbp::Triangle_Index         faceCount = mesh->triangle_count();
+  uint32_t         vertexCount = mesh->vertex_count();
+  uint32_t         faceCount = mesh->triangle_count();
   vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount << " : Vertices " << vertexCount);
-  const Array<Vector_3D<bbp::Micron> >       &vertices = mesh->vertices();
-  const Section_ID                        *section_ids = mesh->vertex_sections().pointer();
-  const float                               *positions = mesh->vertex_relative_distances().pointer();
-  const Array<Vector_3D<bbp::Micron> > &vertex_normals = mesh->normals();
+  const Vector3fs       &vertices = mesh->vertices();
+  const uint16_t                        *section_ids = mesh->vertex_sections().data();
+  const float                               *positions = mesh->vertex_relative_distances().data();
+  const Vector3fs &vertex_normals = mesh->normals();
   const bbp::Morphology &morph = neuron->morphology();
   //
   vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
   transform->PostMultiply();
-  transform->RotateY(neuron->orientation().rotation);
-  transform->Translate(neuron->position().vector());
+  transform->RotateY(neuron->orientation().w()); // x,y,z,angle
+  transform->Translate(neuron->position());      // 
   transform->Update();
   vtkIdType insertN = offsetN;
-  for (bbp::Vertex_Index v=0 ; v<vertexCount; ++v) {
+  for (uint32_t v=0 ; v<vertexCount; ++v) {
     float newPoint[3];
-    transform->TransformPoint(vertices[v].vector(),newPoint); 
+    transform->TransformPoint(vertices[v],newPoint); 
     points->SetPoint(offsetN, newPoint);
-    Section_ID sectionID = section_ids[v];
+    uint16_t sectionID = section_ids[v];
 
     if (do_nrm) {
-      transform->TransformNormal(vertex_normals[v].vector(),newPoint); 
+      transform->TransformNormal(vertex_normals[v],newPoint); 
       nvectors->SetTuple(offsetN, newPoint); 
     }
     if (do_nid) {
@@ -718,7 +733,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
       }
       float width;
       const float trunkWidth = 2;
-      if (section.type() == SOMA) {
+      if (section.type() == bbp::SECTION_SOMA) {
         float radius = soma.max_radius() * 0.9;
         float distance = (vertices[v] - soma.center()).length() - radius;
         if (distance < 0) {
@@ -729,7 +744,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
           width = ((1 - distance / 2) * radius + 
             distance / 2 * trunkWidth);
         }
-      } else if (section.parent().type() == SOMA) {
+      } else if (section.parent().type() == bbp::SECTION_SOMA) {
         float diameter = section.cross_section(position).diameter();
         float distance = section.length() * position;
         if (distance > 2)
@@ -754,8 +769,8 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   //
   // Generate triangles in cell array for each face
   // 
-  const bbp::Vertex_Index* faces2 = mesh->triangles().pointer();
-  for (bbp::Triangle_Index t=0; t<faceCount; ++t)
+  const uint32_t* faces2 = mesh->triangles().data();
+  for (uint32_t t=0; t<faceCount; ++t)
   {
     cells[offsetC*4 + 0] = 3;
     cells[offsetC*4 + 1] = insertN + faces2[t*3 + 0];
@@ -767,6 +782,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {
+#if 0
   bool do_nid = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID)); 
   bool do_nix = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX));
   bool do_sid = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID));
@@ -780,8 +796,10 @@ void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtk
   vtkSmartPointer<vtkFloatArray>        dendriteRadius = do_ddr ? vtkFloatArray::SafeDownCast(field->GetArray(BBP_ARRAY_NAME_DENDRITE_RADIUS)) : NULL;
   //
   const bbp::Morphology               *morph = &neuron->morphology();
-  Morphology_Dataset                 dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
   const Section_Type          *section_types = dataset.section_types();
+  morph->
+
+  Morphology_Dataset                 dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
   const Transform_3D<bbp::Micron> &transform = neuron->global_transform();
 
   vtkIdType insertN = offsetN;
@@ -829,6 +847,7 @@ void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtk
     }
   }
   offsetN += i;
+#endif
 }
 //-----------------------------------------------------------------------------
 void vtkCircuitReader::GenerateNeuronMesh(
@@ -1123,19 +1142,17 @@ void vtkCircuitReader::CreateReportScalars(
   //  vtkDebugMacro(<< "Report Reader Cell Target \n" << this->ReportReader->getCellTarget());
 
   this->ReportReader->updateMapping(this->Partitioned_target);
-  // the mapping array(s) provided by the report reader
-  this->ReportMapping = this->ReportReader->getMapping();  
 
   // we need a cell Target object (another neuron list), so get one from the neuron list (waste of memory?)
   bbp::Cell_Target ctarget = this->Partitioned_target.cell_target();
   if (ctarget.size() != 0) {
-    Cell_Index index = 0;
-    for (Cell_Target::const_iterator i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
+    size_t index = 0;
+    for (GIDSetCIter i=ctarget.begin(); i!=ctarget.end(); ++i, ++index) {
       this->OffsetMapping[*i] = index;
     }
   } else {
     bbp::Neurons &neurons = this->Microcircuit->neurons(); 
-    Cell_Index j = 0;
+    size_t j = 0;
     for (bbp::Neurons::const_iterator i = neurons.begin(); i != neurons.end(); ++i,++j) {
       std::cerr << "We must provide some kind of mapping for neuron list " << std::endl;
       //            (*i)->setSimulationBufferIndex(j);
@@ -1190,9 +1207,11 @@ void vtkCircuitReader::CreateReportScalars(
     partitioned_voltages->SetName(voltageN->GetName());
     partitioned_scalars->AddArray(partitioned_voltages);
     partitioned_voltages->SetNumberOfTuples(this->CachedNeuronMesh->GetNumberOfPoints());
+#ifdef USE_ZOLTAN
     // perform the partitioning using stored partition information
     this->MeshPartitionFilter->MigratePointData(input_scalars, partitioned_scalars);
     this->CachedNeuronMesh->GetPointData()->AddArray(partitioned_voltages);
+#endif
   }
   else if (this->ExportNeuronMesh) {
     this->CachedNeuronMesh->GetPointData()->AddArray(voltageN);
@@ -1201,9 +1220,10 @@ void vtkCircuitReader::CreateReportScalars(
 //-----------------------------------------------------------------------------
 vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
 {
+#if 0
   const bbp::Morphology* morph                    = &neuron->morphology();
   const bbp::Transform_3D<bbp::Micron> &transform = neuron->global_transform();
-  const bbp::Count index = this->OffsetMapping[neuron->gid()];
+  const size_t index = this->OffsetMapping[neuron->gid()];
   vtkDebugMacro(<< "Neuron with GID " << neuron->gid() << " has mapping offset " << index);
 
   Morphology_Dataset dataset = /*std::move(*/morph->operator Morphology_Dataset();//);
@@ -1220,7 +1240,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
   // This is not completely accurate but it's the best we can do to assign some color 
   // to axon sections with undefined simulation data.
   const Sections &axon = morph->axon();
-  const Section_ID lastAxon = axon.size() == 0 || this->ReportMapping->number_of_compartments(index, axon.begin()->id()) == 0 ? axon.begin()->id() : morph->soma().id();
+  const uint16_t lastAxon = axon.size() == 0 || this->ReportMapping->number_of_compartments(index, axon.begin()->id()) == 0 ? axon.begin()->id() : morph->soma().id();
   float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportMapping->number_of_compartments(index, lastAxon)];
 
   vtkIdType i = 0;
@@ -1285,6 +1305,8 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMorphology(bbp::Neuron *neur
     }
   }
   return offsetN + i;
+#endif
+return 0;
 }
 //-----------------------------------------------------------------------------
 vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
@@ -1292,26 +1314,29 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   const bbp::Morphology *sdk_morph    = &neuron->morphology();
   const bbp::Mesh       *sdk_mesh     = &sdk_morph->mesh();
   //
-  const Array<Section_ID>       &section_ids = sdk_mesh->vertex_sections();
-  const Array<float>      &section_distances = sdk_mesh->vertex_relative_distances();
+  const uint16_ts       &section_ids = sdk_mesh->vertex_sections();
+  const floats    &section_distances = sdk_mesh->vertex_relative_distances();
   //
   vtkIdType vertexCount = sdk_mesh->vertex_count();
 
   // get the index 
-  Cell_Index cell_index = neuron->index();
-  if (cell_index==UNDEFINED_CELL_INDEX) {
-    for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
+  size_t cell_index = neuron->index();
+  if (cell_index==std::numeric_limits<size_t>::max()) {
+    for (uint32_t i=0; i<vertexCount; ++i) {
       voltages->SetValue(offsetN + i, this->RestingPotentialVoltage);
     }
     return offsetN + vertexCount;
   }
 
-  const bbp::Count index = this->OffsetMapping[neuron->gid()];
+  const size_t index = this->OffsetMapping[neuron->gid()];
 
   // These are the buffer offsets for this neuron 
-  const std::vector<Report_Frame_Index> &offsets = this->ReportMapping->sections_offsets(index);
+  const brion::SectionOffsets &alloffsets = this->ReportReader->getOffsets(); // bbp:sectionoffsets
+  const uint64_ts &offsets = alloffsets[index];
 
-  const float *buffer = this->_currentFrame.getData<bbp::Voltages>().get();
+  
+  const bbp::floatsPtr fbuffer = this->_currentFrame.getData< bbp::floatsPtr >();
+  const float *buffer = fbuffer->data();
   float somaVoltage = buffer[offsets[0]];
   float rvoltage = this->RestingPotentialVoltage;
 
@@ -1319,15 +1344,17 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   // This is not completely accurate but it's the best we can do to assign some color 
   // to axon sections with undefined simulation data.
   const Sections &axon = sdk_morph->axon();
-  const Section_ID lastAxon = axon.size() == 0 || this->ReportMapping->number_of_compartments(cell_index, axon.begin()->id()) == 0 ? axon.begin()->id() : sdk_morph->soma().id();
-  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportMapping->number_of_compartments(cell_index, lastAxon)];
+  const uint16_t lastAxon = (axon.size() == 0) || 
+    this->ReportReader->getCompartmentCounts()[cell_index][axon.begin()->id()] == 0 ? axon.begin()->id() : sdk_morph->soma().id();
+  //
+  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportReader->getCompartmentCounts()[cell_index][lastAxon]];
 
-  for (bbp::Vertex_Index i=0; i<vertexCount; ++i) {
-    Section_ID     sectionId = section_ids[i];
-    size_t num_sections = this->ReportMapping->number_of_sections(index);
+  for (uint32_t i=0; i<vertexCount; ++i) {
+    uint16_t     sectionId = section_ids[i];
+    size_t num_sections = sdk_morph->size();
     uint16_t compartments = 0;
     if (sectionId < num_sections) {
-      compartments = this->ReportMapping->number_of_compartments(index, sectionId);
+      compartments = this->ReportReader->getCompartmentCounts()[cell_index][sectionId];
     }
     float position = section_distances[i];
     //

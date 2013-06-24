@@ -7,8 +7,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 # --------------------------------------------------------------
 # Find BBP-SDK
 # --------------------------------------------------------------
-SET(BBPSDK_USE_STATIC_LIBS ON)
-find_package(BBPSDK 0.14 REQUIRED NO_MODULE)
+#SET(BBPSDK_USE_STATIC_LIBS ON)
+#find_package(BBPSDK 0.14 REQUIRED NO_MODULE)
 include_directories(${BBPSDK_INCLUDE_DIRS}  ${BBPSDK_PATH}/include)
 
 message("BBPSDK_INCLUDE_DIRS are ${BBPSDK_INCLUDE_DIRS}")
@@ -17,15 +17,15 @@ message("BBPSDK_INCLUDE_DIRS are ${BBPSDK_INCLUDE_DIRS}")
 # Find Boost
 # --------------------------------------------------------------
 IF (MSVC)
-	message("Setting MSVC boost options")
-	set(Boost_USE_STATIC_LIBS        ON)
-	set(Boost_USE_STATIC             ON)
-	set(Boost_USE_MULTITHREADED      ON)
-	set(Boost_USE_STATIC_RUNTIME    OFF)
+#	message("Setting MSVC boost options")
+#	set(Boost_USE_STATIC_LIBS        ON)
+#	set(Boost_USE_STATIC             ON)
+#	set(Boost_USE_MULTITHREADED      ON)
+#	set(Boost_USE_STATIC_RUNTIME    OFF)
 ENDIF (MSVC)
 
-find_package(Boost 1.49 REQUIRED 
-  filesystem program_options serialization system thread unit_test_framework NO_MODULE)
+#find_package(Boost 1.49 REQUIRED 
+#  filesystem program_options serialization system thread unit_test_framework NO_MODULE)
 include_directories(
   ${Boost_INCLUDE_DIR}
 )
