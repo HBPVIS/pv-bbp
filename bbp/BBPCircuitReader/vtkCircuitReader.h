@@ -180,7 +180,7 @@ protected:
   // generate mesh/scalars on a per neuron basis
   void      AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
   void      AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
-  vtkIdType AddReportScalarsToNeuronMorphology(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
+  vtkIdType AddReportScalarsToMorphologySkeleton(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
   vtkIdType AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
 
   // internally used to open report file
@@ -249,7 +249,7 @@ protected:
 
   vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
   vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
-#ifdef USE_ZOLTAN
+#ifdef PV_BBP_USE_ZOLTAN
   vtkSmartPointer<vtkMeshPartitionFilter>    MeshPartitionFilter;
   vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
 #endif

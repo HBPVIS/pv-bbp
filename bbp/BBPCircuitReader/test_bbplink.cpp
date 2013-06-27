@@ -63,14 +63,14 @@
 #include <iterator>
 //
 // BBP-SDK Morphology Reader
-#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
-#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
-#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
-#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
-#include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
-#include "BBP/Microcircuit/Soma.h"
-#include "BBP/Microcircuit/Mesh.h"
-#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
+#include "BBP/bbp.h"
+//#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
+//#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
+//#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
+//#include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
+//#include "BBP/Microcircuit/Soma.h"
+//#include "BBP/Microcircuit/Mesh.h"
+//#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
 #include "vtkCircuitReader.h"
