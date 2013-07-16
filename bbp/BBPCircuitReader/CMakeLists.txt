@@ -163,11 +163,10 @@ ADD_PARAVIEW_PLUGIN(
 
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
     pv_zoltan
-    ${BBPSDK_LIBRARIES}
+    BBPSDK
     hdf5_cpp
     hdf5
     ${CUDA_LIBRARIES}
-#    ${BBPSDK_LIBRARIES}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 
     ${Boost_SERIALIZATION_LIBRARY} 
@@ -196,14 +195,6 @@ message("HDF5 LIBS ARE
 
 add_executable(test_bbplink test_bbplink.cpp)
 target_link_libraries(test_bbplink 
-    ${PLUGIN_NAME}
-#    ${BBPSDK_LIBRARIES}
-#    ${CUDA_LIBRARIES}
-#    ${ZOLTAN_LIBS}
-#    ${HDF5_C_LIBRARY} 
-#    ${HDF5_CXX_LIBRARY} 
-#    ${Boost_LIBRARIES}
-
-
+  ${PLUGIN_NAME}
 )
 
