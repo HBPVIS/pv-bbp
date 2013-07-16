@@ -305,7 +305,7 @@ int vtkCircuitReader::RequestInformation(
     }
     catch (...) {
       this->Experiment.clear();
-      std::cout <<"An exception occurred opening the bbp::Experiment " << std::endl;
+      vtkErrorMacro("An exception occurred opening the bbp::Experiment ");
     }
     //
     this->BuildSIL();
@@ -313,6 +313,7 @@ int vtkCircuitReader::RequestInformation(
     this->FileOpenedTime.Modified();
   }
 
+std::cout <<"Here OK /n" << std::endl;
 
   ok = true;
   bool NeedToRegenerateInfo = /*NeedToReloadFile || */(TargetsModifiedTime>InfoGeneratedTime);
@@ -345,7 +346,7 @@ int vtkCircuitReader::RequestInformation(
             }
           }
           catch (...) {
-            std::cout << "Could not add target " << name << " to list" << std::endl;
+            vtkErrorMacro("Could not add target " << name << " to list");
           }
         }
       }
@@ -355,12 +356,14 @@ int vtkCircuitReader::RequestInformation(
 //      bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
     }
     catch (...) {
-      vtkErrorMacro(<<"Could not open the circuit");
+      vtkErrorMacro(<<"Could not set the target ");
       this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);; 
       ok = false;
     }
     this->InfoGeneratedTime.Modified();
   }
+
+  std::cout <<"Here OK /n" << std::endl;
 
   //    std::cout << cellTarget << std::endl;
 
@@ -369,11 +372,17 @@ int vtkCircuitReader::RequestInformation(
   if (needToRegenerateTimeInfo) {
     // time steps of reports are in the report file
     if (ok && this->UpdateNumPieces==1) {
-      if (this->OpenReportFile()) {
-        this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+      try {
+        if (this->OpenReportFile()) {
+          this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+        }
+        else {
+          this->NumberOfTimeSteps = 0;
+        }
       }
-      else {
-        this->NumberOfTimeSteps = 0;
+      catch (...) {
+    	  vtkErrorMacro("Exception caught during report file read")
+          this->NumberOfTimeSteps = 0;
       }
     }
     else {
@@ -511,16 +520,21 @@ int vtkCircuitReader::RequestData(
   bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime)
     || (TargetsModifiedTime>MeshGeneratedTime);
   //
-  if (NeedToRegenerateMesh) {
+  if (NeedToRegenerateMesh && this->Microcircuit) {
     //
 //    this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
 //    bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
 //    if (neurons.size()==0) {
       // Load neurons for this target so we can partition them
-    this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
-    bbp::Neurons &neurons = this->Microcircuit->neurons(); 
+	try {
+      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
+	}
+    catch (...) {
+      vtkErrorMacro("Caught an exception during Microcircuit->load")
+    }
 //    }
-    int WholeExtent[6] = { 0, (int)neurons.size(), 0, 0, 0, 0 };
+    bbp::Neurons &neurons = this->Microcircuit->neurons();
+    int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
     if (this->MaximumNumberOfNeurons>0) {
       WholeExtent[1] = std::min(neurons.size(), (size_t)(this->MaximumNumberOfNeurons));
     }
@@ -565,11 +579,16 @@ int vtkCircuitReader::RequestData(
     }
 
     // Load morphology and meshes for this subtarget
+    try {
 #ifdef MANUAL_MESH_LOAD
-    this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES); // | bbp::MESHES);
+      this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES); // | bbp::MESHES);
 #else
-    this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
+      this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES | bbp::MESHES);
 #endif
+    }
+    catch (...) {
+    	vtkErrorMacro("Caught an SDK exception during Microcircuit->load")
+    }
     //
     if (this->ExportNeuronMesh) {
       this->GenerateNeuronMesh(request, inputVector, outputVector);
