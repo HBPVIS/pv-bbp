@@ -1428,9 +1428,11 @@ void vtkCircuitReader::BuildSIL()
     const bbp::Targets &default_targets = this->Experiment.targets();
     for (bbp::Targets::const_iterator ti=default_targets.begin(); ti!=default_targets.end(); ++ti) {
       std::string name = (*ti).name();
-      vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
-      names.push_back(name.c_str());
-      this->TargetsSelection->AddArray(name.c_str());
+      if (!this->TargetsSelection->ArrayExists(name.c_str())) {
+        vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
+        names.push_back(name.c_str());
+        this->TargetsSelection->AddArray(name.c_str());
+      }
     }
   }
 
