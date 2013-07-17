@@ -78,7 +78,6 @@ endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
 include_directories(
   ${PLUGIN_PATH}
   ${CMAKE_CURRENT_SOURCE_DIR}/Piston
-  ${BBP_SDK_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIR_CPP}
 )
 
@@ -197,4 +196,18 @@ add_executable(test_bbplink test_bbplink.cpp)
 target_link_libraries(test_bbplink 
   ${PLUGIN_NAME}
 )
+
+#--------------------------------------------------
+# Install
+#--------------------------------------------------
+SET(INSTALL_PATH 
+  "${CMAKE_INSTALL_PREFIX}/lib/paraview-${PARAVIEW_VERSION_MAJOR}.${PARAVIEW_VERSION_MINOR}"
+)
+
+INSTALL(
+  TARGETS 
+    ${PLUGIN_NAME}
+  DESTINATION ${INSTALL_PATH}
+)
+
 
