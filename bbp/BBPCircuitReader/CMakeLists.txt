@@ -178,19 +178,6 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
     ${Boost_DATE_TIME_LIBRARY}
 )
 
-message("BBPSDK LIBS ARE 
-    ${BBPSDK_LIBRARIES}
-")
-
-message("BOOST LIBS ARE 
-    ${Boost_LIBRARIES}
-")
-
-message("HDF5 LIBS ARE 
-    ${HDF5_C_LIBRARY} 
-    ${HDF5_CXX_LIBRARY} 
-")
-
 
 add_executable(test_bbplink test_bbplink.cpp)
 target_link_libraries(test_bbplink 

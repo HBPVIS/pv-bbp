@@ -13,24 +13,16 @@ include_directories(${BBPSDK_INCLUDE_DIR})
 # --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
-IF (MSVC)
-#	message("Setting MSVC boost options")
-#	set(Boost_USE_STATIC_LIBS        ON)
-#	set(Boost_USE_STATIC             ON)
-#	set(Boost_USE_MULTITHREADED      ON)
-#	set(Boost_USE_STATIC_RUNTIME    OFF)
-ENDIF (MSVC)
-
 find_package(Boost NO_MODULE COMPONENTS program_options;filesystem;system;regex;thread;date_time;serialization)
-
 include_directories(
   ${Boost_INCLUDE_DIR}
 )
 link_directories(${Boost_LIBRARY_DIRS})
+
 # --------------------------------------------------------------
 # Find HDF5
 # --------------------------------------------------------------
-find_package(HDF5 COMPONENTS C CXX REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+find_package(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
 include_directories(${HDF5_INCLUDE_DIR}
                     ${HDF5_INCLUDE_DIR_CPP})
 
