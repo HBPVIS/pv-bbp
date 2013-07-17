@@ -66,7 +66,7 @@ if (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
       ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-zoltan/trilinos/cmake/tribits/common_tools/win_interface/include
    )
   endif(WIN32)
-  ADD_DEFINITIONS(-DZOLTAN_SUPPORT)
+  ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
   set(ZOLTAN_LIBS pv_zoltan)
   message("Zoltan support enabled")
 endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
