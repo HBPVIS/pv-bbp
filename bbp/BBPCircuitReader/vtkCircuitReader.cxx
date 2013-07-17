@@ -318,7 +318,7 @@ int vtkCircuitReader::RequestInformation(
   bool NeedToRegenerateInfo = /*NeedToReloadFile || */(TargetsModifiedTime>InfoGeneratedTime);
   if (NeedToRegenerateInfo) {
     // default Target?
-    this->TargetName = this->DefaultTarget ? this->DefaultTarget : this->TargetsSelection->GetArrayName(0);
+    this->TargetName = (this->DefaultTarget && strlen(this->DefaultTarget)>0) ? this->DefaultTarget : this->TargetsSelection->GetArrayName(0);
     //
     this->PrimaryTarget = bbp::Target("empty",bbp::TARGET_CELL);
     //
@@ -332,14 +332,14 @@ int vtkCircuitReader::RequestInformation(
             try {
               bbp::Target temp = this->Experiment.user_targets().get_target(name);
               if (temp.size()>0) {
-                std::cout << "Adding target " << name << " to list" << std::endl;
+                std::cout << "Adding (user) target " << name << " to load list" << std::endl;
                 this->PrimaryTarget.insert(temp);
               }
             }
             catch (...) {
               bbp::Target temp = this->Experiment.targets().get_target(name);
               if (temp.size()>0) {
-                std::cout << "Adding target " << name << " to list" << std::endl;
+                std::cout << "Adding (system) target " << name << " to list" << std::endl;
                 this->PrimaryTarget.insert(temp);
               }
             }
