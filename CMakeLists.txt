@@ -10,12 +10,21 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(BBPSDK REQUIRED NO_MODULE)
 include_directories(${BBPSDK_INCLUDE_DIR})
 
+
 # --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
-find_package(Boost NO_MODULE COMPONENTS program_options;filesystem;system;regex;thread;date_time;serialization)
+OPTION(Boost_USE_FIND_NO_MODULE "If cmake installed boost, use NO_MODULE in find package" ON)
+
+if(Boost_USE_FIND_NO_MODULE)
+  find_package(Boost NO_MODULE COMPONENTS program_options;filesystem;system;regex;thread;date_time;serialization)
+else(Boost_USE_FIND_NO_MODULE)
+  find_package(Boost 1.41.0 REQUIRED filesystem program_options serialization system thread unit_test_framework)
+endif(Boost_USE_FIND_NO_MODULE)
+
 include_directories(
   ${Boost_INCLUDE_DIR}
+  ${Boost_INCLUDE_DIRS}
 )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -25,10 +34,6 @@ link_directories(${Boost_LIBRARY_DIRS})
 find_package(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
 include_directories(${HDF5_INCLUDE_DIR}
                     ${HDF5_INCLUDE_DIR_CPP})
-
-#--------------------------------------------------
-#
-#--------------------------------------------------
 
 # CMake 2.6+ specific
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
