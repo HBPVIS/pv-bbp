@@ -371,7 +371,7 @@ std::cout <<"Here OK /n" << std::endl;
   bool needToRegenerateTimeInfo = true;
   if (needToRegenerateTimeInfo) {
     // time steps of reports are in the report file
-    if (ok && this->UpdateNumPieces==1) {
+    if (ok /*&& this->UpdateNumPieces==1*/) {
       try {
         if (this->OpenReportFile()) {
           this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
