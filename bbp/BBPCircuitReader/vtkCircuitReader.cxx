@@ -303,17 +303,15 @@ int vtkCircuitReader::RequestInformation(
       this->Experiment.open(blueconfig);
       this->Microcircuit = this->Experiment.microcircuit_ptr();
     }
-    catch (...) {
+    catch (std::exception &e) {
       this->Experiment.clear();
-      vtkErrorMacro("An exception occurred opening the bbp::Experiment ");
+      vtkErrorMacro("An exception occurred opening the bbp::Experiment " << e.what());
     }
     //
     this->BuildSIL();
     outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
     this->FileOpenedTime.Modified();
   }
-
-std::cout <<"Here OK /n" << std::endl;
 
   ok = true;
   bool NeedToRegenerateInfo = /*NeedToReloadFile || */(TargetsModifiedTime>InfoGeneratedTime);
@@ -333,20 +331,20 @@ std::cout <<"Here OK /n" << std::endl;
             try {
               bbp::Target temp = this->Experiment.user_targets().get_target(name);
               if (temp.size()>0) {
-                std::cout << "Adding (user) target " << name << " to load list" << std::endl;
+                vtkDebugMacro(<< "Adding (user) target " << name << " to load list" );
                 this->PrimaryTarget.insert(temp);
               }
             }
-            catch (...) {
+            catch (std::exception &e) {
               bbp::Target temp = this->Experiment.targets().get_target(name);
               if (temp.size()>0) {
-                std::cout << "Adding (system) target " << name << " to list" << std::endl;
+                vtkDebugMacro(<< "Adding (system) target " << name << " to list : exception " << e.what());
                 this->PrimaryTarget.insert(temp);
               }
             }
           }
-          catch (...) {
-            vtkErrorMacro("Could not add target " << name << " to list");
+          catch (std::exception &e) {
+            vtkErrorMacro("Could not add target " << name << " to list : exception " << e.what());
           }
         }
       }
@@ -355,19 +353,14 @@ std::cout <<"Here OK /n" << std::endl;
 //      this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
 //      bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
     }
-    catch (...) {
-      vtkErrorMacro(<<"Could not set the target ");
+    catch (std::exception &e) {
+      vtkErrorMacro("Could not set the target : exception " << e.what());
       this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);; 
       ok = false;
     }
     this->InfoGeneratedTime.Modified();
   }
 
-  std::cout <<"Here OK /n" << std::endl;
-
-  //    std::cout << cellTarget << std::endl;
-
-  // std::cout <<"Made it past load " << std::endl;
   bool needToRegenerateTimeInfo = true;
   if (needToRegenerateTimeInfo) {
     // time steps of reports are in the report file
@@ -380,8 +373,8 @@ std::cout <<"Here OK /n" << std::endl;
           this->NumberOfTimeSteps = 0;
         }
       }
-      catch (...) {
-    	  vtkErrorMacro("Exception caught during report file read")
+      catch (std::exception &e) {
+    	  vtkErrorMacro("Exception caught during report file read " << e.what())
           this->NumberOfTimeSteps = 0;
       }
     }
@@ -526,11 +519,11 @@ int vtkCircuitReader::RequestData(
 //    bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
 //    if (neurons.size()==0) {
       // Load neurons for this target so we can partition them
-	try {
+    try {
       this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
-	}
-    catch (...) {
-      vtkErrorMacro("Caught an exception during Microcircuit->load")
+    }
+    catch (std::exception &e) {
+      vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
     }
 //    }
     bbp::Neurons &neurons = this->Microcircuit->neurons();
@@ -587,7 +580,7 @@ int vtkCircuitReader::RequestData(
 #endif
     }
     catch (...) {
-    	vtkErrorMacro("Caught an SDK exception during Microcircuit->load")
+      vtkErrorMacro("Caught an SDK exception during Microcircuit->load")
     }
     //
     if (this->ExportNeuronMesh) {
@@ -654,8 +647,8 @@ int vtkCircuitReader::RequestData(
       try {
         this->CreateReportScalars(request, inputVector, outputVector);
       }
-      catch (...) {
-        vtkErrorMacro(<<"Exception caught during creation of report scalars");
+      catch (std::exception &e) {
+        vtkErrorMacro(<<"Exception caught during creation of report scalars " << e.what());
       }
     }
     else {
@@ -711,7 +704,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   //
   uint32_t         vertexCount = mesh->vertex_count();
   uint32_t         faceCount = mesh->triangle_count();
-  vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount << " : Vertices " << vertexCount);
+//  vtkDebugMacro(<<"Neuron " << neuron->gid() << " : Triangles " << faceCount << " : Vertices " << vertexCount);
   const Vector3fs       &vertices = mesh->vertices();
   const uint16_t     *section_ids = mesh->vertex_sections().data();
   const float          *positions = mesh->vertex_relative_distances().data();
@@ -996,7 +989,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   //
   // reserve space for cells
   //
-  vtkDebugMacro(<<"Allocating space for " << maxCells << " triangles");
+//  vtkDebugMacro(<<"Allocating space for " << maxCells << " triangles");
   vtkIdType *cells = triangles->WritePointer(maxCells, 4*(maxCells));
   //
   // Each neuron counts vertices starting from zero, but we increment one much larger array
@@ -1018,10 +1011,10 @@ void vtkCircuitReader::GenerateNeuronMesh(
       this->AddOneNeuronToMesh(&*neuron, &*mesh, Ncount, points, cells, pointdata, offsetN, offsetC);
     }
   }
-  vtkDebugMacro(<<"Triangles read " << offsetC);
+//  vtkDebugMacro(<<"Triangles read " << offsetC);
   vtkIdType GlobalTotalTriangles = offsetC;
   this->Controller->AllReduce(&offsetC, &GlobalTotalTriangles/*(vtkIdType*)MPI_IN_PLACE*/, 1, vtkCommunicator::SUM_OP);
-  vtkDebugMacro(<<"Global number of triangles read " << GlobalTotalTriangles);
+//  vtkDebugMacro(<<"Global number of triangles read " << GlobalTotalTriangles);
 
 #ifdef MANUAL_MESH_LOAD
   meshes.clear();
@@ -1246,7 +1239,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *ne
 {
   const bbp::Morphology  &morph = neuron->morphology();
   const size_t index = this->OffsetMapping[neuron->gid()];
-  vtkDebugMacro(<< "Neuron with GID " << neuron->gid() << " has mapping offset " << index);
+//  vtkDebugMacro(<< "Neuron with GID " << neuron->gid() << " has mapping offset " << index);
 
 
   // These are the buffer offsets for this neuron 

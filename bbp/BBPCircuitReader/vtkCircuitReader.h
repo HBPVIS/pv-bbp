@@ -38,6 +38,27 @@ class vtkBoundsExtentTranslator;
 //#include "BBP/Microcircuit/Targets/Cell_Target.h"
 //#include <BBP/Microcircuit/Containers/Neurons.h>
 
+//
+// Get built-in type.  Creates member Get"name"() (e.g., GetVisibility());
+//
+#undef vtkGetMacro
+#undef vtkSetMacro
+//
+#define vtkGetMacro(name,type) \
+virtual type Get##name () { \
+  return this->name; \
+  }
+
+#define vtkSetMacro(name,type) \
+virtual void Set##name (type _arg) \
+  { \
+  if (this->name != _arg) \
+    { \
+    this->name = _arg; \
+    this->Modified(); \
+    } \
+  }
+//
 class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm 
 {
 public:
