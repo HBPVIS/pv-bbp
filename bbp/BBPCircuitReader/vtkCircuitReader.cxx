@@ -540,7 +540,7 @@ int vtkCircuitReader::RequestData(
     }
 //    }
     bbp::Neurons &neurons = this->Microcircuit->neurons();
-    int WholeExtent[6] = { 0, neurons.size(), 0, 0, 0, 0 };
+    int WholeExtent[6] = { 0, static_cast<int>(neurons.size()), 0, 0, 0, 0 };
     if (this->MaximumNumberOfNeurons>0) {
       WholeExtent[1] = std::min(neurons.size(), (size_t)(this->MaximumNumberOfNeurons));
     }
