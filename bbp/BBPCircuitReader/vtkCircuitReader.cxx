@@ -429,7 +429,7 @@ int vtkCircuitReader::RequestInformation(
 int vtkCircuitReader::OpenReportFile()
 {
   std::string reportname = "";
-  std::string ideal = "voltage1K";
+  std::string ideal = "voltage5K";
   bbp::Reports_Specification &reports = this->Experiment.reports();
   for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
     reportname = (*ri).label();
