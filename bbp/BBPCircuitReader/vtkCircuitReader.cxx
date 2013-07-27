@@ -149,6 +149,7 @@ vtkCircuitReader::vtkCircuitReader() :
   this->TimeStepTolerance               = 1E-6;
   this->FileName                        = NULL;
   this->DefaultTarget                   = NULL;
+  this->ReportName                      = NULL;
   this->UpdatePiece                     = 0;
   this->UpdateNumPieces                 = 0;
   this->IntegerTimeStepValues           = 0;
@@ -198,6 +199,7 @@ vtkCircuitReader::~vtkCircuitReader()
   //
   delete []this->FileName;
   delete []this->DefaultTarget;
+  delete []this->ReportName;
 }
 //----------------------------------------------------------------------------
 int vtkCircuitReader::FillOutputPortInformation( int port, vtkInformation* info )
@@ -317,10 +319,11 @@ int vtkCircuitReader::RequestInformation(
   bool NeedToRegenerateInfo = /*NeedToReloadFile || */(TargetsModifiedTime>InfoGeneratedTime);
   if (NeedToRegenerateInfo) {
     // default Target?
-    this->TargetName = (this->DefaultTarget && strlen(this->DefaultTarget)>0) ? this->DefaultTarget : this->TargetsSelection->GetArrayName(0);
+    this->TargetName = (this->DefaultTarget && strlen(this->DefaultTarget)>0) ? this->DefaultTarget : "";
     //
     this->PrimaryTarget = bbp::Target("empty",bbp::TARGET_CELL);
     //
+    int c = 0;
     try {
       int N = this->TargetsSelection->GetNumberOfArrays();
       for (int i=0; i<N; i++) {
@@ -333,6 +336,7 @@ int vtkCircuitReader::RequestInformation(
               if (temp.size()>0) {
                 vtkDebugMacro(<< "Adding (user) target " << name << " to load list" );
                 this->PrimaryTarget.insert(temp);
+                c++;
               }
             }
             catch (std::exception &e) {
@@ -340,6 +344,7 @@ int vtkCircuitReader::RequestInformation(
               if (temp.size()>0) {
                 vtkDebugMacro(<< "Adding (system) target " << name << " to list : exception " << e.what());
                 this->PrimaryTarget.insert(temp);
+                c++;
               }
             }
           }
@@ -348,7 +353,15 @@ int vtkCircuitReader::RequestInformation(
           }
         }
       }
-
+      // if no targets set in TargetsStatus, then use default target
+      if (c==0 && this->TargetName.size()>0) {
+        bbp::Target temp = this->Experiment.user_targets().get_target(this->TargetName);
+        if (temp.size()>0) {
+          vtkDebugMacro(<< "Adding (default) target " << this->TargetName.c_str() << " to list ");
+          this->PrimaryTarget.insert(temp);
+          c++;
+        }
+      }
       // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
 //      this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
 //      bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
@@ -429,7 +442,7 @@ int vtkCircuitReader::RequestInformation(
 int vtkCircuitReader::OpenReportFile()
 {
   std::string reportname = "";
-  std::string ideal = "voltage5K";
+  std::string ideal = this->ReportName ? this->ReportName : "";
   bbp::Reports_Specification &reports = this->Experiment.reports();
   for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
     reportname = (*ri).label();
@@ -1447,6 +1460,8 @@ void vtkCircuitReader::BuildSIL()
       }
     }
   }
+  this->TargetsSelection->DisableAllArrays();
+  TargetsModifiedTime.Modified();
 
   // This array is used to assign names to nodes.
   vtkSmartPointer<vtkStringArray> namesArray = vtkSmartPointer<vtkStringArray>::New();
@@ -1556,6 +1571,13 @@ void vtkCircuitReader::SetTargetsStatus(const char* name, int status)
       this->TargetsSelection->DisableArray(name);
     }
   }
+}
+//----------------------------------------------------------------------------
+void vtkCircuitReader::DisableAllTargets()
+{
+  this->TargetsSelection->DisableAllArrays();
+  this->TargetsModifiedTime.Modified();
+  this->Modified();
 }
 //----------------------------------------------------------------------------
 void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)

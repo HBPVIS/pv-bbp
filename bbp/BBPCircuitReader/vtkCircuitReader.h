@@ -77,6 +77,11 @@ public:
   vtkSetStringMacro(DefaultTarget);
   vtkGetStringMacro(DefaultTarget);
 
+  // Description:
+  // Specify the report to load
+  vtkSetStringMacro(ReportName);
+  vtkGetStringMacro(ReportName);
+
   void SetExportMorphologySkeleton(int n) {
     if (this->ExportMorphologySkeleton != n) { 
       this->ExportMorphologySkeleton = n; 
@@ -148,6 +153,7 @@ public:
 
   void SetPointArrayStatus(const char* name, int status);
   void SetTargetsStatus(const char* name, int status);
+  void DisableAllTargets();
 
   // Description:
   // Set/Get the controller use in parallel operations 
@@ -212,6 +218,7 @@ protected:
 
   char         *FileName;
   char         *DefaultTarget;
+  char         *ReportName;
   int           NumberOfTimeSteps;
   int           TimeStep;
   int           ActualTimeStep;
