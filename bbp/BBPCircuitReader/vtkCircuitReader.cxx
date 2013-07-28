@@ -81,15 +81,14 @@
 #include "vtkCircuitReader.h"
 //#include "SpikeData.h"
 
-// BBP-SDK
-// Voxelization
-//#include "BBP/Voxelization/voxelization.h"
-//#include "BBP/VtkDebugging/visualization.h"
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 #define BOOL(x) (x!=0)
 //----------------------------------------------------------------------------
-#define JB_DEBUG__
+//#define JB_DEBUG__
+
+/*
+
 #ifdef JB_DEBUG__
 #undef  OUTPUTTEXT
 #define OUTPUTTEXT(a) std::cout << (a) << std::endl; std::cout.flush();
@@ -110,6 +109,8 @@
 #undef vtkErrorMacro
 #define vtkErrorMacro(a) vtkDebugMacro(a)  
 #endif
+*/
+
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 //#define MANUAL_MESH_LOAD
@@ -381,6 +382,7 @@ int vtkCircuitReader::RequestInformation(
       try {
         if (this->OpenReportFile()) {
           this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
+          vtkDebugMacro(<< "Number of time steps is " << this->NumberOfTimeSteps)
         }
         else {
           this->NumberOfTimeSteps = 0;

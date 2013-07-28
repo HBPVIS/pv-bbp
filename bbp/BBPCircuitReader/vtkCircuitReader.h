@@ -26,20 +26,9 @@ class vtkUnstructuredGrid;
 class vtkBoundsExtentTranslator;
 // BBP-SDK
 
-//#include <BBP/common.h>
-//#include "BBP/Microcircuit/Morphology.h"
 #include "BBP/bbp.h"
 #include "BBP/Experiment.h"
-//#include "BBP/Common/Math/Geometry/Rotation.h"
-//#include "BBP/Microcircuit/Datasets/compartmentReportFrame.h"
-//#include "BBP/Microcircuit/Morphology.h"
-//#include "BBP/Microcircuit/Experiment.h"
-//#include "BBP/Microcircuit/Targets/Targets.h"
-//#include "BBP/Microcircuit/Targets/Cell_Target.h"
-//#include <BBP/Microcircuit/Containers/Neurons.h>
 
-//
-// Get built-in type.  Creates member Get"name"() (e.g., GetVisibility());
 //
 #undef vtkGetMacro
 #undef vtkSetMacro

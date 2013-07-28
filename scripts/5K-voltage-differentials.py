@@ -129,7 +129,7 @@ ExponentialDecayFilter1.Arraystoprocess = ['delta_Voltage']
 #
 NeuronAlphaFunction1 = NeuronAlphaFunction(ExponentialDecayFilter1)
 NeuronAlphaFunction1.DifferentialVoltageArray = 'exp_delta_Voltage'
-NeuronAlphaFunction1.DifferentialBlendFactor = 0.75
+NeuronAlphaFunction1.DifferentialBlendFactor = 0.65
 
 #
 # Setup custom renderer and params
@@ -146,22 +146,17 @@ DataRepresentation1.LookupTable = a1_Voltage_PVLookupTable
 # Display neurons using custom renderer and params
 #
 RenderView1 = GetRenderView()
-#RenderView1.ViewSize = [3840, 2040];
-RenderView1.ViewSize = [1024, 768];
+RenderView1.ViewSize = [3840, 2040];
+#RenderView1.ViewSize = [1024, 768];
 RenderView1.CenterAxesVisibility = 0
 RenderView1.Background2 = [0.0, 0.0, 0.0]
 RenderView1.CameraViewUp = [0.0, 1.0, 0.0]
-RenderView1.CameraPosition = [282.784, 703.662, 1737.1]
-RenderView1.CameraClippingRange = [6.1363304921875, 6136.3304921875]
-RenderView1.CameraFocalPoint = [282.784, 703.662, 1.0]
-RenderView1.CameraViewAngle = 70.0
-RenderView1.CameraParallelScale = 1.0
-RenderView1.CenterOfRotation = [-52.8352661132812, 338.236206054688, -51.3706665039062]
-
-#
-# Set time step (1150) (t=115.0)
-#
-#RenderView1.ViewTime = 115.0
+#RenderView1.CameraPosition = [282.784, 703.662, 1737.1]
+#RenderView1.CameraClippingRange = [6.1363304921875, 6136.3304921875]
+#RenderView1.CameraFocalPoint = [282.784, 703.662, 1.0]
+#RenderView1.CameraViewAngle = 70.0
+#RenderView1.CameraParallelScale = 1.0
+#RenderView1.CenterOfRotation = [-52.8352661132812, 338.236206054688, -51.3706665039062]
 
 #
 # Add scalar bar to display

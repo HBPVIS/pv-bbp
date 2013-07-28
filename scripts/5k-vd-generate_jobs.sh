@@ -80,7 +80,7 @@ do
 	fi	
 	
 	NPERNODE=6
-	for NODES in 176
+	for NODES in 256
 	do
 		write_script
 	done
