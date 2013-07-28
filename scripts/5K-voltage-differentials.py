@@ -71,14 +71,12 @@ paraview.simple._DisableFirstRenderCameraReset()
 # Create BBP reader and set params
 #
 BlueConfigcircuitreader1 = BlueConfigcircuitreader()
-BlueConfigcircuitreader1.BlueConfigFileName = "C:\\data\\bbp\\egpgv\\centralV.cfg"
+#BlueConfigcircuitreader1.BlueConfigFileName = "C:\\data\\bbp\\egpgv\\centralV.cfg"
+BlueConfigcircuitreader1.BlueConfigFileName = "/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
 BlueConfigcircuitreader1.DefaultTarget = target
 BlueConfigcircuitreader1.ReportName = report;
 BlueConfigcircuitreader1.UpdatePipelineInformation()
 #
-#BlueConfigcircuitreader1.DisableAllTargets()
-#BlueConfigcircuitreader1.SetTargetsStatus(target, "1")
-#BlueConfigcircuitreader1.TargetsStatus = ['1K']
 BlueConfigcircuitreader1.PointArrays = ['Normal', 'RTNeuron Opacity', 'Voltage']
 BlueConfigcircuitreader1.DeleteExperiment = 0
 BlueConfigcircuitreader1.MaximumNumberOfNeurons = neurons
@@ -171,10 +169,18 @@ RenderView1.CenterOfRotation = [-52.8352661132812, 338.236206054688, -51.3706665
 RenderView1.Representations.append(ScalarBarWidgetRepresentation1)
 
 #
+# Render Scene
+#
+Render()
+
+#
 # Helix camera path
 #
+timesteps = BlueConfigcircuitreader1.GetProperty("TimestepValues")
 AnimationScene1 = GetAnimationScene()
-AnimationScene1.NumberOfFrames = 5
+AnimationScene1.NumberOfFrames = len(timesteps)
+lastTime = timesteps.GetElement(len(timesteps)-1)
+AnimationScene1.EndTime = lastTime
 
 CameraAnimationCue1 = GetCameraTrack()
 CameraAnimationCue1.Mode = 'Path-based'
@@ -186,14 +192,9 @@ KeyFrame0002 = CameraKeyFrame( ParallelScale=1224.74, Position=[-3785.9285828117
 CameraAnimationCue1.KeyFrames = [ KeyFrame0001, KeyFrame0002 ]
 
 #
-# Render Scene
-#
-Render()
-
-#
 # set animation start to required position
 #
-starttime = (lastindex-0)
+starttime = (lastindex-25)
 if (starttime<0):
   starttime = 0
 
@@ -217,7 +218,8 @@ print "Animation end is  ", AnimationScene1.EndTime
 timingfile=open(filepath + "/" + "timing.txt", "w+")
 for num in range(starttime, 5000):
   start =  time()
-  AnimationScene1.AnimationTime = num/10.0
+  AnimationScene1.AnimationTime = timesteps.GetElement(num)
+  RenderView1.ViewTime = timesteps.GetElement(num)
   Render()
   finish = time()
   timestring = "Render %08f\n" % (finish-start)

@@ -28,7 +28,7 @@ cat << _EOF_ > ${DIR_NAME}/slurm-exp.bash
 #SBATCH --nodes=${NODES}
 #SBATCH --ntasks-per-node=${NPERNODE}
 #SBATCH --distribution=cyclic
-#SBATCH --time=01:00:00
+#SBATCH --time=07:00:00
 
 
 module switch gcc/4.6.2 gcc/4.7.3
@@ -63,7 +63,7 @@ echo "BASEDIR=$BASEDIR" >> run_jobs.bash
 chmod 775 run_jobs.bash
 
 # set some vars which are fixed in this test
-QUEUE=day
+QUEUE=night
 EXECUTABLE=/project/csvis/biddisco/todi/build/pv4/bin/pvbatch
 PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/5K-voltage-differentials.py
 CIRCUIT=
@@ -80,7 +80,7 @@ do
 	fi	
 	
 	NPERNODE=6
-	for NODES in 128
+	for NODES in 176
 	do
 		write_script
 	done
