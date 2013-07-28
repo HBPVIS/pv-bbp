@@ -5,6 +5,7 @@ from paraview.simple import *
 from optparse import OptionParser
 from time import time
 from glob import glob
+import os.path
 import re
 import socket
 import math
@@ -12,11 +13,11 @@ import sys
 
 #############################
 def get_pic_index(filename):
-    match = re.search('_([0-9]+).png', filename)
+    match = re.search('\.([0-9]+).png', filename)
     try:
         index = match.group(1)
     except AttributeError:
-        raise ValueError("Filename has the wrong pattern. Expected:'filename_xxxx.png', got: '{}'".format(filename))
+        raise ValueError("Filename has the wrong pattern. Expected:'filename.xxxx.png', got: '{}'".format(filename))
     return int(index)
 #############################
 
@@ -49,7 +50,7 @@ else:
   servermanager.LoadPlugin('/project/csvis/biddisco/todi/build/plugins/bin/libpv_BBP.so')
 
 filename = "snapshot"
-existing_indices = sorted([get_pic_index(f) for f in glob(filepath+'/'+filename+'_*.png')])
+existing_indices = sorted([get_pic_index(f) for f in glob(filepath+'/'+filename+'.*.png')])
 try:
   lastindex = existing_indices[-1]
 except: 
@@ -102,9 +103,19 @@ ScalarBarWidgetRepresentation1 = CreateScalarBar( Title='Voltage', Position2=[0.
 a1_Voltage_PVLookupTable.ScalarOpacityFunction = a1_Voltage_PiecewiseFunction
 
 #
+# Show the current time
+#
+AnnotateTimeFilter1 = AnnotateTimeFilter(BlueConfigcircuitreader1)
+AnnotateTimeFilter1.Format = 'Time: %06.1f'
+DataRepresentation2 = Show()
+DataRepresentation2.FontSize = 12
+DataRepresentation2.FontFamily = 'Courier'
+DataRepresentation2.WindowLocation = 'LowerRightCorner'
+
+#
 # Temporal Difference filter
 #
-TemporalDifferenceFilter1 = TemporalDifferenceFilter()
+TemporalDifferenceFilter1 = TemporalDifferenceFilter(BlueConfigcircuitreader1)
 TemporalDifferenceFilter1.Arraystoprocess = []
 TemporalDifferenceFilter1.Arraystoprocess = ['Voltage']
 TemporalDifferenceFilter1.ComputeMagnitudes = 1
@@ -112,13 +123,13 @@ TemporalDifferenceFilter1.ComputeMagnitudes = 1
 #
 # Exponential Decay filter
 #
-ExponentialDecayFilter1 = ExponentialDecayFilter()
+ExponentialDecayFilter1 = ExponentialDecayFilter(TemporalDifferenceFilter1)
 ExponentialDecayFilter1.Arraystoprocess = ['delta_Voltage']
 
 #
 # Neuron Alpha filter
 #
-NeuronAlphaFunction1 = NeuronAlphaFunction()
+NeuronAlphaFunction1 = NeuronAlphaFunction(ExponentialDecayFilter1)
 NeuronAlphaFunction1.DifferentialVoltageArray = 'exp_delta_Voltage'
 NeuronAlphaFunction1.DifferentialBlendFactor = 0.75
 
@@ -180,29 +191,40 @@ CameraAnimationCue1.KeyFrames = [ KeyFrame0001, KeyFrame0002 ]
 Render()
 
 #
-# Add an image writer to the animation scene
+# set animation start to required position
 #
-writer = servermanager.vtkSMAnimationSceneImageWriter()
-writer.SetFileName(filepath + "/" + filename + ".png")
-writer.SetFrameRate(1)
-writer.SetAnimationScene(AnimationScene1.SMProxy)
-writer.Save()
+starttime = (lastindex-0)
+if (starttime<0):
+  starttime = 0
+
+print "Animation time is ", AnimationScene1.AnimationTime
+print "Animation end is  ", AnimationScene1.EndTime
 
 #
 # Add an image writer to the animation scene
 #
-AnimationScene1.Play()
+# writer = servermanager.vtkSMAnimationSceneImageWriter()
+# writer.SetFileName(filepath + "/" + filename + ".png")
+# writer.SetFrameRate(1)
+# writer.SetAnimationScene(AnimationScene1.SMProxy)
+# writer.Save()
+
+#AnimationScene1.Play()
 
 #
 # Render 30 frames for test purposes
 #
 timingfile=open(filepath + "/" + "timing.txt", "w+")
-for num in range(0, 2):
+for num in range(starttime, 5000):
   start =  time()
+  AnimationScene1.AnimationTime = num/10.0
   Render()
   finish = time()
   timestring = "Render %08f\n" % (finish-start)
   print timestring
   timingfile.write(timestring)
-  str = filepath + "/" + filename + ("_%04d.png" % num)
-  WriteImage(str)
+  str = filepath + "/" + filename + (".%04d.png" % num)
+  if (not os.path.isfile(str)):
+    WriteImage(str)
+  else :
+    print "Skipped write of image ", str
