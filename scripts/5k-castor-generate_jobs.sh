@@ -40,15 +40,15 @@ module load gcc/4.8.1
 module load boost/1.53.0
 module load gcc/4.8.1
 
-export LD_LIBRARY_PATH=/scratch/castor/biddisco/build/pv4/lib:/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/lib:/scratch/castor/biddisco/apps/hdf5_1_8_cmake/lib/:/scratch/castor/biddisco/apps/bbp/lib:$LD_LIBRARY_PATH
 
-export PV_PLUGIN_PATH=/scratch/castor/biddisco/build/plugins/bin
+export LD_LIBRARY_PATH=${LIB_PATH}
+export PV_PLUGIN_PATH=${PLUGIN_PATH}
+
 export OMP_NUM_THREADS=1
 export HYDRA_LAUNCHER_EXTRA_ARGS=--gres=gpu:2 --startx
-#export CUDA_PCI_DEVICES="2:0:0,3:0:0,132:0:0"
 export CUDA_VISIBLE_DEVICES="0,1"
 
-/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/bin/mpiexec -binding rr -ppn 1 -n ${TASKS_PER_GPU} -env DISPLAY :0.0 ${EXECUTABLE} ${PYSCRIPT} -t ${CIRCUIT} -n ${NEURONS} -p ${BASEDIR}/${DIR_NAME}/ : -n ${TASKS_PER_GPU} -env DISPLAY :0.1 ${EXECUTABLE} ${PYSCRIPT} -t ${CIRCUIT} -n ${NEURONS} -p ${BASEDIR}/${DIR_NAME}/ 
+/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/bin/mpiexec -binding rr -ppn 1 -n ${TASKS_PER_GPU} -env DISPLAY :0.0 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} : -n ${TASKS_PER_GPU} -env DISPLAY :0.1 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} 
 
 # --param1 ${I} --param2 ${J} --param3 ${K} 
 
@@ -71,11 +71,16 @@ echo "#!/bin/bash" > run_jobs.bash
 echo "BASEDIR=$BASEDIR" >> run_jobs.bash
 chmod 775 run_jobs.bash
 
-# set some vars which are fixed in this test
+#
+# settings for paraview on castor
+#
 QUEUE=production
 EXECUTABLE=/scratch/castor/biddisco/build/pv4/bin/pvbatch
 PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/5k-castor.py
+CONFIG="/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
 CIRCUIT=
+LIB_PATH=/scratch/castor/biddisco/build/pv4/lib:/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/lib:/scratch/castor/biddisco/apps/hdf5_1_8_cmake/lib/:/scratch/castor/biddisco/apps/bbp/lib:$LD_LIBRARY_PATH
+PLUGIN_PATH=/scratch/castor/biddisco/build/plugins/bin/
 
 # Loop through all the parameter combinations generating jobs for each
 for NEURONS in 5000

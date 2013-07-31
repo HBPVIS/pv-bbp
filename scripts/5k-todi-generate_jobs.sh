@@ -33,13 +33,12 @@ cat << _EOF_ > ${DIR_NAME}/slurm-exp.bash
 
 module switch gcc/4.6.2 gcc/4.7.3
 
-LD_LIBRARY_PATH=/apps/todi/hdf5/1.8.12-snap3/gnu_47/lib/:/project/csvis/biddisco/todi/build/pv4/lib:/opt/cray/mpt/5.6.4/gni/mpich2-gnu/47/lib:/opt/gcc/mpc/0.8.1/lib:/opt/gcc/mpfr/2.4.2/lib:/opt/gcc/gmp/4.3.2/lib:/opt/gcc/4.7.3/snos/lib64:/apps/todi/boost/1.51.0/gnu_471/lib
-
-export PV_PLUGIN_PATH=/project/csvis/biddisco/todi/build/plugins/bin
+export LD_LIBRARY_PATH=${LIB_PATH}
+export PV_PLUGIN_PATH=${PLUGIN_PATH}
 
 export OMP_NUM_THREADS=1
 
-aprun -n ${TASKS} -N ${NPERNODE} ${EXECUTABLE} ${PYSCRIPT} -t ${CIRCUIT} -n ${NEURONS} -p ${BASEDIR}/${DIR_NAME}/
+aprun -n ${TASKS} -N ${NPERNODE} ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH}
 
 # --param1 ${I} --param2 ${J} --param3 ${K} 
 
@@ -62,11 +61,16 @@ echo "#!/bin/bash" > run_jobs.bash
 echo "BASEDIR=$BASEDIR" >> run_jobs.bash
 chmod 775 run_jobs.bash
 
-# set some vars which are fixed in this test
+#
+# settings for paraview on todi
+#
 QUEUE=night
 EXECUTABLE=/project/csvis/biddisco/todi/build/pv4/bin/pvbatch
 PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/5K-voltage-differentials.py
-CIRCUIT=
+CONFIG="/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
+CIRCUIT=""
+LIB_PATH=/apps/todi/hdf5/1.8.12-snap3/gnu_47/lib/:/project/csvis/biddisco/todi/build/pv4/lib:/opt/cray/mpt/5.6.4/gni/mpich2-gnu/47/lib:/opt/gcc/mpc/0.8.1/lib:/opt/gcc/mpfr/2.4.2/lib:/opt/gcc/gmp/4.3.2/lib:/opt/gcc/4.7.3/snos/lib64:/apps/todi/boost/1.51.0/gnu_471/lib
+PLUGIN_PATH=/project/csvis/biddisco/todi/build/plugins/bin/
 
 # Loop through all the parameter combinations generating jobs for each
 for NEURONS in 5000

@@ -24,14 +24,19 @@ def get_pic_index(filename):
 paraview.simple._DisableFirstRenderCameraReset()
 
 parser = OptionParser()
-parser.add_option("-n", "--neurons", dest="neurons", type="int",    default=1)
-parser.add_option("-t", "--target",  dest="target",  type="string", default="1K")
-parser.add_option("-p", "--path",    dest="path",    type="string", default="/users/biddisco/todi/")
+parser.add_option("-c", "--config",  dest="config",     type="string", default="C:\\data\\bbp\\egpgv\\centralV.cfg")
+parser.add_option("-n", "--neurons", dest="neurons",    type="int",    default=1)
+parser.add_option("-t", "--target",  dest="target",     type="string", default="1K")
+parser.add_option("-d", "--dir",     dest="dir",        type="string", default="/users/biddisco/todi/")
+parser.add_option("-p", "--plugin",  dest="pluginpath", type="string", default="/project/csvis/biddisco/todi/build/plugins/bin/")
+
 try :
   (options, args) = parser.parse_args()
-  target   = options.target
-  neurons  = options.neurons
-  filepath = options.path
+  config     = options.config
+  target     = options.target
+  neurons    = options.neurons
+  filepath   = options.dir
+  pluginpath = options.pluginpath
 except :
   target = "1K"
   neurons = 5
@@ -39,15 +44,15 @@ except :
 
 print "==============================="
 if (socket.gethostname()=="crusca"):
+  print "Setting CRUSCA preferences"
   filepath = "D:\\temp\\"
 elif (socket.gethostname()=="dino"):
   print "Setting DINO preferences"
   filepath = "C:\\temp\\"
-#  servermanager.LoadPlugin('pv_zoltan.dll')
-#  servermanager.LoadPlugin('pv_BBP.dll')
 else:
-  servermanager.LoadPlugin('/project/csvis/biddisco/todi/build/plugins/bin/libpv_zoltan.so')
-  servermanager.LoadPlugin('/project/csvis/biddisco/todi/build/plugins/bin/libpv_BBP.so')
+# the script calling this passes options in on the command line
+  servermanager.LoadPlugin(pluginpath + 'libpv_zoltan.so')
+  servermanager.LoadPlugin(pluginpath + 'libpv_BBP.so')
 
 filename = "snapshot"
 existing_indices = sorted([get_pic_index(f) for f in glob(filepath+'/'+filename+'.*.png')])
@@ -58,11 +63,13 @@ except:
   print "Did not find an existing file to resume from"
   
 report = "voltage"  + target
-print "Target    = ", target
-print "neurons   = ", neurons
-print "report    = ", report
-print "File path = ", filepath
-print "Last N    = ", lastindex
+print "BlueConfig  = ", config
+print "Target      = ", target
+print "neurons     = ", neurons
+print "report      = ", report
+print "File path   = ", filepath
+print "Plugin path = ", pluginpath
+print "Last N      = ", lastindex
 print "==============================="
   
 paraview.simple._DisableFirstRenderCameraReset()
@@ -71,7 +78,6 @@ paraview.simple._DisableFirstRenderCameraReset()
 # Create BBP reader and set params
 #
 BlueConfigcircuitreader1 = BlueConfigcircuitreader()
-#BlueConfigcircuitreader1.BlueConfigFileName = "C:\\data\\bbp\\egpgv\\centralV.cfg"
 BlueConfigcircuitreader1.BlueConfigFileName = "/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
 BlueConfigcircuitreader1.DefaultTarget = target
 BlueConfigcircuitreader1.ReportName = report;
@@ -197,18 +203,7 @@ print "Animation time is ", AnimationScene1.AnimationTime
 print "Animation end is  ", AnimationScene1.EndTime
 
 #
-# Add an image writer to the animation scene
-#
-# writer = servermanager.vtkSMAnimationSceneImageWriter()
-# writer.SetFileName(filepath + "/" + filename + ".png")
-# writer.SetFrameRate(1)
-# writer.SetAnimationScene(AnimationScene1.SMProxy)
-# writer.Save()
-
-#AnimationScene1.Play()
-
-#
-# Render 30 frames for test purposes
+# Render frames 
 #
 timingfile=open(filepath + "/" + "timing.txt", "w+")
 for num in range(starttime, 5000):
