@@ -63,7 +63,7 @@ public:
   
   // Description:
   // Specify the default target to load
-  vtkSetStringMacro(DefaultTarget);
+  void SetDefaultTarget(char *target);
   vtkGetStringMacro(DefaultTarget);
 
   // Description:

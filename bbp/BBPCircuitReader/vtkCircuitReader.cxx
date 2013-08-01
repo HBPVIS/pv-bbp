@@ -85,9 +85,7 @@
 //----------------------------------------------------------------------------
 #define BOOL(x) (x!=0)
 //----------------------------------------------------------------------------
-//#define JB_DEBUG__
-
-/*
+#define JB_DEBUG__
 
 #ifdef JB_DEBUG__
 #undef  OUTPUTTEXT
@@ -109,7 +107,6 @@
 #undef vtkErrorMacro
 #define vtkErrorMacro(a) vtkDebugMacro(a)  
 #endif
-*/
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
@@ -285,6 +282,7 @@ int vtkCircuitReader::RequestInformation(
     NeedToReloadFile = 0;
     result = 0;
   }
+  bool NeedToRegenerateInfo = (TargetsModifiedTime>InfoGeneratedTime);
 
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_NORMAL);
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_NEURONGID);
@@ -296,7 +294,7 @@ int vtkCircuitReader::RequestInformation(
   this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_RTNEURON_OPACITY);
 
   bool ok = true;
-  if (NeedToReloadFile) {
+  if (NeedToReloadFile || NeedToRegenerateInfo) {
     std::string blueconfig = this->FileName;
     // -------------------------------------------------------------------   
     // Create BBP-SDK Experiment and Microcircuit to access to the neurons.
@@ -317,8 +315,7 @@ int vtkCircuitReader::RequestInformation(
   }
 
   ok = true;
-  bool NeedToRegenerateInfo = /*NeedToReloadFile || */(TargetsModifiedTime>InfoGeneratedTime);
-  if (NeedToRegenerateInfo) {
+  if (NeedToRegenerateInfo || NeedToReloadFile) {
     // default Target?
     this->TargetName = (this->DefaultTarget && strlen(this->DefaultTarget)>0) ? this->DefaultTarget : "";
     //
@@ -1496,6 +1493,27 @@ void vtkCircuitReader::SetFileName(char *filename)
   {
     this->FileName = vtksys::SystemTools::DuplicateString(filename);
     this->SetFileModified();
+  }
+  this->Modified();
+}
+//----------------------------------------------------------------------------
+void vtkCircuitReader::SetDefaultTarget(char *target)
+{
+  if (this->DefaultTarget == NULL && target == NULL)
+  {
+    return;
+  }
+  if (this->DefaultTarget && target && (!strcmp(this->DefaultTarget,target)))
+  {
+    return;
+  }
+  delete [] this->DefaultTarget;
+  this->DefaultTarget = NULL;
+
+  if (target)
+  {
+    this->DefaultTarget = vtksys::SystemTools::DuplicateString(target);
+    this->TargetsModifiedTime.Modified();
   }
   this->Modified();
 }
