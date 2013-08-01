@@ -39,9 +39,9 @@ module load cmake
 module load gcc/4.8.1
 module load boost/1.53.0
 module load gcc/4.8.1
+module load cuda/5.0
 
-
-export LD_LIBRARY_PATH=${LIB_PATH}
+export LD_LIBRARY_PATH=${LIB_PATH}:$LD_LIBRARY_PATH
 export PV_PLUGIN_PATH=${PLUGIN_PATH}
 
 export OMP_NUM_THREADS=1
@@ -79,7 +79,7 @@ EXECUTABLE=/scratch/castor/biddisco/build/pv4/bin/pvbatch
 PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/5k-castor.py
 CONFIG="/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
 CIRCUIT=
-LIB_PATH=/scratch/castor/biddisco/build/pv4/lib:/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/lib:/scratch/castor/biddisco/apps/hdf5_1_8_cmake/lib/:/scratch/castor/biddisco/apps/bbp/lib:$LD_LIBRARY_PATH
+LIB_PATH=/scratch/castor/biddisco/build/pv4/lib:/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/lib:/scratch/castor/biddisco/apps/hdf5_1_8_cmake/lib/:/scratch/castor/biddisco/apps/bbp/lib
 PLUGIN_PATH=/scratch/castor/biddisco/build/plugins/bin/
 
 # Loop through all the parameter combinations generating jobs for each

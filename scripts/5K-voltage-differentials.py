@@ -29,6 +29,8 @@ parser.add_option("-n", "--neurons", dest="neurons",    type="int",    default=1
 parser.add_option("-t", "--target",  dest="target",     type="string", default="1K")
 parser.add_option("-d", "--dir",     dest="dir",        type="string", default="/users/biddisco/todi/")
 parser.add_option("-p", "--plugin",  dest="pluginpath", type="string", default="/project/csvis/biddisco/todi/build/plugins/bin/")
+parser.add_option("-s", "--start",   dest="startframe", type="int",    default=0)
+parser.add_option("-e", "--end",     dest="endframe",   type="int",    default=0)
 
 try :
   (options, args) = parser.parse_args()
@@ -37,18 +39,25 @@ try :
   neurons    = options.neurons
   filepath   = options.dir
   pluginpath = options.pluginpath
+  startframe = options.startframe
+  endframe   = options.endframe
 except :
-  target = "1K"
-  neurons = 5
+  config     = "C:\\data\\bbp\\egpgv\\centralV.cfg"
+  target     = "1K"
+  neurons    = 5
+  startframe = 0
+  endframe   = 1
   pass
 
 print "==============================="
 if (socket.gethostname()=="crusca"):
   print "Setting CRUSCA preferences"
   filepath = "D:\\temp\\"
+  pluginpath = ""
 elif (socket.gethostname()=="dino"):
   print "Setting DINO preferences"
   filepath = "C:\\temp\\"
+  pluginpath = ""
 else:
 # the script calling this passes options in on the command line
   servermanager.LoadPlugin(pluginpath + 'libpv_zoltan.so')
@@ -59,7 +68,7 @@ existing_indices = sorted([get_pic_index(f) for f in glob(filepath+'/'+filename+
 try:
   lastindex = existing_indices[-1]
 except: 
-  lastindex = 0
+  lastindex = startframe
   print "Did not find an existing file to resume from"
   
 report = "voltage"  + target
@@ -69,7 +78,9 @@ print "neurons     = ", neurons
 print "report      = ", report
 print "File path   = ", filepath
 print "Plugin path = ", pluginpath
-print "Last N      = ", lastindex
+print "Start Frame = ", startframe
+print "End Frame   = ", endframe
+print "Previous N  = ", lastindex
 print "==============================="
   
 paraview.simple._DisableFirstRenderCameraReset()
@@ -78,14 +89,14 @@ paraview.simple._DisableFirstRenderCameraReset()
 # Create BBP reader and set params
 #
 BlueConfigcircuitreader1 = BlueConfigcircuitreader()
-BlueConfigcircuitreader1.BlueConfigFileName = "/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
+BlueConfigcircuitreader1.BlueConfigFileName = config
 BlueConfigcircuitreader1.DefaultTarget = target
 BlueConfigcircuitreader1.ReportName = report;
-BlueConfigcircuitreader1.UpdatePipelineInformation()
-#
-BlueConfigcircuitreader1.PointArrays = ['Normal', 'RTNeuron Opacity', 'Voltage']
-BlueConfigcircuitreader1.DeleteExperiment = 0
 BlueConfigcircuitreader1.MaximumNumberOfNeurons = neurons
+BlueConfigcircuitreader1.DeleteExperiment = 0
+# update information before setting point arrays 
+BlueConfigcircuitreader1.UpdatePipelineInformation()
+BlueConfigcircuitreader1.PointArrays = ['Normal', 'RTNeuron Opacity', 'Voltage']
 
 #
 # Colour table for scalar RTNeuron_Opacity
@@ -115,6 +126,7 @@ DataRepresentation2 = Show()
 DataRepresentation2.FontSize = 12
 DataRepresentation2.FontFamily = 'Courier'
 DataRepresentation2.WindowLocation = 'LowerRightCorner'
+DataRepresentation2.Justification = 'Center'
 
 #
 # Temporal Difference filter
@@ -152,17 +164,11 @@ DataRepresentation1.LookupTable = a1_Voltage_PVLookupTable
 # Display neurons using custom renderer and params
 #
 RenderView1 = GetRenderView()
-RenderView1.ViewSize = [3840, 2040];
-#RenderView1.ViewSize = [1024, 768];
+#RenderView1.ViewSize = [3840, 2040];
+RenderView1.ViewSize = [1024, 768];
 RenderView1.CenterAxesVisibility = 0
 RenderView1.Background2 = [0.0, 0.0, 0.0]
 RenderView1.CameraViewUp = [0.0, 1.0, 0.0]
-#RenderView1.CameraPosition = [282.784, 703.662, 1737.1]
-#RenderView1.CameraClippingRange = [6.1363304921875, 6136.3304921875]
-#RenderView1.CameraFocalPoint = [282.784, 703.662, 1.0]
-#RenderView1.CameraViewAngle = 70.0
-#RenderView1.CameraParallelScale = 1.0
-#RenderView1.CenterOfRotation = [-52.8352661132812, 338.236206054688, -51.3706665039062]
 
 #
 # Add scalar bar to display
@@ -193,11 +199,20 @@ KeyFrame0002 = CameraKeyFrame( ParallelScale=1224.74, Position=[-3785.9285828117
 CameraAnimationCue1.KeyFrames = [ KeyFrame0001, KeyFrame0002 ]
 
 #
+# Add a blend animation track
+#
+KeyFrameAnimationCue1 = GetAnimationTrack( 'DifferentialBlendFactor' )
+KeyFrame0010 = CompositeKeyFrame( KeyTime=0.0, KeyValues=[0.65] )
+KeyFrame0011 = CompositeKeyFrame( KeyTime=0.5, KeyValues=[0.65] )
+KeyFrame0012 = CompositeKeyFrame( KeyTime=1.0, KeyValues=[0.00] )
+KeyFrameAnimationCue1.KeyFrames = [ KeyFrame0010, KeyFrame0011, KeyFrame0012 ]
+
+#
 # set animation start to required position
 #
 starttime = (lastindex-25)
-if (starttime<0):
-  starttime = 0
+if (starttime<startframe):
+  starttime = startframe
 
 print "Animation time is ", AnimationScene1.AnimationTime
 print "Animation end is  ", AnimationScene1.EndTime
@@ -206,7 +221,7 @@ print "Animation end is  ", AnimationScene1.EndTime
 # Render frames 
 #
 timingfile=open(filepath + "/" + "timing.txt", "w+")
-for num in range(starttime, 5000):
+for num in range(starttime, endframe):
   start =  time()
   AnimationScene1.AnimationTime = timesteps.GetElement(num)
   RenderView1.ViewTime = timesteps.GetElement(num)
