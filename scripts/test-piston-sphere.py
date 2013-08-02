@@ -1,4 +1,5 @@
 from paraview.simple import *
+from time import time
 
 paraview.simple._DisableFirstRenderCameraReset()
 
@@ -34,4 +35,19 @@ RenderView1.CameraPosition = [2.386519687194016, 1.1047581669597257, 2.064228194
 RenderView1.CameraParallelScale = 0.8652845525187569
 RenderView1.CameraClippingRange = [1.6576813276576574, 5.4729910393285035]
 
-Render()
+
+#
+# Render N frames for test purposes
+#
+timingfile=open("timing.txt", "w+")
+for num in range(0, 10):
+  start =  time()
+  RenderView1.ViewTime = num
+  Render()
+  finish = time()
+  timestring = "Render %08f\n" % (finish-start)
+  print timestring
+  timingfile.write(timestring)
+  str = ("snapshot.%04d.png" % num)
+  WriteImage(str)
+

@@ -24,11 +24,15 @@ cat << _EOF_ > ${DIR_NAME}/slurm-exp.bash
 #SBATCH --job-name=${JOB_NAME}
 #SBATCH --output=slurm.out
 #SBATCH --error=slurm.err
-#SBATCH --partition=${QUEUE}
+####SBATCH --partition=${QUEUE}
 #SBATCH --nodes=${NODES}
 #SBATCH --ntasks-per-node=${NPERNODE}
 #SBATCH --distribution=cyclic
-#SBATCH --time=07:00:00
+#SBATCH --time=48:00:00
+
+#SBATCH --partition=long 
+#SBATCH --res=apache
+
 
 
 module switch gcc/4.6.2 gcc/4.7.3
@@ -84,7 +88,7 @@ do
 	fi	
 	
 	NPERNODE=6
-	for NODES in 256
+	for NODES in 128
 	do
 		write_script
 	done

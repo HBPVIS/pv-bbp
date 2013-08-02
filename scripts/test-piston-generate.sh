@@ -20,7 +20,7 @@ fi
 
 mkdir -p $DIR_NAME
 
-cat << _EOF_ > ${DIR_NAME}/submit-job.bash
+cat << _EOF_ > ${DIR_NAME}/slurm-exp.bash
 #!/bin/bash
 #SBATCH --job-name=${JOB_NAME}
 #SBATCH --output=slurm.out
@@ -29,7 +29,7 @@ cat << _EOF_ > ${DIR_NAME}/submit-job.bash
 #SBATCH --nodes=${NODES}
 #SBATCH --ntasks-per-node=${NPERNODE}
 #SBATCH --distribution=cyclic
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH --ntasks-per-core=1
 #SBATCH --gres=gpu:2
 
@@ -46,13 +46,13 @@ export OMP_NUM_THREADS=1
 export HYDRA_LAUNCHER_EXTRA_ARGS=--gres=gpu:2
 export CUDA_VISIBLE_DEVICES="0,1"
 
-/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/bin/mpiexec -binding rr -ppn 1 -n ${TASKS_PER_GPU} -env DISPLAY :0.0 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} -s 500 -e 2500 -i 1 : -n ${TASKS_PER_GPU} -env DISPLAY :0.1 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} -s 500 -e 2500 -i 1
+/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/bin/mpiexec -binding rr -ppn 1 -n ${TASKS_PER_GPU} -env DISPLAY :0.0 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} : -n ${TASKS_PER_GPU} -env DISPLAY :0.1 ${EXECUTABLE} ${PYSCRIPT} -c ${CONFIG} -t ${CIRCUIT} -n ${NEURONS} -d ${BASEDIR}/${DIR_NAME}/ -p ${PLUGIN_PATH} 
 
 _EOF_
 
-chmod 775 ${DIR_NAME}/submit-job.bash
+chmod 775 ${DIR_NAME}/slurm-exp.bash
 
-echo "cd ${DIR_NAME}; sbatch submit-job.bash; cd \$BASEDIR" >> run_jobs.bash
+echo "cd ${DIR_NAME}; sbatch slurm-exp.bash; cd \$BASEDIR" >> run_jobs.bash
 
 }
 
@@ -72,7 +72,7 @@ chmod 775 run_jobs.bash
 #
 QUEUE=production
 EXECUTABLE=/scratch/castor/biddisco/build/pv4/bin/pvbatch
-PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/voltageHelix2.py
+PYSCRIPT=/project/csvis/biddisco/src/plugins/pv-bbp/scripts/test-piston-sphere.py
 CONFIG="/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
 CIRCUIT=
 LIB_PATH=/scratch/castor/biddisco/build/pv4/lib:/apps/castor/mvapich2/1.9-gcc-4.8.0/mvapich2-gnu/lib:/scratch/castor/biddisco/apps/hdf5_1_8_cmake/lib/:/scratch/castor/biddisco/apps/bbp/lib
@@ -89,8 +89,8 @@ do
 	  CIRCUIT=5K
 	fi	
 	
-	NPERNODE=2
-	for NODES in 21
+	NPERNODE=6
+	for NODES in 20
 	do
 		write_script
 	done
