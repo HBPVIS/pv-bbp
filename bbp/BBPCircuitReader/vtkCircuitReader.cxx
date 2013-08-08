@@ -1393,7 +1393,13 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
       // Computing the relative length within section of the capsule midpoint
       uint16_t compartment = std::min(compartments - 1, (int)floor(compartments * position));
       unsigned long offset = offsets[sectionId];
-      rvoltage = buffer[offset + compartment];
+      vtkIdType offsetT = offset + compartment;
+      if (offsetT<this->_currentFrame.getSize()) {
+        rvoltage = buffer[offset + compartment];
+      }
+      else {
+        rvoltage = this->RestingPotentialVoltage;
+      }
     } else {
       rvoltage = this->RestingPotentialVoltage;
       /*
@@ -1608,3 +1614,4 @@ void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
     << (this->FileName ? this->FileName : "(none)") << "\n";  
 }
 //----------------------------------------------------------------------------
+
