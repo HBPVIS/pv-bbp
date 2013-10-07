@@ -1,7 +1,9 @@
 project(pv-BBP)
-
 cmake_minimum_required(VERSION 2.8)
 
+# --------------------------------------------------------------
+# CMake setup, modules, policy, paths
+# --------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(COMMAND cmake_policy)
@@ -10,12 +12,36 @@ if(COMMAND cmake_policy)
   cmake_policy(SET CMP0023 OLD)
 endif(COMMAND cmake_policy)
       
+# CMake 2.6+ specific
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+# --------------------------------------------------------------
+# Plugin path
+# --------------------------------------------------------------
+get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
+
 # --------------------------------------------------------------
 # Find BBP-SDK
 # --------------------------------------------------------------
 find_package(BBPSDK REQUIRED NO_MODULE)
 include_directories(${BBPSDK_INCLUDE_DIR})
 
+# --------------------------------------------------------------
+# Find ParaView
+# --------------------------------------------------------------
+FIND_PACKAGE(ParaView REQUIRED)
+INCLUDE(${PARAVIEW_USE_FILE})
+# recent VTK/ParaView build uses special module files
+include(vtkModuleAPI)
+include(vtkModuleMacros)
+include(ParaViewMacros)
+
+# --------------------------------------------------------------
+# Find Qt4, will be picked up with paraview normally
+# --------------------------------------------------------------
+find_package(Qt4 )
 
 # --------------------------------------------------------------
 # Find Boost
@@ -41,34 +67,167 @@ find_package(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
 include_directories(${HDF5_INCLUDE_DIR}
                     ${HDF5_INCLUDE_DIR_CPP})
 
-# CMake 2.6+ specific
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+# --------------------------------------------------------------
+# Build main plugin
+# --------------------------------------------------------------
+# --------------------------------------------------
+# Plugin config
+# --------------------------------------------------
+# PLUGIN PATHS
+set(XML_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPCircuitReader)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/proj/cmake)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMeshBinReader/proj/cmake)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/proj/cmake)
+#--------------------------------------------------
+# HDF5
+#--------------------------------------------------
+FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR} ${HDF5_INCLUDE_DIR_CPP})
 
+#--------------------------------------------------
+# pv-zoltan
+#--------------------------------------------------
+set(ZOLTAN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan")
+if (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
+  set(ZOLTAN_SUPPORT 1)
+  include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan
+    ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan/trilinos/packages/zoltan/src/include
+    ${CMAKE_CURRENT_BINARY_DIR}/../pv-zoltan/trilinos/packages/zoltan/src
+  )
+  if(WIN32)
+    include_directories(
+      ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan/trilinos/cmake/tribits/common_tools/win_interface/include
+   )
+  endif(WIN32)
+  ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
+  set(ZOLTAN_LIBS pv_zoltan)
+  message("Zoltan support enabled")
+endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
 
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMeshBinReader/src/tests/viz_mesh/CMakeLists.txt
+#--------------------------------------------------
+# Includes
+#--------------------------------------------------
+include_directories(
+  ${PLUGIN_PATH}
+  ${CMAKE_CURRENT_SOURCE_DIR}/Piston
+  ${HDF5_INCLUDE_DIR_CPP}
+)
 
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/vtk_exemples/coloredlines/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/vtk_exemples/picking/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/vtk_exemples/points/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/vtk_exemples/polylines/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPMorphologyReader/src/tests/vtk_exemples/tubes/CMakeLists.txt
+#--------------------------------------------------
+# CONDITIONAL : Setup Qt/GUI panel sources/wrapping
+#--------------------------------------------------
+IF(PARAVIEW_BUILD_QT_GUI)
 
+  QT4_WRAP_CPP(
+    BBP_MOC_SRCS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+  )
 
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/pickingpixel/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/simple_vtkImageData/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/simple_vtkImageData_viz/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/volrendering/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/vtkcontour/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/vtkImageAlgorithmFilter/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/vtkImageDataFilter/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/vtkImageIO/CMakeLists.txt
-#add_subdir(${CMAKE_CURRENT_SOURCE_DIR}/bbp/BBPVolumeDensityReader/src/tests/vtk_exemples/vtkImageWriter/CMakeLists.txt
+  ADD_PARAVIEW_OBJECT_PANEL(
+      BBP_IFACE 
+      BBP_IFACE_SRCS 
+    CLASS_NAME 
+      pqCircuitReaderPanel
+    XML_NAME 
+      CircuitReader 
+    XML_GROUP 
+      sources
+  )
+
+  QT4_WRAP_UI(
+    BBP_UI_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+  )
+
+ENDIF(PARAVIEW_BUILD_QT_GUI)
+
+#--------------------------------------------------
+# Define plugin sources
+#--------------------------------------------------
+
+SET(PLUGIN_NAME pv_BBP)
+ADD_PARAVIEW_PLUGIN(
+  ${PLUGIN_NAME}
+  "1.0" 
+  REQUIRED_PLUGINS pv_zoltan
+
+  SERVER_MANAGER_XML     
+    ${XML_PATH}/vtkTemporalDifferenceFilter.xml
+    ${XML_PATH}/vtkExponentialDecayFilter.xml
+    ${XML_PATH}/vtkNeuronAlphaFunction.xml
+    #
+    ${XML_PATH}/vtkCircuitReader.xml
+#    ${XML_PATH}/vtkMorphologyReader.xml
+#    ${XML_PATH}/vtkMeshBinReader.xml
+    ${XML_PATH}/vtkH5MCellReader.xml
+
+  SERVER_MANAGER_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkExponentialDecayFilter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
+    #
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
+ #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
+ #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
+
+  SERVER_SOURCES
+
+  GUI_INTERFACES 
+    ${BBP_IFACE}
+
+  GUI_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.cxx
+    ${BBP_IFACE_SRCS}
+    ${BBP_MOC_SRCS}
+    ${BBP_UI_SOURCES}
+
+  GUI_RESOURCE_FILES
+    ${XML_PATH}/pv_BBP_Readers.xml
+    ${XML_PATH}/pv_BBP_Sources.xml
+    ${XML_PATH}/pv_BBP_Filters.xml
+)
+
+#--------------------------------------------------
+# setup plugin linking
+#--------------------------------------------------
+
+TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
+  PUBLIC 
+    pv_zoltan
+    BBPSDK
+    hdf5_cpp
+    hdf5
+    ${CUDA_LIBRARIES}
+    ${HDF5_C_LIBRARY} 
+    ${HDF5_CXX_LIBRARY} 
+    ${Boost_SERIALIZATION_LIBRARY} 
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_SERIALIZATION_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
+)
+
+#--------------------------------------------------
+# A simple test of link against plugin
+#--------------------------------------------------
+add_executable(test_bbplink test_bbplink.cpp)
+target_link_libraries(test_bbplink 
+  ${PLUGIN_NAME}
+)
+
+#--------------------------------------------------
+# Install
+#--------------------------------------------------
+SET(INSTALL_PATH 
+  "${CMAKE_INSTALL_PREFIX}/lib/paraview-${PARAVIEW_VERSION_MAJOR}.${PARAVIEW_VERSION_MINOR}"
+)
+
+INSTALL(
+  TARGETS 
+    ${PLUGIN_NAME}
+  DESTINATION ${INSTALL_PATH}
+)
