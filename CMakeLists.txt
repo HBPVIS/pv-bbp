@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(COMMAND cmake_policy)
+  cmake_policy(SET CMP0003 OLD)
+  cmake_policy(SET CMP0017 NEW)
+  cmake_policy(SET CMP0023 OLD)
+endif(COMMAND cmake_policy)
+      
 # --------------------------------------------------------------
 # Find BBP-SDK
 # --------------------------------------------------------------
