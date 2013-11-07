@@ -195,6 +195,7 @@ ADD_PARAVIEW_PLUGIN(
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
   PUBLIC 
     pv_zoltan
+    vtksys
     BBPSDK
     hdf5_cpp
     hdf5
