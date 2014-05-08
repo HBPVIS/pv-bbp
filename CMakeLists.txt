@@ -196,7 +196,7 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
   PUBLIC 
     pv_zoltan
     vtksys
-    BBPSDK
+    BBPSDK Brion Lunchbox pthread
     hdf5_cpp
     hdf5
     ${CUDA_LIBRARIES}
