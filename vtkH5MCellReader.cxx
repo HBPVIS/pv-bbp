@@ -347,12 +347,12 @@ vtkSmartPointer<vtkDataArray> vtkH5MCellReader::ReadDataSetIntoDataArray(char *n
     else {
       Nt = (e-s);
     }
-    hsize_t  count1_mem[] = { Nt*Nc,  1 }; // the physical memory is really a flat array of size Nt*Nc 
-    hsize_t  count2_mem[] = { Nt,    Nc }; // the memory space is Nt*Nc
+    hsize_t  count1_mem[] = { (hsize_t)Nt*Nc,  1 }; // the physical memory is really a flat array of size Nt*Nc 
+    hsize_t  count2_mem[] = { (hsize_t)Nt,    (hsize_t)Nc }; // the memory space is Nt*Nc
     hsize_t  offset_mem[] = { 0,     0 };  // always read into meory starting at 0,0
     hsize_t  stride_mem[] = { 1,     1 };  // stride just 1,1
-    hsize_t  count1_dsk[] = { Nt,   Nc };  // disk space is Nt,Nc
-    hsize_t  offset_dsk[] = { s,     0 };  // offset from our start point
+    hsize_t  count1_dsk[] = { (hsize_t)Nt,   (hsize_t)Nc };  // disk space is Nt,Nc
+    hsize_t  offset_dsk[] = { (hsize_t)s,     0 };  // offset from our start point
     hsize_t  stride_dsk[] = { 1,     1 };  // and stride 1,1
     r = H5Sselect_hyperslab(diskshape, H5S_SELECT_SET, offset_dsk, stride_dsk, count1_dsk, NULL);
     if (r<0) 
@@ -388,7 +388,7 @@ int vtkH5MCellReader::RequestInformation(
   this->UpdatePiece = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
   //
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
+//  outInfo->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
   bool NeedToReadInformation = (FileModifiedTime>FileOpenedTime || !this->H5FileId);
 
   if (NeedToReadInformation)

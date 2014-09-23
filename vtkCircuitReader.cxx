@@ -274,7 +274,7 @@ int vtkCircuitReader::RequestInformation(
   this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
   //
-  outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
+//  outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
   bool NeedToReloadFile = (FileModifiedTime>FileOpenedTime);
 
   if (!vtksys::SystemTools::FileExists(this->FileName)) {
@@ -430,7 +430,7 @@ int vtkCircuitReader::RequestInformation(
 
 #ifdef PV_BBP_USE_ZOLTAN
   if (this->Controller->GetNumberOfProcesses()>1 && this->ParallelRedistribution) {
-    outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
+//    outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
   }
 #endif
 

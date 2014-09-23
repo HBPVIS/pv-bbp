@@ -26,7 +26,8 @@ get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 # Find BBP-SDK
 # --------------------------------------------------------------
 find_package(BBPSDK REQUIRED NO_MODULE)
-include_directories(${BBPSDK_INCLUDE_DIR})
+include_directories(${BBPSDK_INCLUDE_DIRS})
+add_definitions(-DCXX_UNORDERED_MAP_SUPPORTED)
 
 # --------------------------------------------------------------
 # Find ParaView
@@ -46,7 +47,7 @@ find_package(Qt4 )
 # --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
-OPTION(Boost_USE_FIND_NO_MODULE "If cmake installed boost, use NO_MODULE in find package" ON)
+OPTION(Boost_USE_FIND_NO_MODULE "If cmake installed boost, use NO_MODULE in find package" OFF)
 
 if(Boost_USE_FIND_NO_MODULE)
   find_package(Boost NO_MODULE COMPONENTS program_options;filesystem;system;regex;thread;date_time;serialization)
@@ -68,6 +69,17 @@ include_directories(${HDF5_INCLUDE_DIR}
                     ${HDF5_INCLUDE_DIR_CPP})
 
 # --------------------------------------------------------------
+# set c++0x flag for bbp #includes
+# --------------------------------------------------------------
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set(ADD_CXX 1)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(ADD_CXX 1)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+endif()
+
+# --------------------------------------------------------------
 # Build main plugin
 # --------------------------------------------------------------
 # --------------------------------------------------
@@ -84,25 +96,18 @@ FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
 INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR} ${HDF5_INCLUDE_DIR_CPP})
 
 #--------------------------------------------------
-# pv-zoltan
+# pv-zoltan : Required for depth sort
 #--------------------------------------------------
-set(ZOLTAN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan")
-if (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
+find_package(pv_zoltan NO_MODULE REQUIRED)
+if(NOT pv_zoltan_FOUND)
+  message(FATAL_ERROR "pv-bbp requires pv_zoltan")
+endif()
+include_directories(${pv_zoltan_INCLUDE_DIR})
+
   set(ZOLTAN_SUPPORT 1)
-  include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan
-    ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan/trilinos/packages/zoltan/src/include
-    ${CMAKE_CURRENT_BINARY_DIR}/../pv-zoltan/trilinos/packages/zoltan/src
-  )
-  if(WIN32)
-    include_directories(
-      ${CMAKE_CURRENT_SOURCE_DIR}/../pv-zoltan/trilinos/cmake/tribits/common_tools/win_interface/include
-   )
-  endif(WIN32)
   ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
   set(ZOLTAN_LIBS pv_zoltan)
   message("Zoltan support enabled")
-endif (EXISTS "${ZOLTAN_DIR}" AND IS_DIRECTORY "${ZOLTAN_DIR}")
 
 #--------------------------------------------------
 # Includes
@@ -187,6 +192,11 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/pv_BBP_Sources.xml
     ${XML_PATH}/pv_BBP_Filters.xml
 )
+
+if(ADD_CXX)
+  message("Adding C++0x flag for Depth Sort")
+#  set_target_properties(pv_BBP PROPERTIES COMPILE_FLAGS "-std=c++0x -I/usr/include/c++/4.2.1/tr1")
+endif()
 
 #--------------------------------------------------
 # setup plugin linking
