@@ -21,7 +21,7 @@
          name="FileName"
          command="SetFileName"
          label="BlueConfig FileName"
-         default_values="/project/csvis/biddisco/bbpdata/egpgv/centralV.cfg"
+         default_values="/scratch/daint/biddisco/data/egpgv/centralV.cfg"
          number_of_elements="1">
         <FileListDomain name="files"/>
         <Documentation>

@@ -69,16 +69,26 @@
 //
 // BBP-SDK Morphology Reader
 //#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
-//#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
-//#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
-//#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
-//#include "BBP/Microcircuit/Mappings/Compartment_Report_Mapping.h"
-//#include "BBP/Microcircuit/Soma.h"
-//#include "BBP/Microcircuit/Mesh.h"
-//#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
+#include "BBP/Readers/Microcircuit_Reader.h"
+#include "BBP/Readers/Mesh_Reader.h"
+#include "BBP/Readers/compartmentReportReader.h"
+//#include "BBP/Mappings/Compartment_Report_Mapping.h"
+#include "BBP/Cell_Target.h"
+#include "BBP/Targets/Targets.h"
+#include "BBP/Soma.h"
+#include "BBP/Mesh.h"
+#include "BBP/Microcircuit.h"
+#include "BBP/Morphology.h"
+#include "BBP/Neuron.h"
+#include "BBP/Section.h"
+#include "BBP/Containers/Neurons.h"
+#include "BBP/Containers/Sections.h"
+//#include "BBP/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
 #include "vtkCircuitReader.h"
+#include "BBP/Report_Specification.h"
+#include "BBP/Containers/Reports_Specification.h"
 //#include "SpikeData.h"
 
 //----------------------------------------------------------------------------

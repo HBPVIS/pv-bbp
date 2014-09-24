@@ -26,7 +26,11 @@ class vtkUnstructuredGrid;
 class vtkBoundsExtentTranslator;
 // BBP-SDK
 
-#include "BBP/BBP.h"
+//#include "BBP/BBP.h"
+#include "BBP/Targets/Target.h"
+#include "BBP/Targets/Targets.h"
+#include "BBP/Datasets/compartmentReportFrame.h"
+#include "BBP/Readers/compartmentReportReader.h"
 #include "BBP/Experiment.h"
 
 //
