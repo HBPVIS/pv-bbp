@@ -284,6 +284,7 @@ int vtkCircuitReader::RequestInformation(
   this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
   //
+  outInfo0->Set(CAN_HANDLE_PIECE_REQUEST(), 1);
 //  outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
   bool NeedToReloadFile = (FileModifiedTime>FileOpenedTime);
 
