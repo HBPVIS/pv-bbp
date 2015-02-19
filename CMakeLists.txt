@@ -157,8 +157,6 @@ ADD_PARAVIEW_PLUGIN(
   REQUIRED_PLUGINS pv_zoltan
 
   SERVER_MANAGER_XML     
-    ${XML_PATH}/vtkTemporalDifferenceFilter.xml
-    ${XML_PATH}/vtkExponentialDecayFilter.xml
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
@@ -167,8 +165,6 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTemporalDifferenceFilter.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkExponentialDecayFilter.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
