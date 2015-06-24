@@ -63,7 +63,7 @@
 #include <iterator>
 //
 // BBP-SDK Morphology Reader
-#include "BBP/bbp.h"
+#include "BBP/BBP.h"
 //#include "BBP/Microcircuit/Readers/Microcircuit_Reader.h"
 //#include "BBP/Microcircuit/Readers/Mesh_Reader.h"
 //#include "BBP/Microcircuit/Readers/compartmentReportReader.h"
