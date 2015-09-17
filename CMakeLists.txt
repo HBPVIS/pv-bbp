@@ -40,11 +40,6 @@ include(vtkModuleMacros)
 include(ParaViewMacros)
 
 # --------------------------------------------------------------
-# Find Qt4, will be picked up with paraview normally
-# --------------------------------------------------------------
-find_package(Qt4 )
-
-# --------------------------------------------------------------
 # Find Boost
 # --------------------------------------------------------------
 OPTION(Boost_USE_FIND_NO_MODULE "If cmake installed boost, use NO_MODULE in find package" OFF)
@@ -122,11 +117,33 @@ include_directories(
 # CONDITIONAL : Setup Qt/GUI panel sources/wrapping
 #--------------------------------------------------
 IF(PARAVIEW_BUILD_QT_GUI)
-
-  QT4_WRAP_CPP(
-    BBP_MOC_SRCS 
-      ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
-  )
+    if (PARAVIEW_QT_VERSION VERSION_GREATER "4")
+      set (Qt5_FIND_COMPONENTS Widgets)
+      include (ParaViewQt5)
+    
+      QT5_WRAP_CPP(
+        BBP_MOC_SRCS 
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+      )
+    
+      QT5_WRAP_UI(
+        BBP_UI_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+      )
+      
+    else ()
+      include (${QT_USE_FILE})
+    
+      QT4_WRAP_CPP(
+        BBP_MOC_SRCS 
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+      )
+    
+      QT4_WRAP_UI(
+        BBP_UI_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+      )
+    endif ()
 
   ADD_PARAVIEW_OBJECT_PANEL(
       BBP_IFACE 
@@ -137,11 +154,6 @@ IF(PARAVIEW_BUILD_QT_GUI)
       CircuitReader 
     XML_GROUP 
       sources
-  )
-
-  QT4_WRAP_UI(
-    BBP_UI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
   )
 
 ENDIF(PARAVIEW_BUILD_QT_GUI)

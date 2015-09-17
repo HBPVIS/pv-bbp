@@ -204,7 +204,7 @@ void pqCircuitReaderPanel::updateSIL()
 //----------------------------------------------------------------------------
 void pqCircuitReaderPanel::addSelectionsToTreeWidget(const QString& prop, QTreeWidget* tree)
 {
-  vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toAscii().data());
+  vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toLatin1().data());
   QList<QVariant> SMPropertyDomain;
   SMPropertyDomain = pqSMAdaptor::getSelectionPropertyDomain(SMProperty);
   int j;
@@ -221,7 +221,7 @@ void pqCircuitReaderPanel::addSelectionToTreeWidget(const QString& name,
                                                const QString& prop,
                                                int propIdx)
 {
-  vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toAscii().data());
+  vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toLatin1().data());
 
   if(!SMProperty || !tree)
     {
