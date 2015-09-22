@@ -13,6 +13,9 @@
  
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSmartPointer.h"
+#include "vtkUnsignedIntArray.h"
+#define VTK_WRAPPING_CXX
+#include "vtkClientServerStream.h"
 #include <string>
 #include <vector>
 
@@ -59,7 +62,7 @@ public:
   //vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
   vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
- 
+
   // Description:
   // Specify file name of the morphology file.
   void SetFileName(char *filename);
@@ -122,7 +125,15 @@ public:
   vtkSetMacro(IntegerTimeStepValues,int);
   vtkGetMacro(IntegerTimeStepValues,int);
   vtkBooleanMacro(IntegerTimeStepValues,int);
-  
+
+  vtkSetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
+  vtkGetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
+
+  void SetSelectedGIds(vtkIdType N, int Ids[]);
+//BTX
+  void SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0);
+//ETX
+
   // Description:
   // Get the number of timesteps in the file
   vtkGetMacro(NumberOfTimeSteps,int);
@@ -228,6 +239,9 @@ protected:
   int           UpdateNumPieces;
   int           IntegerTimeStepValues;
   int           DeleteExperiment;
+
+  // this is the selectiobn array we will get from zeq
+  vtkUnsignedIntArray *SelectedGIds;
   //
 //BTX
   std::vector<double> TimeStepValues;

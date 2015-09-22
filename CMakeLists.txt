@@ -99,10 +99,10 @@ if(NOT pv_zoltan_FOUND)
 endif()
 include_directories(${pv_zoltan_INCLUDE_DIR})
 
-  set(ZOLTAN_SUPPORT 1)
-  ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
-  set(ZOLTAN_LIBS pv_zoltan)
-  message("Zoltan support enabled")
+set(ZOLTAN_SUPPORT 1)
+ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
+set(ZOLTAN_LIBS pv_zoltan)
+message("Zoltan support enabled")
 
 #--------------------------------------------------
 # Includes
@@ -172,16 +172,12 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
-#    ${XML_PATH}/vtkMorphologyReader.xml
-#    ${XML_PATH}/vtkMeshBinReader.xml
     ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
- #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
- #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES

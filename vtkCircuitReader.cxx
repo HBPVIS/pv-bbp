@@ -189,6 +189,9 @@ vtkCircuitReader::vtkCircuitReader() :
   this->RestingPotentialVoltage  = -65.0;
 
   this->NumberOfPointsBeforePartitioning = 0;
+
+  // when we receive a selection from zeq, this will be filled
+  this->SelectedGIds = NULL;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReader::~vtkCircuitReader()
@@ -204,6 +207,7 @@ vtkCircuitReader::~vtkCircuitReader()
   this->PointDataArraySelection->FastDelete();
   this->TargetsSelection->FastDelete();
   this->SetController(NULL);
+  this->SetSelectedGIds(NULL);
   //
   delete []this->FileName;
   delete []this->DefaultTarget;
@@ -261,11 +265,12 @@ int vtkCircuitReader::RequestTimeInformation(
   if (!this->FileName) {
     return 1;
   }
-  vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
+  // vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
   //  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
   //
   this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+  return result;
 }
 //----------------------------------------------------------------------------
 int vtkCircuitReader::RequestInformation(
@@ -517,10 +522,10 @@ int vtkCircuitReader::RequestData(
     this->IntegerTimeStepValues ? 0.5 : this->TimeStepTolerance ), requestedTimeValue ))
     - this->TimeStepValues.begin();
   //
-  bool NeedToRegernerateTime = false;
+  bool NeedToRegenerateTime = false;
   if (requestedTimeValue!=this->CurrentTime) {
     this->CurrentTime = requestedTimeValue;
-    NeedToRegernerateTime = true;
+    NeedToRegenerateTime = true;
   }
   //
   output0->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), requestedTimeValue);
@@ -534,7 +539,7 @@ int vtkCircuitReader::RequestData(
   load_timer->StartTimer();
 
   bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime)
-    || (TargetsModifiedTime>MeshGeneratedTime);
+    || (TargetsModifiedTime>MeshGeneratedTime || this->SelectedGIds->GetMTime()>MeshGeneratedTime);
   //
   if (NeedToRegenerateMesh && this->Microcircuit) {
     //
@@ -551,7 +556,10 @@ int vtkCircuitReader::RequestData(
 //    }
     bbp::Neurons &neurons = this->Microcircuit->neurons();
     int WholeExtent[6] = { 0, static_cast<int>(neurons.size()), 0, 0, 0, 0 };
-    if (this->MaximumNumberOfNeurons>0) {
+    if (this->SelectedGIds!=NULL) {
+      WholeExtent[1] = std::min(neurons.size(), (size_t)(this->SelectedGIds->GetNumberOfTuples()));
+    }
+    else if (this->MaximumNumberOfNeurons>0) {
       WholeExtent[1] = std::min(neurons.size(), (size_t)(this->MaximumNumberOfNeurons));
     }
     vtkSmartPointer<vtkExtentTranslator> extTran = vtkSmartPointer<vtkExtentTranslator>::New();
@@ -562,24 +570,32 @@ int vtkCircuitReader::RequestData(
     extTran->PieceToExtent();
     extTran->GetExtent(this->PartitionExtents);
 
-    // neurons are ordered in layers and higher layers have bigger cell counts
-    // so read them using a random shuffle to avoid one process getting all the 
-    // small ones and another the big ones. We can use an operator[]
-    // to get neurons from the container because it uses a map, with the GID as key
-    // so build a list of all keys and then shuffle that and let each process use
-    // a chunk of the list
-    // NB. we want all processes to have the same sequence, seed fixed num
     std::srand(12345); 
     std::vector<uint32_t> shufflevector;
-    shufflevector.reserve(neurons.size());
-    //
-    for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
-      shufflevector.push_back(neuron->gid());
-    }
-    std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
-    //  std::ostream_iterator<vtkIdType> out_it(cout,", ");
-    //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
 
+    // if the user has passed a GId array, we should use them directly
+    if (this->SelectedGIds!=NULL) {
+      unsigned int *raw_data = this->SelectedGIds->GetPointer(0);
+      shufflevector.assign(raw_data, raw_data+this->SelectedGIds->GetNumberOfTuples());
+      std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+    }
+    else {
+      // neurons are ordered in layers and higher layers have bigger cell counts
+      // so read them using a random shuffle to avoid one process getting all the 
+      // small ones and another the big ones. We can use an operator[]
+      // to get neurons from the container because it uses a map, with the GID as key
+      // so build a list of all keys and then shuffle that and let each process use
+      // a chunk of the list
+      // NB. we want all processes to have the same sequence, seed fixed num
+      shufflevector.reserve(neurons.size());
+      //
+      for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
+        shufflevector.push_back(neuron->gid());
+      }
+      std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+      //  std::ostream_iterator<vtkIdType> out_it(cout,", ");
+      //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
+    }
     // create a new target based on our subrange of neurons, clear any contests first.
     this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
 
@@ -593,7 +609,6 @@ int vtkCircuitReader::RequestData(
       //    if (cell_index==UNDEFINED_CELL_INDEX) {
       //    }
     }
-
     // Load morphology and meshes for this subtarget
     try {
 #ifdef MANUAL_MESH_LOAD
@@ -664,7 +679,7 @@ int vtkCircuitReader::RequestData(
 #endif
     this->MeshGeneratedTime.Modified();
   }
-  if (NeedToRegenerateMesh || NeedToRegernerateTime) {
+  if (NeedToRegenerateMesh || NeedToRegenerateTime) {
     bool do_rep = (this->NumberOfTimeSteps>0) && this->GetPointArrayStatus(BBP_ARRAY_NAME_VOLTAGE);
     if (do_rep /*&& this->UpdateNumPieces==1*/) {
       try {
@@ -683,13 +698,12 @@ int vtkCircuitReader::RequestData(
   //
   // copy internal mesh to output
   //
-    if (this->ExportNeuronMesh) {
-      output0->ShallowCopy(this->CachedNeuronMesh);
-    }
-    else if (this->ExportMorphologySkeleton) {
-      output0->ShallowCopy(this->CachedMorphologySkeleton);
-    }
-
+  if (this->ExportNeuronMesh) {
+    output0->ShallowCopy(this->CachedNeuronMesh);
+  }
+  else if (this->ExportMorphologySkeleton) {
+    output0->ShallowCopy(this->CachedMorphologySkeleton);
+  }
 
   //
   //  output1->ShallowCopy(this->CachedMorphologySkeleton);
@@ -1534,32 +1548,38 @@ void vtkCircuitReader::SetDefaultTarget(char *target)
   }
   this->Modified();
 }
+
 //----------------------------------------------------------------------------
 void vtkCircuitReader::SetFileModified()
 {
   this->FileModifiedTime.Modified();
   this->Modified();
 }
+
 //-----------------------------------------------------------------------------
 vtkSmartPointer<vtkMutableDirectedGraph> vtkCircuitReader::GetSIL()
 {
   return this->SIL;
 }
+
 //----------------------------------------------------------------------------
 int vtkCircuitReader::GetNumberOfPointArrays()
 {
   return this->PointDataArraySelection->GetNumberOfArrays();
 }
+
 //----------------------------------------------------------------------------
 const char* vtkCircuitReader::GetPointArrayName(int index)
 {
   return this->PointDataArraySelection->GetArrayName(index);
 }
+
 //----------------------------------------------------------------------------
 int vtkCircuitReader::GetPointArrayStatus(const char* name)
 {
   return this->PointDataArraySelection->ArrayIsEnabled(name);
 }
+
 //----------------------------------------------------------------------------
 void vtkCircuitReader::SetPointArrayStatus(const char* name, int status)
 {
@@ -1609,6 +1629,7 @@ void vtkCircuitReader::SetTargetsStatus(const char* name, int status)
     }
   }
 }
+
 //----------------------------------------------------------------------------
 void vtkCircuitReader::DisableAllTargets()
 {
@@ -1616,6 +1637,7 @@ void vtkCircuitReader::DisableAllTargets()
   this->TargetsModifiedTime.Modified();
   this->Modified();
 }
+
 //----------------------------------------------------------------------------
 void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
 {
@@ -1624,5 +1646,33 @@ void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "File Name: " 
     << (this->FileName ? this->FileName : "(none)") << "\n";  
 }
-//----------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------
+void vtkCircuitReader::SetSelectedGIds(vtkIdType N, int Ids[])
+{
+  vtkWarningMacro("SetSelectedIds - Type 1 " << N);
+  this->SelectedGIds = vtkUnsignedIntArray::New();
+  this->SelectedGIds->SetArray((unsigned int*)(Ids), N, 1);
+  this->SetSelectedGIds(this->SelectedGIds);
+}
+
+//----------------------------------------------------------------------------
+void vtkCircuitReader::SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0)
+{
+  vtkWarningMacro("SetSelectedIds - Type 2 " << N);
+  unsigned int *new_data = new unsigned int[N];
+  std::copy(temp0.operator int *(), temp0.operator int *()+N, new_data);
+  this->SelectedGIds = vtkUnsignedIntArray::New();
+  this->SelectedGIds->SetArray((unsigned int*)(new_data), N, 0);
+  this->SetSelectedGIds(this->SelectedGIds);
+  this->MeshParamsModifiedTime.Modified();
+  this->Modified();
+
+  std::cout << "We have Ids (2) " << N << std::endl;
+  std::cout << "vtkCircuitReader got Ids " << N << std::endl;
+  for (unsigned int i=0; i<std::min((vtkIdType)(5),N); ++i) {
+    std::cout << new_data[i] << ",";
+  }
+  std::cout << std::endl;
+
+}

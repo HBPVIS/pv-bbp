@@ -116,7 +116,7 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
 
   // add the custom panel to the existing auto-generated stuff
   int rows = this->PanelLayout->rowCount();
-  int cols = this->PanelLayout->columnCount();
+//  int cols = this->PanelLayout->columnCount();
   QVBoxLayout* subLayout = new QVBoxLayout();
   subLayout->addWidget(frame, 1);
   subLayout->setMargin(0);

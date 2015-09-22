@@ -152,6 +152,14 @@
         </Documentation>
       </IntVectorProperty>
 
+<ProxyProperty
+  command="SetSelectedGIds"
+  name="SelectedGIds">
+  <ProxyGroupDomain name="group">
+    <Group name="data_arrays" />
+  </ProxyGroupDomain>
+</ProxyProperty>
+
       <Hints>
         <Property name="FileName" show="1"/>
         <Property name="DefaultTarget" show="1"/>
