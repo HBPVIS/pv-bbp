@@ -1,0 +1,61 @@
+<ServerManagerConfiguration>
+ 
+  <ProxyGroup name="sources">
+
+    <SourceProxy base_proxygroup="bbp_custom"
+                 base_proxyname="CircuitReaderBase"
+                 name="CircuitReaderMesh"
+                class="vtkCircuitReaderMesh"
+                label="BlueConfig circuit reader (mesh)">
+      <Documentation
+        short_help="Read the BlueConfig file to obtain a circuit."
+        long_help="Read the BlueConfig file to obtain a circuit.">
+        This reader constructs circuits by reading targets from a BlueConfig and generating the meshes for each morphology.
+      </Documentation>
+
+      <!-- cscs          default_values="/project/csvis/biddisco/bbpdata/bmc-benchmark/blueconfig" -->
+      <!-- dino          default_values="C:\data\bbp\bmc-benchmark\blueconfig" -->
+      <!-- crusca  SMALL default_values="D:/data/bbp/small/BlueConfig" target="viz1"-->
+      <!-- crusca  BMC   default_values="D:\data\bbp\bmc-benchmark\blueconfig" target="1K 2K 5K"-->
+      <!--         default_values="D:/bbp/bbp-ext-proj5/simulation_data/simulations/run_1k/BlueConfig.simple" -->
+<!-- /project/csvis/biddisco/bbpdata/egpgv/centralV.cfg" -->
+
+      <IntVectorProperty
+         name="MaximumNumberOfNeurons"
+         command="SetMaximumNumberOfNeurons"
+         number_of_elements="1"
+         default_values="1" >
+        <Documentation>
+          When nonzero, only a subset of neurons up to a count of N will be loaded to save time/memory
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="ExportNeuronMesh"
+         command="SetExportNeuronMesh"
+         number_of_elements="1"
+         default_values="1" >
+        <BooleanDomain name="bool"/>
+        <Documentation>
+          Generate the full neuron mesh (triangles)
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="ExportMorphologySkeleton"
+         command="SetExportMorphologySkeleton"
+         number_of_elements="1"
+         default_values="0" >
+        <BooleanDomain name="bool"/>
+        <Documentation>
+          Generate the morphology skeleton (lines)
+        </Documentation>
+      </IntVectorProperty>
+      <Hints>
+        <ShowInMenu category="BBP" />
+      </Hints>
+
+    </SourceProxy>
+
+  </ProxyGroup>
+</ServerManagerConfiguration>

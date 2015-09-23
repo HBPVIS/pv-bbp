@@ -151,7 +151,7 @@ IF(PARAVIEW_BUILD_QT_GUI)
     CLASS_NAME 
       pqCircuitReaderPanel
     XML_NAME 
-      CircuitReader 
+      CircuitReaderBase
     XML_GROUP 
       sources
   )
@@ -171,14 +171,18 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
-    ${XML_PATH}/vtkCircuitReader.xml
-    ${XML_PATH}/vtkH5MCellReader.xml
+    ${XML_PATH}/vtkCircuitReaderBase.xml
+    ${XML_PATH}/vtkCircuitReaderMesh.xml
+    ${XML_PATH}/vtkCircuitReaderSoma.xml
+#    ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderBase.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderMesh.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderSoma.cxx
+#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
 
@@ -198,7 +202,7 @@ ADD_PARAVIEW_PLUGIN(
 )
 
 if(ADD_CXX)
-  message("Adding C++0x flag for Depth Sort")
+#  message("Adding C++0x flag for Depth Sort")
 #  set_target_properties(pv_BBP PROPERTIES COMPILE_FLAGS "-std=c++0x -I/usr/include/c++/4.2.1/tr1")
 endif()
 

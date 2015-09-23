@@ -68,11 +68,9 @@
 #include <iterator>
 //
 // BBP-SDK Morphology Reader
-//#include "BBP/IO/File/Parsers/Morphology_HDF5_File_Parser.h"
 #include "BBP/Readers/Microcircuit_Reader.h"
 #include "BBP/Readers/Mesh_Reader.h"
 #include "BBP/Readers/compartmentReportReader.h"
-//#include "BBP/Mappings/Compartment_Report_Mapping.h"
 #include "BBP/Cell_Target.h"
 #include "BBP/Targets/Targets.h"
 #include "BBP/Soma.h"
@@ -83,10 +81,9 @@
 #include "BBP/Section.h"
 #include "BBP/Containers/Neurons.h"
 #include "BBP/Containers/Sections.h"
-//#include "BBP/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
-#include "vtkCircuitReader.h"
+#include "vtkCircuitReaderMesh.h"
 #include "BBP/Report_Specification.h"
 #include "BBP/Containers/Reports_Specification.h"
 //#include "SpikeData.h"
@@ -123,377 +120,33 @@
 //#define MANUAL_MESH_LOAD
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-#define BBP_ARRAY_NAME_NORMAL           "Normal"
-#define BBP_ARRAY_NAME_NEURONGID        "Neuron Gid"
-#define BBP_ARRAY_NAME_NEURONINDEX      "Neuron Index"
-#define BBP_ARRAY_NAME_SECTION_ID       "Section Id"
-#define BBP_ARRAY_NAME_SECTION_TYPE     "Section Type"
-#define BBP_ARRAY_NAME_DENDRITE_RADIUS  "Dendrite Radius"
-#define BBP_ARRAY_NAME_VOLTAGE          "Voltage"
-#define BBP_ARRAY_NAME_RTNEURON_OPACITY "RTNeuron Opacity"
 
-//----------------------------------------------------------------------------
-#define USE_BBP_TRANSFORM
-#define USE_VTK_TRANSFORM
 //----------------------------------------------------------------------------
 using namespace bbp;
 //----------------------------------------------------------------------------
-vtkStandardNewMacro(vtkCircuitReader);
+vtkStandardNewMacro(vtkCircuitReaderMesh);
 //----------------------------------------------------------------------------
-vtkCxxSetObjectMacro(vtkCircuitReader, Controller, vtkMultiProcessController);
-//----------------------------------------------------------------------------
-vtkCircuitReader::vtkCircuitReader() :
-  PrimaryTarget("dummy", bbp::TARGET_CELL), 
-  Partitioned_target("dummy", bbp::TARGET_CELL)
+vtkCircuitReaderMesh::vtkCircuitReaderMesh() : vtkCircuitReaderBase()
 {
-  this->FileName = NULL;
-  this->SetNumberOfInputPorts(0);
-  this->SetNumberOfOutputPorts(1);
-  //
-  this->NumberOfTimeSteps               = 0;
-  this->TimeStep                        = 0;
-  this->ActualTimeStep                  = 0;
-  this->CurrentTime                     = std::numeric_limits<float>::min();
-  this->TimeStepTolerance               = 1E-6;
-  this->FileName                        = NULL;
-  this->DefaultTarget                   = NULL;
-  this->ReportName                      = NULL;
-  this->UpdatePiece                     = 0;
-  this->UpdateNumPieces                 = 0;
-  this->IntegerTimeStepValues           = 0;
-  this->ExportNeuronMesh                = 1;
-  this->ExportMorphologySkeleton        = 0;
-  this->ParallelRedistribution          = 1;
-  this->MaximumNumberOfNeurons          = 25;
-  this->DeleteExperiment                = 1;
-  //
-  this->PointDataArraySelection         = vtkDataArraySelection::New();
-  this->TargetsSelection                = vtkDataArraySelection::New();
-  this->Controller = NULL;
-  this->SetController(vtkMultiProcessController::GetGlobalController());
-  if (this->Controller == NULL) {
-    this->SetController(vtkSmartPointer<vtkDummyController>::New());
-  }
-  this->SIL              = vtkSmartPointer<vtkMutableDirectedGraph>::New();
-  this->SILUpdateStamp   = 0;
-  //
-  this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
-  this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
-#ifdef PV_BBP_USE_ZOLTAN
-  this->MeshPartitionFilter           = NULL;
-  this->BoundsTranslator              = vtkSmartPointer<vtkBoundsExtentTranslator>::New();
-#endif
+  this->ExportNeuronMesh         = 1;
+  this->ExportMorphologySkeleton = 0;
+  this->MaximumNumberOfNeurons   = 25;
   //
   this->HyperPolarizedVoltage    = -85.0;
   this->DePolarizedVoltage       = -50.0;
   this->RestingPotentialVoltage  = -65.0;
-
-  this->NumberOfPointsBeforePartitioning = 0;
-
-  // when we receive a selection from zeq, this will be filled
-  this->SelectedGIds = NULL;
+  //
+  this->CachedNeuronMesh              = vtkSmartPointer<vtkPolyData>::New();
+  this->CachedMorphologySkeleton      = vtkSmartPointer<vtkPolyData>::New();
 }
 //----------------------------------------------------------------------------
-vtkCircuitReader::~vtkCircuitReader()
+vtkCircuitReaderMesh::~vtkCircuitReaderMesh()
 {
-  this->SIL                           = NULL;
   this->CachedNeuronMesh              = NULL;
   this->CachedMorphologySkeleton      = NULL;
-#ifdef PV_BBP_USE_ZOLTAN
-  this->MeshPartitionFilter           = NULL;
-  this->BoundsTranslator              = NULL;
-#endif
-  //
-  this->PointDataArraySelection->FastDelete();
-  this->TargetsSelection->FastDelete();
-  this->SetController(NULL);
-  this->SetSelectedGIds(NULL);
-  //
-  delete []this->FileName;
-  delete []this->DefaultTarget;
-  delete []this->ReportName;
 }
 //----------------------------------------------------------------------------
-int vtkCircuitReader::FillOutputPortInformation( int port, vtkInformation* info )
-{
-  if (port == 0) {
-    if (this->Controller && this->Controller->GetNumberOfProcesses()>1) {
-      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
-    }
-    else {
-      info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
-    }
-    return 1;
-  }
-
-  if (port == 1) {
-    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData" );
-    return 1;
-  }
-
-  return 0;
-} 
-/*
-std::pair<double, double> GetClosest(std::vector<double> &sortedlist, const double& val) const
-{
-std::vector<double>::const_iterator it = std::lower_bound(sortedlist.begin(), sortedlist.end(), val);
-if (it == sortedlist.end())        return std::make_pair(sortedlist.back(), sortedlist.back());
-else if (it == sortedlist.begin()) return std::make_pair(sortedlist.front(), sortedlist.front());
-else return std::make_pair(*(it - 1), *(it));
-}
-*/
-class vtkCircuitReaderToleranceCheck: public std::binary_function<double, double, bool>
-{
-public:
-  vtkCircuitReaderToleranceCheck(double tol) { this->tolerance = tol; }
-  double tolerance;
-  //
-  result_type operator()(first_argument_type a, second_argument_type b) const
-  {
-    bool result = (fabs(a-b)<=(this->tolerance));
-    return (result_type)result;
-  }
-};
-//----------------------------------------------------------------------------
-int vtkCircuitReader::RequestTimeInformation(
-  vtkInformation *vtkNotUsed(request),
-  vtkInformationVector **vtkNotUsed(inputVector),
-  vtkInformationVector *outputVector)
-{
-  int result = 1;
-  // if there is no blue config supplied yet, exit quietly
-  if (!this->FileName) {
-    return 1;
-  }
-  // vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  //  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
-  //
-  this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-  this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-  return result;
-}
-//----------------------------------------------------------------------------
-int vtkCircuitReader::RequestInformation(
-  vtkInformation *vtkNotUsed(request),
-  vtkInformationVector **vtkNotUsed(inputVector),
-  vtkInformationVector *outputVector)
-{
-  int result = 1;
-  // if there is no blue config supplied yet, exit quietly
-  if (!this->FileName) {
-    return 1;
-  }
-  vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-  //  vtkInformation *outInfo1 = outputVector->GetInformationObject(1);
-  //
-  this->UpdatePiece = this->Controller->GetLocalProcessId(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-  this->UpdateNumPieces = this->Controller->GetNumberOfProcesses(); // outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-  //
-  outInfo0->Set(CAN_HANDLE_PIECE_REQUEST(), 1);
-//  outInfo0->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
-  bool NeedToReloadFile = (FileModifiedTime>FileOpenedTime);
-
-  if (!vtksys::SystemTools::FileExists(this->FileName)) {
-    vtkWarningMacro("File not found " << this->FileName);
-    NeedToReloadFile = 0;
-    result = 0;
-  }
-  bool NeedToRegenerateInfo = (TargetsModifiedTime>InfoGeneratedTime);
-
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_NORMAL);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_NEURONGID);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_NEURONINDEX);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_SECTION_ID);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_SECTION_TYPE);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_DENDRITE_RADIUS);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_VOLTAGE);
-  this->PointDataArraySelection->AddArray(BBP_ARRAY_NAME_RTNEURON_OPACITY);
-
-  bool ok = true;
-  if (NeedToReloadFile || NeedToRegenerateInfo) {
-    std::string blueconfig = this->FileName;
-    // -------------------------------------------------------------------   
-    // Create BBP-SDK Experiment and Microcircuit to access to the neurons.
-    // -------------------------------------------------------------------   
-    try {
-      this->Experiment.close();
-      this->Experiment.open(blueconfig);
-      this->Microcircuit = this->Experiment.microcircuit_ptr();
-    }
-    catch (std::exception &e) {
-      this->Experiment.clear();
-      vtkErrorMacro("An exception occurred opening the bbp::Experiment " << e.what());
-    }
-    //
-    this->BuildSIL();
-    outInfo0->Set(vtkDataObject::SIL(), this->GetSIL());
-    this->FileOpenedTime.Modified();
-  }
-
-  ok = true;
-  if (NeedToRegenerateInfo || NeedToReloadFile) {
-    // default Target?
-    this->TargetName = (this->DefaultTarget && strlen(this->DefaultTarget)>0) ? this->DefaultTarget : "";
-    //
-    this->PrimaryTarget = bbp::Target("empty",bbp::TARGET_CELL);
-    //
-    int c = 0;
-    try {
-      int N = this->TargetsSelection->GetNumberOfArrays();
-      for (int i=0; i<N; i++) {
-        const char *name = this->TargetsSelection->GetArrayName(i);
-        if (this->TargetsSelection->ArrayIsEnabled(name)) {
-          //          this->TargetName = name;
-          try {
-            try {
-              bbp::Target temp = this->Experiment.user_targets().get_target(name);
-              if (temp.size()>0) {
-                vtkDebugMacro(<< "Adding (user) target " << name << " to load list" );
-                this->PrimaryTarget.insert(temp);
-                c++;
-              }
-            }
-            catch (std::exception &e) {
-              bbp::Target temp = this->Experiment.targets().get_target(name);
-              if (temp.size()>0) {
-                vtkDebugMacro(<< "Adding (system) target " << name << " to list : exception " << e.what());
-                this->PrimaryTarget.insert(temp);
-                c++;
-              }
-            }
-          }
-          catch (std::exception &e) {
-            vtkErrorMacro("Could not add target " << name << " to list : exception " << e.what());
-          }
-        }
-      }
-      // if no targets set in TargetsStatus, then use default target
-      if (c==0 && this->TargetName.size()>0) {
-        bbp::Target temp = this->Experiment.user_targets().get_target(this->TargetName);
-        if (temp.size()>0) {
-          vtkDebugMacro(<< "Adding (default) target " << this->TargetName.c_str() << " to list ");
-          this->PrimaryTarget.insert(temp);
-          c++;
-        }
-      }
-      // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
-//      this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
-//      bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
-    }
-    catch (std::exception &e) {
-      vtkErrorMacro("Could not set the target : exception " << e.what());
-      this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);; 
-      ok = false;
-    }
-    this->InfoGeneratedTime.Modified();
-  }
-
-  bool needToRegenerateTimeInfo = true;
-  if (needToRegenerateTimeInfo) {
-    // time steps of reports are in the report file
-    if (ok /*&& this->UpdateNumPieces==1*/) {
-      try {
-        if (this->OpenReportFile()) {
-          this->NumberOfTimeSteps = (this->stopTime-this->startTime)/this->timestep;
-          vtkDebugMacro(<< "Number of time steps is " << this->NumberOfTimeSteps)
-        }
-        else {
-          this->NumberOfTimeSteps = 0;
-        }
-      }
-      catch (std::exception &e) {
-    	  vtkErrorMacro("Exception caught during report file read " << e.what())
-          this->NumberOfTimeSteps = 0;
-      }
-    }
-    else {
-      this->NumberOfTimeSteps = 0;
-    }
-
-    if (this->NumberOfTimeSteps==0) {
-      //      vtkErrorMacro(<<"No time steps report data, may cause crash later : TODO fix this");
-    }
-    else {
-      this->TimeStepValues.assign(this->NumberOfTimeSteps, 0.0);
-      for (int i=0; i<this->NumberOfTimeSteps; ++i) {
-        this->TimeStepValues[i] = this->startTime + (i*this->timestep);
-      }
-    }
-
-    if (this->TimeStepValues.size()>0) {
-      outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
-        &this->TimeStepValues[0],
-        static_cast<int>(this->TimeStepValues.size()));
-      //    outInfo1->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
-      //      &this->TimeStepValues[0],
-      //      static_cast<int>(this->TimeStepValues.size()));
-      double timeRange[2] = { this->TimeStepValues.front(), this->TimeStepValues.back() };
-      if (this->TimeStepValues.size()>1)
-      {
-        this->TimeStepTolerance = 0.01*(this->TimeStepValues[1]-this->TimeStepValues[0]);
-      }
-      else
-      {
-        this->TimeStepTolerance = 1E-3;
-      }
-      outInfo0->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-    }
-    //    outInfo1->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-
-    this->FileOpenedTime.Modified();
-    result = 1;
-  }
-
-#ifdef PV_BBP_USE_ZOLTAN
-  if (this->Controller->GetNumberOfProcesses()>1 && this->ParallelRedistribution) {
-//    outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
-  }
-#endif
-
-  //
-  return result;
-}
-//----------------------------------------------------------------------------
-int vtkCircuitReader::OpenReportFile()
-{
-  std::string reportname = "";
-  std::string ideal = this->ReportName ? this->ReportName : "";
-  bbp::Reports_Specification &reports = this->Experiment.reports();
-  for (bbp::Reports_Specification::iterator ri=reports.begin(); ri!=reports.end(); ++ri) {
-    reportname = (*ri).label();
-    if (ideal==reportname) {
-      break;
-    }
-  }                                          
-  if (reports.size()==0) {
-    return 0;
-  }
-  bbp::Reports_Specification::iterator ri=reports.find(reportname);
-  this->ReportReader.reset(new bbp::CompartmentReportReader(*ri, this->Partitioned_target));
-
-
-//  this->ReportReader->getCellTarget();
-  //
-  this->startTime = (*ri).start_time();
-  this->stopTime  = (*ri).end_time();
-  this->timestep  = (*ri).timestep();
-
-  return 1;
-}
-//----------------------------------------------------------------------------
-// We know that our data contains only triangles, so this is safe
-//----------------------------------------------------------------------------
-vtkSmartPointer<vtkPolyData> UnstructuredGridToPolyData(vtkUnstructuredGrid *ug, vtkSmartPointer<vtkPolyData> pd) 
-{
-  if (!pd) pd = vtkSmartPointer<vtkPolyData>::New();
-  pd->SetPoints(ug->GetPoints());
-  pd->SetPolys(ug->GetCells());
-  pd->GetPointData()->ShallowCopy(ug->GetPointData());
-  //
-  return pd;
-}
-//----------------------------------------------------------------------------
-int vtkCircuitReader::RequestData(
+int vtkCircuitReaderMesh::RequestData(
   vtkInformation *request,
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
@@ -518,7 +171,7 @@ int vtkCircuitReader::RequestData(
   //
   this->ActualTimeStep = std::find_if(
     this->TimeStepValues.begin(), this->TimeStepValues.end(),
-    std::bind2nd( vtkCircuitReaderToleranceCheck( 
+    std::bind2nd( vtkCircuitReaderBase::TimeToleranceCheck(
     this->IntegerTimeStepValues ? 0.5 : this->TimeStepTolerance ), requestedTimeValue ))
     - this->TimeStepValues.begin();
   //
@@ -543,7 +196,6 @@ int vtkCircuitReader::RequestData(
     (MeshParamsModifiedTime>MeshGeneratedTime) ||
     (TargetsModifiedTime>MeshGeneratedTime ||
     (this->SelectedGIds && this->SelectedGIds->GetMTime()>MeshGeneratedTime));
-
   //
   if (NeedToRegenerateMesh && this->Microcircuit) {
     //
@@ -669,8 +321,6 @@ int vtkCircuitReader::RequestData(
       this->BoundsTranslator->InitWholeBounds();
       int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
       this->BoundsTranslator->SetWholeExtent(whole_extent);
-
-      //      this->CachedNeuronMesh = UnstructuredGridToPolyData(vtkUnstructuredGrid::SafeDownCast(this->MeshPartitionFilter->GetOutput()), this->CachedNeuronMesh);
       this->CachedNeuronMesh = vtkPolyData::SafeDownCast(this->MeshPartitionFilter->GetOutput());
       this->MeshPartitionFilter->SetInputData((vtkPolyData*)NULL);
       //      this->MeshPartitionFilter = NULL;
@@ -709,9 +359,6 @@ int vtkCircuitReader::RequestData(
     output0->ShallowCopy(this->CachedMorphologySkeleton);
   }
 
-  //
-  //  output1->ShallowCopy(this->CachedMorphologySkeleton);
-  //  
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {
     vtkDebugMacro(<< "Mesh Load and Redistribution : " << load_timer->GetElapsedTime() << " seconds");
@@ -728,7 +375,7 @@ int vtkCircuitReader::RequestData(
   return 1;
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
+void vtkCircuitReaderMesh::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {  
   bool do_nrm = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_NORMAL);
   bool do_sid = 1==this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
@@ -839,7 +486,7 @@ void vtkCircuitReader::AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *
   }
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
+void vtkCircuitReaderMesh::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC)
 {
   bool do_nid = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID)); 
   bool do_nix = BOOL(this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX));
@@ -908,7 +555,7 @@ void vtkCircuitReader::AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtk
   offsetN += i;
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::GenerateNeuronMesh(
+void vtkCircuitReaderMesh::GenerateNeuronMesh(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -1069,7 +716,7 @@ void vtkCircuitReader::GenerateNeuronMesh(
   this->CachedNeuronMesh->GetPointData()->ShallowCopy(pointdata);
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::GenerateMorphologySkeleton(
+void vtkCircuitReaderMesh::GenerateMorphologySkeleton(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -1192,7 +839,7 @@ void vtkCircuitReader::GenerateMorphologySkeleton(
   this->CachedMorphologySkeleton->GetPointData()->ShallowCopy(pointdata);
 }
 //-----------------------------------------------------------------------------
-void vtkCircuitReader::CreateReportScalars(
+void vtkCircuitReaderMesh::CreateReportScalars(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -1276,7 +923,7 @@ void vtkCircuitReader::CreateReportScalars(
   }
 }
 //-----------------------------------------------------------------------------
-vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
+vtkIdType vtkCircuitReaderMesh::AddReportScalarsToMorphologySkeleton(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
 {
   const bbp::Morphology  &morph = neuron->morphology();
   const size_t index = this->OffsetMapping[neuron->gid()];
@@ -1289,7 +936,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *ne
   
   const bbp::floatsPtr fbuffer = this->_currentFrame.getData< bbp::floatsPtr >();
   const float *buffer = fbuffer->data();
-  float somaVoltage = buffer[offsets[0]];
+//  float somaVoltage = buffer[offsets[0]];
   float rvoltage = this->RestingPotentialVoltage;
 
   // Finding the voltage value of the last compartment of the last axon section. 
@@ -1300,7 +947,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *ne
   const uint16_t lastAxon = (axon.size() == 0) || 
     this->ReportReader->getCompartmentCounts()[cell_index][axon.begin()->id()] == 0 ? axon.begin()->id() : morph.soma().id();
   //
-  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportReader->getCompartmentCounts()[cell_index][lastAxon]];
+//  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportReader->getCompartmentCounts()[cell_index][lastAxon]];
 
   vtkIdType i = 0;
   const bbp::Sections &sections = morph.sections();
@@ -1314,11 +961,11 @@ vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *ne
     //                    SECTION_DENDRITE,           //!< general or basal dendrite (near to soma)
     //                    SECTION_APICAL_DENDRITE,    //!< apical dendrite (far from soma)
     //                    SECTION_UNDEFINED
-    bbp::SectionType section_type = (*section).type();
+//    bbp::SectionType section_type = (*section).type();
 
     // if the segment has more than zero pieces, add the start point
     if (segments.begin()!=segments.end()) {
-      double      radius = segments.begin()->begin().diameter()/2.0; 
+//      double      radius = segments.begin()->begin().diameter()/2.0;
       //
       uint16_t compartments = this->ReportReader->getCompartmentCounts()[index][sectionId];
 
@@ -1370,7 +1017,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToMorphologySkeleton(bbp::Neuron *ne
 return 0;
 }
 //-----------------------------------------------------------------------------
-vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
+vtkIdType vtkCircuitReaderMesh::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN)
 {
   const bbp::Morphology *sdk_morph    = &neuron->morphology();
   const bbp::Mesh       *sdk_mesh     = &sdk_morph->mesh();
@@ -1397,7 +1044,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   
   const bbp::floatsPtr fbuffer = this->_currentFrame.getData< bbp::floatsPtr >();
   const float *buffer = fbuffer->data();
-  float somaVoltage = buffer[offsets[0]];
+//  float somaVoltage = buffer[offsets[0]];
   float rvoltage = this->RestingPotentialVoltage;
 
   // Finding the voltage value of the last compartment of the last axon section. 
@@ -1407,7 +1054,7 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
   const uint16_t lastAxon = (axon.size() == 0) || 
     this->ReportReader->getCompartmentCounts()[cell_index][axon.begin()->id()] == 0 ? axon.begin()->id() : sdk_morph->soma().id();
   //
-  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportReader->getCompartmentCounts()[cell_index][lastAxon]];
+//  float undefinedAxonVoltage = buffer[offsets[lastAxon] + this->ReportReader->getCompartmentCounts()[cell_index][lastAxon]];
 
   for (uint32_t i=0; i<vertexCount; ++i) {
     uint16_t     sectionId = section_ids[i];
@@ -1442,241 +1089,4 @@ vtkIdType vtkCircuitReader::AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vt
     voltages->SetValue(offsetN + i, rvoltage);
   }
   return offsetN + vertexCount;
-}
-//-----------------------------------------------------------------------------
-void vtkCircuitReader::BuildSIL()
-{
-  // Initialize the SIL, dump all previous information.
-  this->SILUpdateStamp++;
-  this->SIL->Initialize();
-
-  vtkSmartPointer<vtkVariantArray> childEdge = vtkSmartPointer<vtkVariantArray>::New();
-  childEdge->InsertNextValue(0);
-
-  vtkSmartPointer<vtkVariantArray> crossEdge = vtkSmartPointer<vtkVariantArray>::New();
-  crossEdge->InsertNextValue(0);
-
-  // CrossEdge is an edge linking hierarchies.
-  vtkSmartPointer<vtkUnsignedCharArray> crossEdgesArray = vtkSmartPointer<vtkUnsignedCharArray>::New();
-  crossEdgesArray->SetName("CrossEdges");
-  this->SIL->GetEdgeData()->AddArray(crossEdgesArray);
-
-  std::deque<std::string> names;
-  std::deque<vtkIdType> crossEdgeIds; // ids for edges between trees.
-  int cc;
-
-  // Now build the hierarchy.
-  vtkIdType rootId = this->SIL->AddVertex();
-  names.push_back("SIL");
-
-  // Add the Heirarchy subtree.
-  vtkIdType targetsRoot = this->SIL->AddChild(rootId, childEdge);
-  names.push_back("Targets");
-
-  // Get default targets for the microcircuit.
-  if (this->Microcircuit) {
-    // Get user targets for the microcircuit.
-    const bbp::Targets &user_targets = this->Experiment.user_targets();
-    for (bbp::Targets::const_iterator ti=user_targets.begin(); ti!=user_targets.end(); ++ti) {
-      std::string name = (*ti).name();
-      vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
-      names.push_back(name.c_str());
-      this->TargetsSelection->AddArray(name.c_str());
-    }
-
-    const bbp::Targets &default_targets = this->Experiment.targets();
-    for (bbp::Targets::const_iterator ti=default_targets.begin(); ti!=default_targets.end(); ++ti) {
-      std::string name = (*ti).name();
-      if (!this->TargetsSelection->ArrayExists(name.c_str())) {
-        vtkIdType childBlock = this->SIL->AddChild(targetsRoot, childEdge);
-        names.push_back(name.c_str());
-        this->TargetsSelection->AddArray(name.c_str());
-      }
-    }
-  }
-  this->TargetsSelection->DisableAllArrays();
-  TargetsModifiedTime.Modified();
-
-  // This array is used to assign names to nodes.
-  vtkSmartPointer<vtkStringArray> namesArray = vtkSmartPointer<vtkStringArray>::New();
-  namesArray->SetName("Names");
-  namesArray->SetNumberOfTuples(this->SIL->GetNumberOfVertices());
-  this->SIL->GetVertexData()->AddArray(namesArray);
-
-  std::deque<std::string>::iterator iter;
-  for (cc=0, iter = names.begin(); iter != names.end(); ++iter, ++cc)
-  {
-    const char *name = (*iter).c_str();
-    namesArray->SetValue(cc, name);
-  }
-}
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetFileName(char *filename)
-{
-  if (this->FileName == NULL && filename == NULL)
-  {
-    return;
-  }
-  if (this->FileName && filename && (!strcmp(this->FileName,filename)))
-  {
-    return;
-  }
-  delete [] this->FileName;
-  this->FileName = NULL;
-
-  if (filename)
-  {
-    this->FileName = vtksys::SystemTools::DuplicateString(filename);
-    this->SetFileModified();
-  }
-  this->Modified();
-}
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetDefaultTarget(char *target)
-{
-  if (this->DefaultTarget == NULL && target == NULL)
-  {
-    return;
-  }
-  if (this->DefaultTarget && target && (!strcmp(this->DefaultTarget,target)))
-  {
-    return;
-  }
-  delete [] this->DefaultTarget;
-  this->DefaultTarget = NULL;
-
-  if (target)
-  {
-    this->DefaultTarget = vtksys::SystemTools::DuplicateString(target);
-    this->TargetsModifiedTime.Modified();
-  }
-  this->Modified();
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetFileModified()
-{
-  this->FileModifiedTime.Modified();
-  this->Modified();
-}
-
-//-----------------------------------------------------------------------------
-vtkSmartPointer<vtkMutableDirectedGraph> vtkCircuitReader::GetSIL()
-{
-  return this->SIL;
-}
-
-//----------------------------------------------------------------------------
-int vtkCircuitReader::GetNumberOfPointArrays()
-{
-  return this->PointDataArraySelection->GetNumberOfArrays();
-}
-
-//----------------------------------------------------------------------------
-const char* vtkCircuitReader::GetPointArrayName(int index)
-{
-  return this->PointDataArraySelection->GetArrayName(index);
-}
-
-//----------------------------------------------------------------------------
-int vtkCircuitReader::GetPointArrayStatus(const char* name)
-{
-  return this->PointDataArraySelection->ArrayIsEnabled(name);
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetPointArrayStatus(const char* name, int status)
-{
-  if (status!=this->GetPointArrayStatus(name))
-  {
-    this->MeshParamsModifiedTime.Modified();
-    if (status)
-    {
-      this->PointDataArraySelection->EnableArray(name);
-    }
-    else
-    {
-      this->PointDataArraySelection->DisableArray(name);
-    }
-    this->Modified();
-  }
-}
-//----------------------------------------------------------------------------
-int vtkCircuitReader::GetNumberOfTargets()
-{
-  return this->TargetsSelection->GetNumberOfArrays();
-}
-
-//----------------------------------------------------------------------------
-const char* vtkCircuitReader::GetTargetsName(int index)
-{
-  return this->TargetsSelection->GetArrayName(index);
-}
-
-//----------------------------------------------------------------------------
-int vtkCircuitReader::GetTargetsStatus(const char* name)
-{
-  return this->TargetsSelection->ArrayIsEnabled(name);
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetTargetsStatus(const char* name, int status)
-{
-  if (this->TargetsSelection->GetArraySetting(name)!=status) {
-    this->TargetsModifiedTime.Modified();
-    this->Modified();
-    if (status) {
-      this->TargetsSelection->EnableArray(name);
-    }
-    else {
-      this->TargetsSelection->DisableArray(name);
-    }
-  }
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::DisableAllTargets()
-{
-  this->TargetsSelection->DisableAllArrays();
-  this->TargetsModifiedTime.Modified();
-  this->Modified();
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::PrintSelf(ostream& os, vtkIndent indent)
-{
-  this->Superclass::PrintSelf(os,indent);
-
-  os << indent << "File Name: " 
-    << (this->FileName ? this->FileName : "(none)") << "\n";  
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetSelectedGIds(vtkIdType N, int Ids[])
-{
-  vtkWarningMacro("SetSelectedIds - Type 1 " << N);
-  this->SelectedGIds = vtkUnsignedIntArray::New();
-  this->SelectedGIds->SetArray((unsigned int*)(Ids), N, 1);
-  this->SetSelectedGIds(this->SelectedGIds);
-}
-
-//----------------------------------------------------------------------------
-void vtkCircuitReader::SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0)
-{
-  vtkWarningMacro("SetSelectedIds - Type 2 " << N);
-  unsigned int *new_data = new unsigned int[N];
-  std::copy(temp0.operator int *(), temp0.operator int *()+N, new_data);
-  this->SelectedGIds = vtkUnsignedIntArray::New();
-  this->SelectedGIds->SetArray((unsigned int*)(new_data), N, 0);
-  this->SetSelectedGIds(this->SelectedGIds);
-  this->MeshParamsModifiedTime.Modified();
-  this->Modified();
-
-  std::cout << "We have Ids (2) " << N << std::endl;
-  std::cout << "vtkCircuitReader got Ids " << N << std::endl;
-  for (unsigned int i=0; i<std::min((vtkIdType)(5),N); ++i) {
-    std::cout << new_data[i] << ",";
-  }
-  std::cout << std::endl;
-
 }

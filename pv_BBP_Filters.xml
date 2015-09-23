@@ -1,6 +1,6 @@
 <ParaViewFilters>
   <Category name="BBP" menu_label="&amp;BBP">
-    <Proxy group="sources" name="CircuitReader" />
+    <Proxy group="sources" name="CircuitReaderMesh" />
     <Proxy group="filters" name="NeuronAlphaFunction" />
     <Proxy group="filters" name="ParticleTrails" />   
   </Category>

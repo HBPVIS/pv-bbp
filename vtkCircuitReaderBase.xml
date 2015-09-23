@@ -1,14 +1,14 @@
 <ServerManagerConfiguration>
  
-  <ProxyGroup name="sources">
+  <ProxyGroup name="bbp_custom">
 
-    <SourceProxy name="CircuitReader"
-                class="vtkCircuitReader"
-                label="BlueConfig circuit reader">
+    <SourceProxy name="CircuitReaderBase"
+                class="vtkCircuitReaderBase"
+                label="BlueConfig circuit reader (base)">
       <Documentation
         short_help="Read the BlueConfig file to obtain a circuit."
         long_help="Read the BlueConfig file to obtain a circuit.">
-        This reader constructs circuits by reading targets from a BLueConfig and generating the meshes for each morphology.
+        This reader constructs circuits by reading targets from a BlueConfig and generating the meshes for each morphology.
       </Documentation>
 
       <!-- cscs          default_values="/project/csvis/biddisco/bbpdata/bmc-benchmark/blueconfig" -->
@@ -67,28 +67,6 @@
       </IntVectorProperty>
 
       <IntVectorProperty
-         name="ExportNeuronMesh"
-         command="SetExportNeuronMesh"
-         number_of_elements="1"
-         default_values="1" >
-        <BooleanDomain name="bool"/>
-        <Documentation>
-          Generate the full neuron mesh (triangles)
-        </Documentation>
-      </IntVectorProperty>
-
-      <IntVectorProperty
-         name="ExportMorphologySkeleton"
-         command="SetExportMorphologySkeleton"
-         number_of_elements="1"
-         default_values="0" >
-        <BooleanDomain name="bool"/>
-        <Documentation>
-          Generate the morphology skeleton (lines)
-        </Documentation>
-      </IntVectorProperty>
-
-      <IntVectorProperty
          name="ParallelRedistribution"
          command="SetParallelRedistribution"
          number_of_elements="1"
@@ -96,16 +74,6 @@
         <BooleanDomain name="bool"/>
         <Documentation>
           When running in parallel, this option enables the redistribution of polygons (principally to enable sort last compositing with transparency)
-        </Documentation>
-      </IntVectorProperty>
-
-      <IntVectorProperty
-         name="MaximumNumberOfNeurons"
-         command="SetMaximumNumberOfNeurons"
-         number_of_elements="1"
-         default_values="1" >
-        <Documentation>
-          When nonzero, only a subset of neurons up to a count of N will be loaded to save time/memory
         </Documentation>
       </IntVectorProperty>
 
@@ -152,18 +120,19 @@
         </Documentation>
       </IntVectorProperty>
 
-<ProxyProperty
-  command="SetSelectedGIds"
-  name="SelectedGIds">
-  <ProxyGroupDomain name="group">
-    <Group name="data_arrays" />
-  </ProxyGroupDomain>
-</ProxyProperty>
+      <ProxyProperty
+        command="SetSelectedGIds"
+        name="SelectedGIds">
+        <ProxyGroupDomain name="group">
+          <Group name="data_arrays" />
+        </ProxyGroupDomain>
+      </ProxyProperty>
 
       <Hints>
         <Property name="FileName" show="1"/>
         <Property name="DefaultTarget" show="1"/>
         <Property name="TargetsStatus" show="0"/>
+        <Property name="SelectedGIds" show="0"/>
       </Hints>
     </SourceProxy>
 

@@ -1,5 +1,5 @@
 <ParaViewReaders>
-  <Reader name="CircuitReader"
+  <Reader name="CircuitReaderMesh"
           extensions="BlueConfig"
           file_description="Blue Brain Circuit (BlueConfig)">
   </Reader>

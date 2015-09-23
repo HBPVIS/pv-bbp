@@ -1,42 +1,47 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCircuitReader.cxx,v $
+  Module:    $RCSfile: vtkCircuitReaderBase.cxx,v $
 
   Copyright (c) Sebastien Lasserre, Blue Brain Project
   All rights reserved.
 
 =========================================================================*/
 
-#ifndef __vtkCircuitReader_h
-#define __vtkCircuitReader_h 
+#ifndef __vtkCircuitReaderBase_h
+#define __vtkCircuitReaderBase_h 
  
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSmartPointer.h"
 #include "vtkUnsignedIntArray.h"
+
+// for (custom) client server arg decode define this
 #define VTK_WRAPPING_CXX
 #include "vtkClientServerStream.h"
+
+// std::
 #include <string>
 #include <vector>
-
 
 class vtkDataArraySelection;
 class vtkMultiProcessController;
 class vtkFloatArray;
 class vtkMutableDirectedGraph;
 class vtkMeshPartitionFilter;
+class vtkParticlePartitionFilter;
 class vtkUnstructuredGrid;
 class vtkBoundsExtentTranslator;
-// BBP-SDK
 
-//#include "BBP/BBP.h"
+// BBP-SDK
 #include "BBP/Targets/Target.h"
 #include "BBP/Targets/Targets.h"
 #include "BBP/Datasets/compartmentReportFrame.h"
 #include "BBP/Readers/compartmentReportReader.h"
 #include "BBP/Experiment.h"
 
-//
+//----------------------------------------------------------------------------
+// custom set/get macro to replace the vtk ones
+//----------------------------------------------------------------------------
 #undef vtkGetMacro
 #undef vtkSetMacro
 //
@@ -55,12 +60,23 @@ virtual void Set##name (type _arg) \
     } \
   }
 //
-class VTK_EXPORT vtkCircuitReader : public vtkPolyDataAlgorithm 
+//----------------------------------------------------------------------------
+#define BBP_ARRAY_NAME_NORMAL           "Normal"
+#define BBP_ARRAY_NAME_NEURONGID        "Neuron Gid"
+#define BBP_ARRAY_NAME_NEURONINDEX      "Neuron Index"
+#define BBP_ARRAY_NAME_SECTION_ID       "Section Id"
+#define BBP_ARRAY_NAME_SECTION_TYPE     "Section Type"
+#define BBP_ARRAY_NAME_DENDRITE_RADIUS  "Dendrite Radius"
+#define BBP_ARRAY_NAME_VOLTAGE          "Voltage"
+#define BBP_ARRAY_NAME_RTNEURON_OPACITY "RTNeuron Opacity"
+//----------------------------------------------------------------------------
+
+class VTK_EXPORT vtkCircuitReaderBase : public vtkPolyDataAlgorithm 
 {
 public:
-  static vtkCircuitReader *New();
-  //vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
-  vtkTypeMacro(vtkCircuitReader,vtkPolyDataAlgorithm);
+  static vtkCircuitReaderBase *New();
+  //vtkTypeMacro(vtkCircuitReaderBase,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkCircuitReaderBase, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -78,38 +94,9 @@ public:
   vtkSetStringMacro(ReportName);
   vtkGetStringMacro(ReportName);
 
-  void SetExportMorphologySkeleton(int n) {
-    if (this->ExportMorphologySkeleton != n) { 
-      this->ExportMorphologySkeleton = n; 
-      this->MeshParamsModifiedTime.Modified();
-      this->Modified(); 
-    } 
-  }
-  vtkGetMacro(ExportMorphologySkeleton,int);
-  vtkBooleanMacro(ExportMorphologySkeleton,int);
-
-  void SetExportNeuronMesh(int n) {
-    if (this->ExportNeuronMesh != n) { 
-      this->ExportNeuronMesh = n; 
-      this->MeshParamsModifiedTime.Modified();
-      this->Modified(); 
-    } 
-  }
-  vtkGetMacro(ExportNeuronMesh,int);
-  vtkBooleanMacro(ExportNeuronMesh,int);
-
   vtkSetMacro(ParallelRedistribution,int);
   vtkGetMacro(ParallelRedistribution,int);
   vtkBooleanMacro(ParallelRedistribution,int);
-
-  void SetMaximumNumberOfNeurons(int n) {
-    if (this->MaximumNumberOfNeurons != n) { 
-      this->MaximumNumberOfNeurons = n; 
-      this->MeshParamsModifiedTime.Modified();
-      this->Modified(); 
-    } 
-  }
-  vtkGetMacro(MaximumNumberOfNeurons,int);
 
   vtkSetMacro(DeleteExperiment,int);
   vtkGetMacro(DeleteExperiment,int);
@@ -126,6 +113,10 @@ public:
   vtkGetMacro(IntegerTimeStepValues,int);
   vtkBooleanMacro(IntegerTimeStepValues,int);
 
+  // Description:
+  // Get the number of timesteps in the file
+  vtkGetMacro(NumberOfTimeSteps,int);
+
   vtkSetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
   vtkGetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
 
@@ -133,10 +124,6 @@ public:
 //BTX
   void SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0);
 //ETX
-
-  // Description:
-  // Get the number of timesteps in the file
-  vtkGetMacro(NumberOfTimeSteps,int);
 
   // Description:
   // Get the number of point or cell arrays available in the input.
@@ -175,50 +162,35 @@ public:
 
   vtkSmartPointer<vtkMutableDirectedGraph> GetSIL();
 
-  // Description:
-  // hyperpolarized (voltage near -85 mV)
-  vtkSetMacro(HyperPolarizedVoltage,double);
-  vtkGetMacro(HyperPolarizedVoltage,double);
-
-  // Description:
-  // depolarized (voltage near -50 mV)
-  vtkSetMacro(DePolarizedVoltage,double);
-  vtkGetMacro(DePolarizedVoltage,double);
-
-  // Description:
-  // resting potential (voltage near -65 mV)
-  vtkSetMacro(RestingPotentialVoltage,double);
-  vtkGetMacro(RestingPotentialVoltage,double);
-  
 protected:
-   vtkCircuitReader();
-  ~vtkCircuitReader();
+   vtkCircuitReaderBase();
+  ~vtkCircuitReaderBase();
 
   int   FillOutputPortInformation( int port, vtkInformation* info );
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  
+
   int RequestTimeInformation(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **vtkNotUsed(inputVector),
     vtkInformationVector *outputVector);
-
-  // top level functions which generate meshes/scalars for the whole data
-  void GenerateNeuronMesh(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  void GenerateMorphologySkeleton(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  void CreateReportScalars(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-
-  // generate mesh/scalars on a per neuron basis
-  void      AddOneNeuronToMesh(bbp::Neuron *neuron, const bbp::Mesh *mesh, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
-  void      AddOneNeuronToMorphologySkeleton(bbp::Neuron *neuron, vtkIdType Ncount, vtkPoints *points, vtkIdType *cells, vtkFieldData *field, vtkIdType &offsetN, vtkIdType &offsetC);
-  vtkIdType AddReportScalarsToMorphologySkeleton(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
-  vtkIdType AddReportScalarsToNeuronMesh(bbp::Neuron *neuron, vtkFloatArray *voltages, vtkIdType offsetN);
 
   // internally used to open report file
   int       OpenReportFile();
   //
   //
   //
+  class TimeToleranceCheck: public std::binary_function<double, double, bool>
+  {
+  public:
+    TimeToleranceCheck(double tol) { this->tolerance = tol; }
+    double tolerance;
+    //
+    result_type operator()(first_argument_type a, second_argument_type b) const
+    {
+      bool result = (fabs(a-b)<=(this->tolerance));
+      return (result_type)result;
+    }
+  };
 
   char         *FileName;
   char         *DefaultTarget;
@@ -271,26 +243,18 @@ protected:
   vtkSmartPointer<vtkMutableDirectedGraph> SIL;
   void BuildSIL();
   int SILUpdateStamp;
-  int ExportMorphologySkeleton;
-  int ExportNeuronMesh;
   int ParallelRedistribution;
-  int MaximumNumberOfNeurons;
-
-  double HyperPolarizedVoltage;
-  double DePolarizedVoltage;
-  double RestingPotentialVoltage;
 
   vtkIdType NumberOfPointsBeforePartitioning;
 
-  vtkSmartPointer<vtkPolyData>               CachedNeuronMesh;
-  vtkSmartPointer<vtkPolyData>               CachedMorphologySkeleton;
 #ifdef PV_BBP_USE_ZOLTAN
-  vtkSmartPointer<vtkMeshPartitionFilter>    MeshPartitionFilter;
-  vtkSmartPointer<vtkBoundsExtentTranslator> BoundsTranslator;
+  vtkSmartPointer<vtkMeshPartitionFilter>     MeshPartitionFilter;
+  vtkSmartPointer<vtkParticlePartitionFilter> ParticlePartitionFilter;
+  vtkSmartPointer<vtkBoundsExtentTranslator>  BoundsTranslator;
 #endif
 private:
-  vtkCircuitReader(const vtkCircuitReader&); 
-  void operator=(const vtkCircuitReader&); 
+  vtkCircuitReaderBase(const vtkCircuitReaderBase&); 
+  void operator=(const vtkCircuitReaderBase&); 
 };
  
 #endif

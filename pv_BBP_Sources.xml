@@ -1,4 +1,4 @@
 <ParaViewSources>
-  <Source name="CircuitReader" />
+  <Source name="CircuitReaderMesh" />
 </ParaViewSources>
 
