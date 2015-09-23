@@ -538,8 +538,12 @@ int vtkCircuitReader::RequestData(
   vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();        
   load_timer->StartTimer();
 
-  bool NeedToRegenerateMesh = (FileModifiedTime>MeshGeneratedTime) || (MeshParamsModifiedTime>MeshGeneratedTime)
-    || (TargetsModifiedTime>MeshGeneratedTime || this->SelectedGIds->GetMTime()>MeshGeneratedTime);
+  bool NeedToRegenerateMesh =
+    (FileModifiedTime>MeshGeneratedTime) ||
+    (MeshParamsModifiedTime>MeshGeneratedTime) ||
+    (TargetsModifiedTime>MeshGeneratedTime ||
+    (this->SelectedGIds && this->SelectedGIds->GetMTime()>MeshGeneratedTime));
+
   //
   if (NeedToRegenerateMesh && this->Microcircuit) {
     //
