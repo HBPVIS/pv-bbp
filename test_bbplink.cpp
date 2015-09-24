@@ -73,13 +73,13 @@
 //#include "BBP/Microcircuit/Datasets/Morphology_Dataset.h"
 
 // Header of this Reader
-#include "vtkCircuitReader.h"
+#include "vtkCircuitReaderMesh.h"
 //
 
 
 
 int main(int argc, char **argv) {
-  vtkSmartPointer<vtkCircuitReader> reader = vtkSmartPointer<vtkCircuitReader>::New();
+  vtkSmartPointer<vtkCircuitReaderMesh> reader = vtkSmartPointer<vtkCircuitReaderMesh>::New();
 }
 
 
