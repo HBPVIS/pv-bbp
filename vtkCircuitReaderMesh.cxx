@@ -698,6 +698,9 @@ void vtkCircuitReaderMesh::GenerateNeuronMesh(
 #endif
       this->AddOneNeuronToMesh(&*neuron, &*mesh, Ncount, points, cells, pointdata, offsetN, offsetC);
     }
+    if (this->DeleteExperiment) {
+      neuron->clear();
+    }
   }
 //  vtkDebugMacro(<<"Triangles read " << offsetC);
   vtkIdType GlobalTotalTriangles = offsetC;

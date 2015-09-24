@@ -181,15 +181,6 @@ int vtkCircuitReaderSoma::RequestData(
   //
   if (NeedToRegenerateMesh && this->Microcircuit) {
     //
-    // Load neurons for this target so we can partition them
-    try {
-//      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
-      this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES); // | bbp::MESHES);
-    }
-    catch (std::exception &e) {
-      vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
-    }
-    //
     this->GenerateSomaPoints(request, inputVector, outputVector);
 
     this->NumberOfPointsBeforePartitioning = this->CachedNeuronSoma->GetNumberOfPoints();
@@ -268,9 +259,6 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   // get the info objects
   vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
 
-  // get the outputs
-  vtkPolyData *output0 = vtkPolyData::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
-
   // VTK arrays 
   vtkSmartPointer<vtkPoints>                    points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray>                  verts = vtkSmartPointer<vtkCellArray>::New();
@@ -281,6 +269,14 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   vtkSmartPointer<vtkIntArray>                neuronId;
   vtkSmartPointer<vtkIntArray>                neuronIx;
 
+  // Load just neurons for this target so we can partition them
+  try {
+    this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
+  }
+  catch (std::exception &e) {
+    vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
+  }
+  //
   bbp::Neurons &neurons = this->Microcircuit->neurons();
   //
   int WholeExtent[6] = { 0, static_cast<int>(neurons.size()), 0, 0, 0, 0 };
@@ -293,20 +289,19 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
 
-  // start reading neurons from the N'th one for this process
-  bbp::Neurons::iterator neuron = neurons.begin();
-  std::advance(neuron, PartitionExtents[0]);
-
   //
   // reserve space for coordinates
   //
   vtkIdType maxPoints = PartitionExtents[1]-PartitionExtents[0];
   vtkIdType maxCells  = maxPoints;
-  //
   points->GetData()->Resize(maxPoints);
   points->SetNumberOfPoints(maxPoints);
   //
-  // reserve space for each scalar/vector field
+  // reserve space for cells
+  //
+  vtkIdType *cells = verts->WritePointer(maxCells, 2*(maxCells));
+  //
+  // reserve space for each scalar/vector fields
   //
   bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
   bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
@@ -353,33 +348,49 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
     dendriteRadius->SetNumberOfTuples(maxPoints);
     pointdata->AddArray(dendriteRadius);
   }
-  //
-  // reserve space for cells
-  //
-  vtkIdType *cells = verts->WritePointer(maxCells, 2*(maxCells));
 
   //
-  // no need to add section types etc, but other filters might want them
+  // create a new target based on our subrange of neurons, clear any contests first.
   //
-  bbp::SectionType section_type = SECTION_SOMA;
+  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
+  
+  // start reading neurons from the N'th one for this process
+  bbp::Neurons::iterator neuron_start = neurons.begin();
+  std::advance(neuron_start, PartitionExtents[0]);
+  //
+  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++, neuron_start++) {
+    this->Partitioned_target.insert(neuron_start->gid());
+  }
+
+  // Load neurons for the target so we can partition them
+  // we need morphologies to get radius of soma etc
+  try {
+    this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES);
+  }
+  catch (std::exception &e) {
+    vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
+  }
 
   //
-  // loop over neurons
+  // loop over partitioned neurons
   //
+  bbp::Neurons::iterator neuron = this->Microcircuit->neurons().begin();
   int index = 0;
-  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++,neuron++,index++) {
-    this->Partitioned_target.insert(neuron->gid());
+  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++, neuron++, index++) {
+
     double     radius = neuron->soma().mean_radius();
     Vector3f newPoint = neuron->soma().position();
     //
     points->SetPoint(index, newPoint);
-    if (do_sid) sectionId->SetValue(index, 0);
-    if (do_sty) sectionType->SetValue(index, section_type);
+    if (do_sid) sectionId->SetValue(index, neuron->sections().begin()->id());
+    if (do_sty) sectionType->SetValue(index, neuron->sections().begin()->type());
     if (do_ddr) dendriteRadius->SetValue(index, radius);
     if (do_nid) neuronId->SetValue(index, neuron->gid());
     if (do_nix) neuronIx->SetValue(index, index + PartitionExtents[0]);
+
     cells[index*2]   = 1;
-    cells[index*2+1] = i;
+    cells[index*2+1] = index;
+    neuron->clear();
   }
   //
   this->CachedNeuronSoma->SetPoints(points);
