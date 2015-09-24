@@ -75,8 +75,31 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 endif()
 
 # --------------------------------------------------------------
+# setup paths to 'default' data
+# --------------------------------------------------------------
+site_name(MACHINE)
+if (MACHINE MATCHES "carona")
+  set(PV_BBP_DEFAULT_DATA "/Users/biddisco/data/bbp/egpgv/centralV.cfg")
+  set(PV_BBP_DEFAULT_TARGET "5K")
+elseif (MACHINE MATCHES "bbpviz")
+  set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
+  set(PV_BBP_DEFAULT_TARGET "demo")
+elseif (MACHINE MATCHES "crusca")
+  set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
+  set(PV_BBP_DEFAULT_TARGET "1K")
+else ()
+endif()
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderBase.xml.in 
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkCircuitReaderBase.xml 
+  @ONLY
+)
+
+# --------------------------------------------------------------
 # Build main plugin
 # --------------------------------------------------------------
+
 # --------------------------------------------------
 # Plugin config
 # --------------------------------------------------
@@ -185,10 +208,9 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
-    ${XML_PATH}/vtkCircuitReaderBase.xml
+    ${CMAKE_CURRENT_BINARY_DIR}/vtkCircuitReaderBase.xml
     ${XML_PATH}/vtkCircuitReaderMesh.xml
     ${XML_PATH}/vtkCircuitReaderSoma.xml
-#    ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
@@ -196,7 +218,6 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderBase.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderMesh.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderSoma.cxx
-#    ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
 
@@ -210,11 +231,6 @@ ADD_PARAVIEW_PLUGIN(
     ${BBP_IFACE_SRCS}
     ${BBP_MOC_SRCS}
     ${BBP_UI_SOURCES}
-
-#  GUI_RESOURCE_FILES
-#    ${XML_PATH}/pv_BBP_Readers.xml
-#    ${XML_PATH}/pv_BBP_Sources.xml
-#    ${XML_PATH}/pv_BBP_Filters.xml
 )
 
 if(ADD_CXX)
