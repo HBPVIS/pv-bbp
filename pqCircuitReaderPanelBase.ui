@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>vtkCircuitReaderPanel</class>
- <widget class="QWidget" name="vtkCircuitReaderPanel">
+ <class>vtkCircuitReaderPanelBase</class>
+ <widget class="QWidget" name="vtkCircuitReaderPanelBase">
   <property name="geometry">
    <rect>
     <x>0</x>

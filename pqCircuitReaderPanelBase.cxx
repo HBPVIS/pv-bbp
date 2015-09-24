@@ -1,7 +1,7 @@
 /*=========================================================================
 
    Program: ParaView
-   Module:    $RCSfile: pqCircuitReaderPanel.cxx,v $
+   Module:    $RCSfile: pqCircuitReaderPanelBase.cxx,v $
 
    Copyright (c) 2005-2008 Sandia Corporation, Kitware Inc.
    All rights reserved.
@@ -29,8 +29,8 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-#include "pqCircuitReaderPanel.h"
-#include "ui_pqCircuitReaderPanel.h"
+#include "pqCircuitReaderPanelBase.h"
+#include "ui_pqCircuitReaderPanelBase.h"
 
 // Qt includes
 #include <QAction>
@@ -76,10 +76,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pqTreeViewSelectionHelper.h"
 #include "pqTreeView.h"
 //----------------------------------------------------------------------------
-class pqCircuitReaderPanel::pqUI : public QObject, public Ui::vtkCircuitReaderPanel 
+class pqCircuitReaderPanelBase::pqUI : public QObject, public Ui::vtkCircuitReaderPanelBase
 {
 public:
-  pqUI(pqCircuitReaderPanel* p) : QObject(p) 
+  pqUI(pqCircuitReaderPanelBase* p) : QObject(p) 
    {
    this->VTKConnect = vtkSmartPointer<vtkEventQtSlotConnect>::New();
    this->SILUpdateStamp = -1;
@@ -92,7 +92,7 @@ public:
   int SILUpdateStamp;
 };
 //----------------------------------------------------------------------------
-pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
+pqCircuitReaderPanelBase::pqCircuitReaderPanelBase(pqProxy* object_proxy, QWidget* p) :
   Superclass(object_proxy, p)
 {
   this->UI = new pqUI(this);
@@ -180,11 +180,11 @@ pqCircuitReaderPanel::pqCircuitReaderPanel(pqProxy* object_proxy, QWidget* p) :
     }
 }
 //----------------------------------------------------------------------------
-pqCircuitReaderPanel::~pqCircuitReaderPanel()
+pqCircuitReaderPanelBase::~pqCircuitReaderPanelBase()
 {
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::updateSIL()
+void pqCircuitReaderPanelBase::updateSIL()
 {
   vtkSMProxy* reader = this->referenceProxy()->getProxy();
   reader->UpdatePropertyInformation(reader->GetProperty("SILUpdateStamp"));
@@ -202,7 +202,7 @@ void pqCircuitReaderPanel::updateSIL()
 }
 
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::addSelectionsToTreeWidget(const QString& prop, QTreeWidget* tree)
+void pqCircuitReaderPanelBase::addSelectionsToTreeWidget(const QString& prop, QTreeWidget* tree)
 {
   vtkSMProperty* SMProperty = this->proxy()->GetProperty(prop.toLatin1().data());
   QList<QVariant> SMPropertyDomain;
@@ -215,7 +215,7 @@ void pqCircuitReaderPanel::addSelectionsToTreeWidget(const QString& prop, QTreeW
     }
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::addSelectionToTreeWidget(const QString& name,
+void pqCircuitReaderPanelBase::addSelectionToTreeWidget(const QString& name,
                                                const QString& realName,
                                                QTreeWidget* tree,
                                                const QString& prop,
@@ -241,7 +241,7 @@ void pqCircuitReaderPanel::addSelectionToTreeWidget(const QString& name,
   this->UI->TreeItemToPropMap[item] = prop;
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::linkServerManagerProperties()
+void pqCircuitReaderPanelBase::linkServerManagerProperties()
 {
   this->propertyManager()->registerLink(
     this->UI->Targets->model(), "values", SIGNAL(valuesChanged()),
@@ -264,7 +264,7 @@ void pqCircuitReaderPanel::linkServerManagerProperties()
   }
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const QModelIndex &previous)
+void pqCircuitReaderPanelBase::targetItemChanged(const QModelIndex &current, const QModelIndex &previous)
 {
   // a child leaf is a dataset, but we want the node name to fetch dimension information
   // so go up one if the user selected a leaf
@@ -277,7 +277,7 @@ void pqCircuitReaderPanel::targetItemChanged(const QModelIndex &current, const Q
   //
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::refreshFileInfo(const QString &newname)
+void pqCircuitReaderPanelBase::refreshFileInfo(const QString &newname)
 {
   vtkSMSourceProxy* reader = vtkSMSourceProxy::SafeDownCast(this->referenceProxy()->getProxy());
   pqSMAdaptor::setElementProperty(
@@ -286,7 +286,7 @@ void pqCircuitReaderPanel::refreshFileInfo(const QString &newname)
   reader->UpdatePipelineInformation();
 }
 //----------------------------------------------------------------------------
-void pqCircuitReaderPanel::refreshFileInfo()
+void pqCircuitReaderPanelBase::refreshFileInfo()
 {
 //  emit this->preaccept();
   vtkSMSourceProxy* reader = vtkSMSourceProxy::SafeDownCast(this->referenceProxy()->getProxy());

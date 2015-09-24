@@ -123,12 +123,14 @@ IF(PARAVIEW_BUILD_QT_GUI)
     
       QT5_WRAP_CPP(
         BBP_MOC_SRCS 
-          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelBase.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelMesh.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelSoma.h
       )
     
       QT5_WRAP_UI(
         BBP_UI_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelBase.ui
       )
       
     else ()
@@ -136,12 +138,14 @@ IF(PARAVIEW_BUILD_QT_GUI)
     
       QT4_WRAP_CPP(
         BBP_MOC_SRCS 
-          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
-      )
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelBase.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelMesh.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelSoma.h
+       )
     
       QT4_WRAP_UI(
         BBP_UI_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelBase.ui
       )
     endif ()
 
@@ -149,13 +153,23 @@ IF(PARAVIEW_BUILD_QT_GUI)
       BBP_IFACE 
       BBP_IFACE_SRCS 
     CLASS_NAME 
-      pqCircuitReaderPanel
+      pqCircuitReaderPanelMesh
     XML_NAME 
-      CircuitReaderBase
+      CircuitReaderMesh
     XML_GROUP 
       sources
   )
 
+  ADD_PARAVIEW_OBJECT_PANEL(
+      BBP_IFACE 
+      BBP_IFACE_SRCS 
+    CLASS_NAME 
+      pqCircuitReaderPanelSoma
+    XML_NAME 
+      CircuitReaderSoma
+    XML_GROUP 
+      sources
+  )
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
@@ -190,15 +204,17 @@ ADD_PARAVIEW_PLUGIN(
     ${BBP_IFACE}
 
   GUI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelBase.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelMesh.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanelSoma.cxx
     ${BBP_IFACE_SRCS}
     ${BBP_MOC_SRCS}
     ${BBP_UI_SOURCES}
 
-  GUI_RESOURCE_FILES
-    ${XML_PATH}/pv_BBP_Readers.xml
-    ${XML_PATH}/pv_BBP_Sources.xml
-    ${XML_PATH}/pv_BBP_Filters.xml
+#  GUI_RESOURCE_FILES
+#    ${XML_PATH}/pv_BBP_Readers.xml
+#    ${XML_PATH}/pv_BBP_Sources.xml
+#    ${XML_PATH}/pv_BBP_Filters.xml
 )
 
 if(ADD_CXX)

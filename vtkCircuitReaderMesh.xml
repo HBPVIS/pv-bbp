@@ -52,7 +52,9 @@
         </Documentation>
       </IntVectorProperty>
       <Hints>
-        <ShowInMenu category="BBP" />
+        <Property name="DeleteExperiment" show="1"/>
+        <Property name="SelectedGIds" show="0"/>
+<!--        <ShowInMenu category="BBP" /> -->
       </Hints>
 
     </SourceProxy>

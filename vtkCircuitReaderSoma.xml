@@ -21,7 +21,9 @@
 <!-- /project/csvis/biddisco/bbpdata/egpgv/centralV.cfg" -->
 
       <Hints>
-        <ShowInMenu category="BBP" />
+        <Property name="DeleteExperiment" show="0"/>
+        <Property name="SelectedGIds" show="0"/>
+<!--        <ShowInMenu category="BBP" /> -->
       </Hints>
     </SourceProxy>
 
