@@ -125,6 +125,7 @@ vtkStandardNewMacro(vtkCircuitReaderSoma);
 vtkCircuitReaderSoma::vtkCircuitReaderSoma() : vtkCircuitReaderBase()
 {
   this->CachedNeuronSoma = vtkSmartPointer<vtkPolyData>::New();
+  this->IgnoreTime = 1;
 }
 //----------------------------------------------------------------------------
 vtkCircuitReaderSoma::~vtkCircuitReaderSoma()

@@ -211,6 +211,7 @@ protected:
   int           UpdateNumPieces;
   int           IntegerTimeStepValues;
   int           DeleteExperiment;
+  int           IgnoreTime;
 
   // this is the selectiobn array we will get from zeq
   vtkUnsignedIntArray *SelectedGIds;

@@ -147,6 +147,7 @@ vtkCircuitReaderBase::vtkCircuitReaderBase() :
   this->IntegerTimeStepValues           = 0;
   this->ParallelRedistribution          = 1;
   this->DeleteExperiment                = 1;
+  this->IgnoreTime                      = 0;
   //
   this->PointDataArraySelection         = vtkDataArraySelection::New();
   this->TargetsSelection                = vtkDataArraySelection::New();
@@ -339,9 +340,6 @@ int vtkCircuitReaderBase::RequestInformation(
           c++;
         }
       }
-      // Don't load meshes yet, we'll do that once we've decided which neurons this node will generate
-//      this->Microcircuit->load(this->PrimaryTarget, 0); // bbp::NEURONS);
-//      bbp::Cell_Target cellTarget = this->PrimaryTarget.cell_target();
     }
     catch (std::exception &e) {
       vtkErrorMacro("Could not set the target : exception " << e.what());
@@ -351,7 +349,7 @@ int vtkCircuitReaderBase::RequestInformation(
     this->InfoGeneratedTime.Modified();
   }
 
-  bool needToRegenerateTimeInfo = true;
+  bool needToRegenerateTimeInfo = (this->IgnoreTime==0);
   if (needToRegenerateTimeInfo) {
     // time steps of reports are in the report file
     if (ok /*&& this->UpdateNumPieces==1*/) {
