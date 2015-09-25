@@ -272,8 +272,8 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   // Load just neurons for this target so we can partition them
   try {
     if (this->Microcircuit->neurons().size()==0) {
-//      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
-      this->Microcircuit->load(bbp::Target("Empty", bbp::TARGET_CELL), bbp::NEURONS);
+      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
+//      this->Microcircuit->load(bbp::Target("Empty", bbp::TARGET_CELL), bbp::NEURONS);
     }
   }
   catch (std::exception &e) {
@@ -440,6 +440,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   this->CachedNeuronSoma->SetPoints(points);
   this->CachedNeuronSoma->SetVerts(verts);
   this->CachedNeuronSoma->GetPointData()->ShallowCopy(pointdata);
+  vtkDebugMacro("Completed GenerateSomaPoints");
 }
 //-----------------------------------------------------------------------------
 
