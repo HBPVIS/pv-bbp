@@ -196,7 +196,7 @@ int vtkCircuitReaderSoma::RequestData(
       this->ParticlePartitionFilter->SetInputDisposable(1);
       // for animation over time, keep the map of point send/receive
       // @TODO : Only save this if voltage reports are being loaded
-      this->ParticlePartitionFilter->SetKeepInversePointLists(1);
+      this->ParticlePartitionFilter->SetKeepInversePointLists(0);
 
       // release our reference count for now
       this->CachedNeuronSoma = NULL;
@@ -276,6 +276,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   catch (std::exception &e) {
     vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
   }
+
   //
   bbp::Neurons &neurons = this->Microcircuit->neurons();
   //
@@ -288,6 +289,41 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   extTran->SetWholeExtent(WholeExtent);
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
+
+  std::srand(12345);
+  std::vector<uint32_t> shufflevector;
+
+  // if the user has passed a GId array, we should use them directly
+  if (this->SelectedGIds!=NULL) {
+    unsigned int *raw_data = this->SelectedGIds->GetPointer(0);
+    shufflevector.assign(raw_data, raw_data+this->SelectedGIds->GetNumberOfTuples());
+    std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+  }
+  else {
+    // neurons are ordered in layers and higher layers have bigger cell counts
+    // so read them using a random shuffle to avoid one process getting all the 
+    // small ones and another the big ones. We can use an operator[]
+    // to get neurons from the container because it uses a map, with the GID as key
+    // so build a list of all keys and then shuffle that and let each process use
+    // a chunk of the list
+    // NB. we want all processes to have the same sequence, seed fixed num
+    shufflevector.reserve(neurons.size());
+    //
+    for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
+      shufflevector.push_back(neuron->gid());
+    }
+    std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+    //  std::ostream_iterator<vtkIdType> out_it(cout,", ");
+    //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
+  }
+  // create a new target based on our subrange of neurons, clear any contests first.
+  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
+
+  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
+    uint32_t gid = shufflevector[i];
+    Neurons::iterator ni = neurons.find( gid );
+    this->Partitioned_target.insert(gid);
+  }
 
   //
   // reserve space for coordinates
@@ -349,19 +385,6 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
     pointdata->AddArray(dendriteRadius);
   }
 
-  //
-  // create a new target based on our subrange of neurons, clear any contests first.
-  //
-  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
-  
-  // start reading neurons from the N'th one for this process
-  bbp::Neurons::iterator neuron_start = neurons.begin();
-  std::advance(neuron_start, PartitionExtents[0]);
-  //
-  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++, neuron_start++) {
-    this->Partitioned_target.insert(neuron_start->gid());
-  }
-
   // Load neurons for the target so we can partition them
   // we need morphologies to get radius of soma etc
   try {
@@ -374,9 +397,9 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   //
   // loop over partitioned neurons
   //
-  bbp::Neurons::iterator neuron = this->Microcircuit->neurons().begin();
   int index = 0;
-  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++, neuron++, index++) {
+  for (bbp::Target::cell_iterator gid=this->Partitioned_target.cell_begin(); gid!=this->Partitioned_target.cell_end(); ++gid, ++index) {
+    Neurons::iterator neuron = neurons.find( *gid );
 
     double     radius = neuron->soma().mean_radius();
     Vector3f newPoint = neuron->soma().position();
