@@ -66,12 +66,17 @@ protected:
    vtkCircuitReaderSoma();
   ~vtkCircuitReaderSoma();
 
+  // store infor about somas
+  typedef std::tuple<double, vmml::Vector3f, int, unsigned char> soma_info;
+  typedef std::map<uint32_t, soma_info> soma_map_type;
+
   int  RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   // top level functions which generate meshes/scalars for the whole data
   void GenerateSomaPoints(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   vtkSmartPointer<vtkPolyData>  CachedNeuronSoma;
+  soma_map_type                 soma_map;
 
 private:
   vtkCircuitReaderSoma(const vtkCircuitReaderSoma&); 

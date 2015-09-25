@@ -271,7 +271,10 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
 
   // Load just neurons for this target so we can partition them
   try {
-    this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
+    if (this->Microcircuit->neurons().size()==0) {
+//      this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
+      this->Microcircuit->load(bbp::Target("Empty", bbp::TARGET_CELL), bbp::NEURONS);
+    }
   }
   catch (std::exception &e) {
     vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
@@ -281,7 +284,9 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   bbp::Neurons &neurons = this->Microcircuit->neurons();
   //
   int WholeExtent[6] = { 0, static_cast<int>(neurons.size()), 0, 0, 0, 0 };
-  WholeExtent[1] = neurons.size();
+  if (this->SelectedGIds!=NULL) {
+    WholeExtent[1] = std::min(neurons.size(), (size_t)(this->SelectedGIds->GetNumberOfTuples()));
+  }
   vtkSmartPointer<vtkExtentTranslator> extTran = vtkSmartPointer<vtkExtentTranslator>::New();
   extTran->SetSplitModeToBlock();
   extTran->SetNumberOfPieces(this->UpdateNumPieces);
@@ -290,39 +295,37 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
 
-  std::srand(12345);
-  std::vector<uint32_t> shufflevector;
+  // neurons are ordered in layers and higher layers have bigger cell counts
+  // so read them using a random shuffle to avoid one process getting all the 
+  // small ones and another the big ones. We can use an operator[]
+  // to get neurons from the container because it uses a map, with the GID as key
+  // so build a list of all keys and then shuffle that and let each process use
+  // a chunk of the list
 
-  // if the user has passed a GId array, we should use them directly
+  // create a new target for our subrange of neurons, clear any contests first.
+  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
+  bbp::Target NeuronsToLoad_target = bbp::Target("Temporary", bbp::TARGET_CELL);
+
+  // if the user has passed a GId array (selection), we should use them directly
+  // onyl add neurons to our target if we have not loaded them before
   if (this->SelectedGIds!=NULL) {
     unsigned int *raw_data = this->SelectedGIds->GetPointer(0);
-    shufflevector.assign(raw_data, raw_data+this->SelectedGIds->GetNumberOfTuples());
-    std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
+    for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
+      if (soma_map.find(raw_data[i])==soma_map.end()) {
+        NeuronsToLoad_target.insert(raw_data[i]);
+      }
+      this->Partitioned_target.insert(raw_data[i]);
+    }
   }
   else {
-    // neurons are ordered in layers and higher layers have bigger cell counts
-    // so read them using a random shuffle to avoid one process getting all the 
-    // small ones and another the big ones. We can use an operator[]
-    // to get neurons from the container because it uses a map, with the GID as key
-    // so build a list of all keys and then shuffle that and let each process use
-    // a chunk of the list
-    // NB. we want all processes to have the same sequence, seed fixed num
-    shufflevector.reserve(neurons.size());
-    //
-    for (bbp::Neurons::iterator neuron=neurons.begin(); neuron!=neurons.end(); ++neuron) {
-      shufflevector.push_back(neuron->gid());
+    Neurons::iterator neuron = neurons.begin();
+    std::advance(neuron, PartitionExtents[0]);
+    for (int i=PartitionExtents[0]; i<PartitionExtents[1]; ++i, ++neuron) {
+      if (soma_map.find(neuron->gid())==soma_map.end()) {
+        NeuronsToLoad_target.insert(neuron->gid());
+      }
+      this->Partitioned_target.insert(neuron->gid());
     }
-    std::random_shuffle ( shufflevector.begin(), shufflevector.end() );
-    //  std::ostream_iterator<vtkIdType> out_it(cout,", ");
-    //  std::copy(shufflevector.begin(), shufflevector.end(), out_it );
-  }
-  // create a new target based on our subrange of neurons, clear any contests first.
-  this->Partitioned_target = bbp::Target("ParaViewCells", bbp::TARGET_CELL);
-
-  for (int i=PartitionExtents[0]; i<PartitionExtents[1]; i++) {
-    uint32_t gid = shufflevector[i];
-    Neurons::iterator ni = neurons.find( gid );
-    this->Partitioned_target.insert(gid);
   }
 
   //
@@ -388,7 +391,9 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   // Load neurons for the target so we can partition them
   // we need morphologies to get radius of soma etc
   try {
-    this->Microcircuit->load(this->Partitioned_target, bbp::NEURONS | bbp::MORPHOLOGIES);
+    if (!NeuronsToLoad_target.empty()) {
+      this->Microcircuit->load(NeuronsToLoad_target, bbp::NEURONS | bbp::MORPHOLOGIES);
+    }
   }
   catch (std::exception &e) {
     vtkErrorMacro("Caught an exception during Microcircuit->load " << e.what());
@@ -397,23 +402,39 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   //
   // loop over partitioned neurons
   //
-  int index = 0;
+  int      index = 0;
+  double   radius;
+  Vector3f newPoint;
+  int      section_Id;
+  unsigned char section_Type;
+  //
   for (bbp::Target::cell_iterator gid=this->Partitioned_target.cell_begin(); gid!=this->Partitioned_target.cell_end(); ++gid, ++index) {
-    Neurons::iterator neuron = neurons.find( *gid );
-
-    double     radius = neuron->soma().mean_radius();
-    Vector3f newPoint = neuron->soma().position();
+    soma_map_type::iterator it = soma_map.find(*gid);
+    if (it==soma_map.end()) {
+      Neurons::iterator neuron = neurons.find( *gid );
+      radius          = neuron->soma().mean_radius();
+      newPoint        = neuron->soma().position();
+      section_Id      = neuron->sections().begin()->id();
+      section_Type    = neuron->sections().begin()->type();
+      soma_map[*gid]  = std::make_tuple(radius, newPoint, section_Id, section_Type);
+      neuron->clear();
+    }
+    else {
+      radius       = std::get<0>(it->second);
+      newPoint     = std::get<1>(it->second);
+      section_Id   = std::get<2>(it->second);
+      section_Type = std::get<3>(it->second);
+    }
     //
     points->SetPoint(index, newPoint);
-    if (do_sid) sectionId->SetValue(index, neuron->sections().begin()->id());
-    if (do_sty) sectionType->SetValue(index, neuron->sections().begin()->type());
+    if (do_sid) sectionId->SetValue(index, section_Id);
+    if (do_sty) sectionType->SetValue(index, section_Type);
     if (do_ddr) dendriteRadius->SetValue(index, radius);
-    if (do_nid) neuronId->SetValue(index, neuron->gid());
+    if (do_nid) neuronId->SetValue(index, *gid);
     if (do_nix) neuronIx->SetValue(index, index + PartitionExtents[0]);
-
+    //
     cells[index*2]   = 1;
     cells[index*2+1] = index;
-    neuron->clear();
   }
   //
   this->CachedNeuronSoma->SetPoints(points);
