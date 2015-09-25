@@ -650,23 +650,33 @@ void vtkCircuitReaderBase::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkCircuitReaderBase::SetSelectedGIds(vtkIdType N, int Ids[])
+void vtkCircuitReaderBase::ClearSelectedGIds()
 {
-  vtkWarningMacro("SetSelectedIds - Type 1 " << N);
-  this->SelectedGIds = vtkUnsignedIntArray::New();
-  this->SelectedGIds->SetArray((unsigned int*)(Ids), N, 1);
-  this->SetSelectedGIds(this->SelectedGIds);
+  if (!this->SelectedGIds) this->SelectedGIds = vtkUnsignedIntArray::New();
+  else {
+    this->SelectedGIds->Initialize();
+  }
+  this->MeshParamsModifiedTime.Modified();
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
-void vtkCircuitReaderBase::SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0)
+void vtkCircuitReaderBase::SetSelectedGIds(vtkIdType N, unsigned int *Ids)
+{
+  vtkWarningMacro("SetSelectedIds - Type 1 " << N);
+  this->SelectedGIds = vtkUnsignedIntArray::New();
+  this->SelectedGIds->SetArray((unsigned int*)(Ids), N, 0);
+  this->SetSelectedGIds(this->SelectedGIds);
+  //
+  this->MeshParamsModifiedTime.Modified();
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkCircuitReaderBase::SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<unsigned int> &temp0)
 {
   vtkWarningMacro("SetSelectedIds - Type 2 " << N);
   unsigned int *new_data = new unsigned int[N];
-  std::copy(temp0.operator int *(), temp0.operator int *()+N, new_data);
-  this->SelectedGIds = vtkUnsignedIntArray::New();
-  this->SelectedGIds->SetArray((unsigned int*)(new_data), N, 0);
-  this->SetSelectedGIds(this->SelectedGIds);
-  this->MeshParamsModifiedTime.Modified();
-  this->Modified();
+  std::copy(temp0.operator unsigned int *(), temp0.operator unsigned int *()+N, new_data);
+  this->SetSelectedGIds(N, new_data);
 }

@@ -120,9 +120,10 @@ public:
   vtkSetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
   vtkGetObjectMacro(SelectedGIds, vtkUnsignedIntArray);
 
-  void SetSelectedGIds(vtkIdType N, int Ids[]);
+  void ClearSelectedGIds();
+  void SetSelectedGIds(vtkIdType N, unsigned int *Ids);
 //BTX
-  void SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<int> &temp0);
+  void SetSelectedGIds(vtkIdType N, vtkClientServerStreamDataArg<unsigned int> &temp0);
 //ETX
 
   // Description:
