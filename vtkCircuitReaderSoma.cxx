@@ -285,7 +285,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   //
   int WholeExtent[6] = { 0, static_cast<int>(neurons.size()), 0, 0, 0, 0 };
   if (this->SelectedGIds!=NULL) {
-    WholeExtent[1] = std::min(neurons.size(), (size_t)(this->SelectedGIds->GetNumberOfTuples()));
+    WholeExtent[1] = (size_t)(this->SelectedGIds->GetNumberOfTuples());
   }
   vtkSmartPointer<vtkExtentTranslator> extTran = vtkSmartPointer<vtkExtentTranslator>::New();
   extTran->SetSplitModeToBlock();
