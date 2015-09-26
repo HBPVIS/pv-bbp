@@ -257,10 +257,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
-  // get the info objects
-  vtkInformation *outInfo0 = outputVector->GetInformationObject(0);
-
-  // VTK arrays 
+  // VTK arrays
   vtkSmartPointer<vtkPoints>                    points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray>                  verts = vtkSmartPointer<vtkCellArray>::New();
   vtkSmartPointer<vtkPointData>              pointdata = vtkSmartPointer<vtkPointData>::New();
@@ -274,7 +271,6 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   try {
     if (this->Microcircuit->neurons().size()==0) {
       this->Microcircuit->load(this->PrimaryTarget, bbp::NEURONS);
-//      this->Microcircuit->load(bbp::Target("Empty", bbp::TARGET_CELL), bbp::NEURONS);
     }
   }
   catch (std::exception &e) {
