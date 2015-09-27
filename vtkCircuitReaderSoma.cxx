@@ -292,6 +292,11 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   extTran->PieceToExtent();
   extTran->GetExtent(this->PartitionExtents);
 
+  // in case of an invalid partition (zero cells split over N processes
+  if (this->PartitionExtents[1]<0) {
+    this->PartitionExtents[1]=0;
+  }
+
   // neurons are ordered in layers and higher layers have bigger cell counts
   // so read them using a random shuffle to avoid one process getting all the 
   // small ones and another the big ones. We can use an operator[]
