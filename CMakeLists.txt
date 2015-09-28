@@ -88,6 +88,8 @@ elseif (MACHINE MATCHES "crusca")
   set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
   set(PV_BBP_DEFAULT_TARGET "1K")
 else ()
+  set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
+  set(PV_BBP_DEFAULT_TARGET "1K")
 endif()
 
 configure_file(
@@ -126,6 +128,20 @@ set(ZOLTAN_SUPPORT 1)
 ADD_DEFINITIONS(-DZOLTAN_SUPPORT -DPV_BBP_USE_ZOLTAN)
 set(ZOLTAN_LIBS pv_zoltan)
 message("Zoltan support enabled")
+
+#--------------------------------------------------
+# pv-temporal : Required for spike display
+#--------------------------------------------------
+find_package(pv_temporal NO_MODULE REQUIRED)
+if(NOT pv_temporal_FOUND)
+  message(FATAL_ERROR "pv-bbp requires pv_temporal")
+endif()
+include_directories(${pv_temporal_INCLUDE_DIR})
+
+set(TEMPORAL_SUPPORT 1)
+ADD_DEFINITIONS(-DTEMPORAL_SUPPORT -DPV_BBP_USE_TEMPORAL)
+set(TEMPORAL_LIBS pv_temporal)
+message("Temporal support enabled")
 
 #--------------------------------------------------
 # Includes
@@ -203,7 +219,7 @@ SET(PLUGIN_NAME pv_BBP)
 ADD_PARAVIEW_PLUGIN(
   ${PLUGIN_NAME}
   "1.0" 
-  REQUIRED_PLUGINS pv_zoltan
+  REQUIRED_PLUGINS pv_zoltan pv_temporal
 
   SERVER_MANAGER_XML     
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
@@ -211,6 +227,7 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_BINARY_DIR}/vtkCircuitReaderBase.xml
     ${XML_PATH}/vtkCircuitReaderMesh.xml
     ${XML_PATH}/vtkCircuitReaderSoma.xml
+    ${XML_PATH}/vtkNeuronSpikeFilter.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
@@ -218,6 +235,7 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderBase.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderMesh.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderSoma.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronSpikeFilter.cxx
 
   SERVER_SOURCES
 
@@ -245,6 +263,7 @@ endif()
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
   PUBLIC 
     pv_zoltan
+    pv_temporal
     vtksys
     BBPSDK Brion Lunchbox pthread
     hdf5_cpp
