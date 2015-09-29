@@ -90,9 +90,6 @@ void vtkNeuronSpikeFilter::ClearSpikeData()
 void vtkNeuronSpikeFilter::SetSpikeData(vtkIdType N, signed char Ids[])
 {
   vtkWarningMacro("SetSpikeData - Type 1 " << N);
-//  this->SelectedGIds = vtkUnsignedIntArray::New();
-//  this->SelectedGIds->SetArray((unsigned int*)(Ids), N, 1);
-//  this->SetSelectedGIds(this->SelectedGIds);
 }
 
 //----------------------------------------------------------------------------

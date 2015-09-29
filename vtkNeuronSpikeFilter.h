@@ -51,57 +51,6 @@ public:
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector);
   
-
-/*
-  // Description:
-  vtkSetMacro(DecayFactor, double);
-  vtkGetMacro(DecayFactor, int);
-
-  // Description:
-  vtkSetStringMacro(ArrayNamePrefix);
-  vtkGetStringMacro(ArrayNamePrefix); 
-
-  // Description:
-  // when HighFrequencyResponse is enabled and diffential value is larger than HighFrequencyDelta, 
-  // the decay function is squashed and the moving average snaps to the incoming data. 
-  // When the difference is smaller, the decay is applied as expected. 
-  // The reason for this is to alow sharp spikes in value to be tracked withuot smothing, but apply a slower decay.
-  // Experimental feaure subject to change
-  vtkSetMacro(HighFrequencyDelta, double);
-  vtkGetMacro(HighFrequencyDelta, double);
-  vtkBooleanMacro(HighFrequencyDelta, double);
-
-  // Description:
-  vtkSetMacro(HighFrequencyResponse, int);
-  vtkGetMacro(HighFrequencyResponse, int);
-  vtkBooleanMacro(HighFrequencyResponse, int);
-
-  vtkSetMacro(ClampAndNormalizeOutput, int);
-  vtkGetMacro(ClampAndNormalizeOutput, int);
-  vtkBooleanMacro(ClampAndNormalizeOutput, int);
-
-  vtkSetVector2Macro(NormalizedRange,double);
-  vtkGetVectorMacro(NormalizedRange,double,2);
-
-  vtkSetMacro(OutputAbsoluteValue, int);
-  vtkGetMacro(OutputAbsoluteValue, int);
-  vtkBooleanMacro(OutputAbsoluteValue, int);
-
-  // Description:
-  // Get the number of point or cell arrays available in the input.
-  int GetNumberOfPointArrays();
-
-  // Description:
-  // Get the name of the point or cell array with the given index in
-  // the input.
-  const char* GetPointArrayName(int index);
-
-  // Description:
-  // Get/Set whether the point or cell array with the given name is to
-  // be read.
-  int GetPointArrayStatus(const char* name);
-  void SetPointArrayStatus(const char* name, int status);
-*/
   typedef std::tuple<uint32_t, float> spike_info_type;
   typedef std::vector<spike_info_type> spike_list_type;
   spike_list_type spikelist;
