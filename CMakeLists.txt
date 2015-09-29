@@ -228,6 +228,7 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkCircuitReaderMesh.xml
     ${XML_PATH}/vtkCircuitReaderSoma.xml
     ${XML_PATH}/vtkNeuronSpikeFilter.xml
+    ${XML_PATH}/vtkNeuronSpikeTableSource.xml
 
   SERVER_MANAGER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
@@ -236,6 +237,7 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderMesh.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderSoma.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronSpikeFilter.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronSpikeTableSource.cxx
 
   SERVER_SOURCES
 
