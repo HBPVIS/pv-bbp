@@ -193,6 +193,7 @@ int vtkCircuitReaderSoma::RequestData(
       //
       this->ParticlePartitionFilter = vtkSmartPointer<vtkParticlePartitionFilter>::New();
       this->ParticlePartitionFilter->SetInputData(this->CachedNeuronSoma);
+      this->ParticlePartitionFilter->SetGhostCellOverlap(20);
       // tell the partition filter we can dump the input memory when needed
       this->ParticlePartitionFilter->SetInputDisposable(1);
       // for animation over time, keep the map of point send/receive
@@ -214,8 +215,9 @@ int vtkCircuitReaderSoma::RequestData(
       dataset->GetBounds(bounds);
       this->BoundsTranslator->ExchangeBoundsForAllProcesses(this->Controller, bounds);
       this->BoundsTranslator->InitWholeBounds();
-      int whole_extent[6] = {0, 8191, 0, 8191, 0, 8191};
+      int whole_extent[6] = {0, 64, 0, 64, 0, 64};
       this->BoundsTranslator->SetWholeExtent(whole_extent);
+
       this->CachedNeuronSoma = vtkPolyData::SafeDownCast(this->ParticlePartitionFilter->GetOutput());
       this->ParticlePartitionFilter->SetInputData((vtkPolyData*)NULL);
       // release anything we don't need
@@ -237,6 +239,8 @@ int vtkCircuitReaderSoma::RequestData(
   // copy internal mesh to output
   //
   output0->ShallowCopy(this->CachedNeuronSoma);
+  output0->GetInformation()->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
+  outInfo0->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
 
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {

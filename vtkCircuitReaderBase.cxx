@@ -407,7 +407,7 @@ int vtkCircuitReaderBase::RequestInformation(
 
 #ifdef PV_BBP_USE_ZOLTAN
   if (this->Controller->GetNumberOfProcesses()>1 && this->ParallelRedistribution) {
-//    outInfo0->Set(vtkStreamingDemandDrivenPipeline::EXTENT_TRANSLATOR(), this->BoundsTranslator);
+    outInfo0->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
   }
 #endif
 
