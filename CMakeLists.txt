@@ -89,7 +89,7 @@ elseif (MACHINE MATCHES "crusca")
   set(PV_BBP_DEFAULT_TARGET "1K")
 else ()
   set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
-  set(PV_BBP_DEFAULT_TARGET "1K")
+  set(PV_BBP_DEFAULT_TARGET "demo")
 endif()
 
 configure_file(
