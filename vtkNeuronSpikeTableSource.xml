@@ -35,6 +35,26 @@
         </ProxyGroupDomain>
       </ProxyProperty>
 
+      <IntVectorProperty
+         name="MaximumTableSize"
+         command="SetMaximumTableSize"
+         number_of_elements="1"
+         default_values="500" >
+        <Documentation>
+          The number of entries to save
+        </Documentation>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty
+         name="BinResolution"
+         command="SetBinResolution"
+         number_of_elements="1"
+         default_values="0.1" >
+        <Documentation>
+          The bin size (time) during which to count spikes
+        </Documentation>
+      </DoubleVectorProperty>
+
       <ProxyProperty
          name="NameStrings"
          command="SetNameStrings">

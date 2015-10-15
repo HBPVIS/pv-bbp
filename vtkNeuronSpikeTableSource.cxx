@@ -66,7 +66,7 @@ vtkNeuronSpikeTableSource::vtkNeuronSpikeTableSource()
   this->SpikeData            = vtkSmartPointer<vtkDoubleArray>::New();
   this->SpikeData->SetName("Spike Frequency");
   this->BinResolution        = 0.1;
-  this->MaxTimeBins          = 500;
+  this->MaximumTableSize     = 500;
   this->PreviousBinStartTime = 0.0;
 //  this->NameStrings = vtkStringList::New();
 //  this->NameStrings->AddString("Spike Frequency");
@@ -86,13 +86,13 @@ void vtkNeuronSpikeTableSource::ClearSpikeData()
 //----------------------------------------------------------------------------
 void vtkNeuronSpikeTableSource::SetSpikeData(vtkIdType N, signed char Ids[])
 {
-  vtkWarningMacro("SetSpikeData - Type 1 " << N);
+//  vtkWarningMacro("SetSpikeData - Type 1 " << N);
 }
 
 //----------------------------------------------------------------------------
 void vtkNeuronSpikeTableSource::SetSpikeData(vtkIdType N, vtkClientServerStreamDataArg<signed char> &temp0)
 {
-  vtkWarningMacro("SetSpikeData - Type 2 " << N);
+//  vtkWarningMacro("SetSpikeData - Type 2 " << N);
   //
   spike_info_type *begin = (spike_info_type *) (temp0.operator signed char *());
   this->spikelist.assign(begin, begin + N/sizeof(spike_info_type));
@@ -155,7 +155,7 @@ int vtkNeuronSpikeTableSource::ProcessSpikeData(vtkTable *outdata)
   //
   this->LastMinTime = firsttime;
 
-  double real_start = static_cast<int>((lasttime/this->BinResolution)+0.5) - this->MaxTimeBins;
+  double real_start = static_cast<int>((lasttime/this->BinResolution)+0.5) - this->MaximumTableSize;
   real_start = (real_start > 0) ? real_start : 0;
   // the startpoint of bin 0
   real_start = real_start*this->BinResolution;

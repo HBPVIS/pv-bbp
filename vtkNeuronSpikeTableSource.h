@@ -57,10 +57,18 @@ public:
 
   void SetDataModified();
 
+  vtkSetMacro(MaximumTableSize, int);
+  vtkGetMacro(MaximumTableSize, int);
+
+  vtkSetMacro(BinResolution, double);
+  vtkGetMacro(BinResolution, double);
+
   //
   void ClearSpikeData();
   void SetSpikeData(vtkIdType N, signed char Ids[]);
   void SetSpikeData(vtkIdType N, vtkClientServerStreamDataArg<signed char> &temp0);
+
+
 
 protected:
    vtkNeuronSpikeTableSource();
@@ -91,7 +99,7 @@ protected:
   vtkTimeStamp SpikeListModifiedTime;
 
   double  BinResolution;
-  int     MaxTimeBins;
+  int     MaximumTableSize;
   double  PreviousBinStartTime;
   double  LastMaxTime;
   double  LastMinTime;
