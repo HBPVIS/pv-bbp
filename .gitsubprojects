@@ -1,0 +1,3 @@
+# -*- mode: cmake -*-
+#git_subproject(pvZoltan https://github.com/eile/pv-zoltan.git master)
+git_subproject(pv-temporal https://github.com/eile/pv-temporal.git 8fee70d)

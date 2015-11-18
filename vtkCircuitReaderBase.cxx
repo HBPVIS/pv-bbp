@@ -16,7 +16,7 @@
 #include "vtkDummyController.h"
 //
 #include "vtkObjectFactory.h"
-#include "vtkCellArray.h" 
+#include "vtkCellArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
@@ -54,9 +54,8 @@
 //
 #include "vtkPKdTree.h"
 #ifdef PV_BBP_USE_ZOLTAN
- #include "vtkBoundsExtentTranslator.h"
- #include "vtkMeshPartitionFilter.h"
- #include "vtkParticlePartitionFilter.h"
+#  include "vtkMeshPartitionFilter.h"
+#  include "vtkParticlePartitionFilter.h"
 #endif
 //
 #include <vtksys/SystemTools.hxx>
@@ -112,7 +111,7 @@
     }
 
 #undef vtkErrorMacro
-#define vtkErrorMacro(a) vtkDebugMacro(a)  
+#define vtkErrorMacro(a) vtkDebugMacro(a)
 #endif
 
 //----------------------------------------------------------------------------
@@ -127,7 +126,7 @@ vtkStandardNewMacro(vtkCircuitReaderBase);
 vtkCxxSetObjectMacro(vtkCircuitReaderBase, Controller, vtkMultiProcessController);
 //----------------------------------------------------------------------------
 vtkCircuitReaderBase::vtkCircuitReaderBase() :
-  PrimaryTarget("dummy", bbp::TARGET_CELL), 
+  PrimaryTarget("dummy", bbp::TARGET_CELL),
   Partitioned_target("dummy", bbp::TARGET_CELL)
 {
   this->FileName = NULL;
@@ -208,7 +207,7 @@ int vtkCircuitReaderBase::FillOutputPortInformation( int port, vtkInformation* i
   }
 
   return 0;
-} 
+}
 /*
 std::pair<double, double> GetClosest(std::vector<double> &sortedlist, const double& val) const
 {
@@ -276,9 +275,9 @@ int vtkCircuitReaderBase::RequestInformation(
   bool ok = true;
   if (NeedToReloadFile || NeedToRegenerateInfo) {
     std::string blueconfig = this->FileName;
-    // -------------------------------------------------------------------   
+    // -------------------------------------------------------------------
     // Create BBP-SDK Experiment and Microcircuit to access to the neurons.
-    // -------------------------------------------------------------------   
+    // -------------------------------------------------------------------
     try {
       this->Experiment.close();
       this->Experiment.open(blueconfig);
@@ -343,7 +342,7 @@ int vtkCircuitReaderBase::RequestInformation(
     }
     catch (std::exception &e) {
       vtkErrorMacro("Could not set the target : exception " << e.what());
-      this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);; 
+      this->PrimaryTarget = bbp::Target("exception",bbp::TARGET_CELL);;
       ok = false;
     }
     this->InfoGeneratedTime.Modified();
@@ -425,7 +424,7 @@ int vtkCircuitReaderBase::OpenReportFile()
     if (ideal==reportname) {
       break;
     }
-  }                                          
+  }
   if (reports.size()==0) {
     return 0;
   }
@@ -645,8 +644,8 @@ void vtkCircuitReaderBase::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
-  os << indent << "File Name: " 
-    << (this->FileName ? this->FileName : "(none)") << "\n";  
+  os << indent << "File Name: "
+    << (this->FileName ? this->FileName : "(none)") << "\n";
 }
 
 //----------------------------------------------------------------------------

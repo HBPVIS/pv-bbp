@@ -16,7 +16,7 @@
 #include "vtkDummyController.h"
 //
 #include "vtkObjectFactory.h"
-#include "vtkCellArray.h" 
+#include "vtkCellArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
@@ -111,7 +111,7 @@
     }
 
 #undef vtkErrorMacro
-#define vtkErrorMacro(a) vtkDebugMacro(a)  
+#define vtkErrorMacro(a) vtkDebugMacro(a)
 #endif
 
 //----------------------------------------------------------------------------
@@ -151,8 +151,8 @@ int vtkCircuitReaderSoma::RequestData(
   vtkPointSet *output0 = vtkPointSet::SafeDownCast(outInfo0->Get(vtkDataObject::DATA_OBJECT()));
 
   // Which time step has been requested
-  double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) 
-    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) : 0.0; 
+  double requestedTimeValue = outInfo0->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP())
+    ? outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) : 0.0;
   //
   this->ActualTimeStep = std::find_if(
     this->TimeStepValues.begin(), this->TimeStepValues.end(),
@@ -172,7 +172,7 @@ int vtkCircuitReaderSoma::RequestData(
   this->UpdatePiece = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   this->UpdateNumPieces = outInfo0->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
-  vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();        
+  vtkSmartPointer<vtkTimerLog> load_timer = vtkSmartPointer<vtkTimerLog>::New();
   load_timer->StartTimer();
 
   bool NeedToRegenerateMesh =
@@ -188,7 +188,7 @@ int vtkCircuitReaderSoma::RequestData(
 
 #ifdef PV_BBP_USE_ZOLTAN
     if (this->UpdateNumPieces>1 && this->ParallelRedistribution) {
-      vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();        
+      vtkSmartPointer<vtkTimerLog> redist_timer = vtkSmartPointer<vtkTimerLog>::New();
       redist_timer->StartTimer();
       //
       this->ParticlePartitionFilter = vtkSmartPointer<vtkParticlePartitionFilter>::New();
@@ -239,8 +239,8 @@ int vtkCircuitReaderSoma::RequestData(
   // copy internal mesh to output
   //
   output0->ShallowCopy(this->CachedNeuronSoma);
-  output0->GetInformation()->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
-  outInfo0->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
+  // output0->GetInformation()->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
+  // outInfo0->Set(vtkBoundsExtentTranslator::META_DATA(), this->BoundsTranslator);
 
   load_timer->StopTimer();
   if (this->UpdatePiece==0) {
@@ -302,7 +302,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   }
 
   // neurons are ordered in layers and higher layers have bigger cell counts
-  // so read them using a random shuffle to avoid one process getting all the 
+  // so read them using a random shuffle to avoid one process getting all the
   // small ones and another the big ones. We can use an operator[]
   // to get neurons from the container because it uses a map, with the GID as key
   // so build a list of all keys and then shuffle that and let each process use
@@ -351,7 +351,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
   bool do_ddr = this->GetPointArrayStatus(BBP_ARRAY_NAME_DENDRITE_RADIUS);
   bool do_sty = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_TYPE);
   bool do_sid = this->GetPointArrayStatus(BBP_ARRAY_NAME_SECTION_ID);
-  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID); 
+  bool do_nid = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONGID);
   bool do_nix = this->GetPointArrayStatus(BBP_ARRAY_NAME_NEURONINDEX);
   //
   if (do_nid) {
@@ -369,7 +369,7 @@ void vtkCircuitReaderSoma::GenerateSomaPoints(
     neuronIx->SetNumberOfTuples(maxPoints);
     pointdata->AddArray(neuronIx);
   }
-  //    
+  //
   if (do_sid) {
     sectionId = vtkSmartPointer<vtkIntArray>::New();
     sectionId->SetName(BBP_ARRAY_NAME_SECTION_ID);
