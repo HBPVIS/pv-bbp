@@ -17,15 +17,32 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+#-----------------------------------------------------------------------------
+# Basic naming/config stuff here
+#-----------------------------------------------------------------------------
+set(VERSION_MAJOR   0)
+set(VERSION_MINOR   9)
+set(VERSION_RELEASE 0)
+set(VERSION_ABI     1)
+set(VERSION        "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_RELEASE}")
+
+set (pv_BBP_DESCRIPTION    "Zoltan mesh distribution for ParaView")
+set (pv_BBP_MAINTAINER     "pv_zoltan")
+set (pv_BBP_LICENSE        "BSD")
+
 # --------------------------------------------------------------
-# Plugin path
+# CMake modules
 # --------------------------------------------------------------
-get_filename_component(PLUGIN_PATH ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
+list(APPEND CMAKE_MODULE_PATH 
+  ${PROJECT_SOURCE_DIR}/CMake
+  ${CMAKE_SOURCE_DIR}/CMake/common
+)
 
 # --------------------------------------------------------------
 # Find BBP-SDK
 # --------------------------------------------------------------
-find_package(BBPSDK REQUIRED NO_MODULE)
+include(Common)
+common_package(BBPSDK)
 include_directories(${BBPSDK_INCLUDE_DIRS})
 add_definitions(-DCXX_UNORDERED_MAP_SUPPORTED)
 
@@ -92,8 +109,8 @@ set(SRC_PATH   "${CMAKE_CURRENT_SOURCE_DIR}")
 #--------------------------------------------------
 # HDF5
 #--------------------------------------------------
-FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
-INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR} ${HDF5_INCLUDE_DIR_CPP})
+#FIND_PACKAGE(HDF5 REQUIRED NO_MODULE PATHS "$ENV{ProgramFiles}/HDF5")
+#INCLUDE_DIRECTORIES(${HDF5_INCLUDE_DIR} ${HDF5_INCLUDE_DIR_CPP})
 
 #--------------------------------------------------
 # pv-zoltan : Required for depth sort
@@ -113,7 +130,7 @@ include_directories(${pv_zoltan_INCLUDE_DIR})
 # Includes
 #--------------------------------------------------
 include_directories(
-  ${PLUGIN_PATH}
+  ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/Piston
   ${HDF5_INCLUDE_DIR_CPP}
 )
@@ -122,11 +139,6 @@ include_directories(
 # CONDITIONAL : Setup Qt/GUI panel sources/wrapping
 #--------------------------------------------------
 IF(PARAVIEW_BUILD_QT_GUI)
-
-  QT4_WRAP_CPP(
-    BBP_MOC_SRCS 
-      ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
-  )
 
   ADD_PARAVIEW_OBJECT_PANEL(
       BBP_IFACE 
@@ -139,12 +151,44 @@ IF(PARAVIEW_BUILD_QT_GUI)
       sources
   )
 
-  QT4_WRAP_UI(
-    BBP_UI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
-  )
+  if (PARAVIEW_QT_VERSION VERSION_GREATER "4")
+    set (Qt5_FIND_COMPONENTS Widgets)
+    include (ParaViewQt5)
 
-ENDIF(PARAVIEW_BUILD_QT_GUI)
+    #--------------------------------------------------
+    # make sure all *.ui dialogs/etc are wrapped
+    #--------------------------------------------------
+    QT5_WRAP_UI(
+      BBP_UI_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+    )
+
+    #--------------------------------------------------
+    # make sure all *.h files for ui are wrapped by moc
+    #--------------------------------------------------
+    QT5_WRAP_CPP(
+      BBP_MOC_SRCS 
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+    )
+  else()
+    include (${QT_USE_FILE})
+    #--------------------------------------------------
+    # make sure all *.ui dialogs/etc are wrapped
+    #--------------------------------------------------
+    QT4_WRAP_UI(
+      BBP_UI_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.ui
+    )
+
+    #--------------------------------------------------
+    # make sure all *.h files for ui are wrapped by moc
+    #--------------------------------------------------
+    QT4_WRAP_CPP(
+      BBP_MOC_SRCS 
+        ${CMAKE_CURRENT_SOURCE_DIR}/pqCircuitReaderPanel.h
+    )
+  endif()
+endif(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
 # Define plugin sources
@@ -162,8 +206,6 @@ ADD_PARAVIEW_PLUGIN(
     ${XML_PATH}/vtkNeuronAlphaFunction.xml
     #
     ${XML_PATH}/vtkCircuitReader.xml
-#    ${XML_PATH}/vtkMorphologyReader.xml
-#    ${XML_PATH}/vtkMeshBinReader.xml
     ${XML_PATH}/vtkH5MCellReader.xml
 
   SERVER_MANAGER_SOURCES
@@ -172,8 +214,6 @@ ADD_PARAVIEW_PLUGIN(
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkNeuronAlphaFunction.cxx
     #
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReader.cxx
- #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMorphologyReader.cxx
- #   ${CMAKE_CURRENT_SOURCE_DIR}/vtkMeshBinReader.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkH5MCellReader.cxx
 
   SERVER_SOURCES
@@ -207,8 +247,7 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
     pv_zoltan
     vtksys
     BBPSDK Brion Lunchbox pthread
-    hdf5_cpp
-    hdf5
+    ${HDF5_EXPORT_LIBRARIES}
     ${CUDA_LIBRARIES}
     ${HDF5_C_LIBRARY} 
     ${HDF5_CXX_LIBRARY} 
