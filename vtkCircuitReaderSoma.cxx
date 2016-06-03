@@ -55,7 +55,7 @@
 #include "vtkPKdTree.h"
 #ifdef PV_BBP_USE_ZOLTAN
  #include "vtkBoundsExtentTranslator.h"
- #include "vtkParticlePartitionFilter.h"
+ #include <vtkParticlePartitionFilter.h>
 #endif
 //
 #include <vtksys/SystemTools.hxx>
@@ -193,7 +193,7 @@ int vtkCircuitReaderSoma::RequestData(
       //
       this->ParticlePartitionFilter = vtkSmartPointer<vtkParticlePartitionFilter>::New();
       this->ParticlePartitionFilter->SetInputData(this->CachedNeuronSoma);
-      this->ParticlePartitionFilter->SetGhostCellOverlap(20);
+      this->ParticlePartitionFilter->SetGhostHaloSize(20);
       // tell the partition filter we can dump the input memory when needed
       this->ParticlePartitionFilter->SetInputDisposable(1);
       // for animation over time, keep the map of point send/receive
