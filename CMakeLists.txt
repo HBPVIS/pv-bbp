@@ -78,9 +78,13 @@ endif()
 # setup paths to 'default' data
 # --------------------------------------------------------------
 site_name(MACHINE)
-if (MACHINE MATCHES "carona")
+
+
+if ((MACHINE MATCHES "carona") OR (MACHINE MATCHES "vpn"))
   set(PV_BBP_DEFAULT_DATA "/Users/biddisco/data/bbp/egpgv/centralV.cfg")
   set(PV_BBP_DEFAULT_TARGET "5K")
+#  set (PV_BBP_DEFAULT_DATA "/Users/biddisco/data/bbp/Summit2015Demo/data/vizCa2p0_1x7/BlueConfig")
+#  set(PV_BBP_DEFAULT_TARGET "demo")
 elseif (MACHINE MATCHES "bbpviz")
   set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
   set(PV_BBP_DEFAULT_TARGET "demo")
@@ -91,6 +95,8 @@ else ()
   set (PV_BBP_DEFAULT_DATA "/gpfs/bbp.cscs.ch/project/proj3/resources/circuits/summit2015demo/BlueConfig")
   set(PV_BBP_DEFAULT_TARGET "demo")
 endif()
+
+message("Setting BBP default config for machine ${MACHINE} \n" ${PV_BBP_DEFAULT_DATA} "\n" ${PV_BBP_DEFAULT_TARGET})
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/vtkCircuitReaderBase.xml.in 
