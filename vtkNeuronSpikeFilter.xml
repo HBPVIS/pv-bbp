@@ -37,18 +37,14 @@
         </ProxyGroupDomain>
       </ProxyProperty>
 
-<!--
-      <DoubleVectorProperty
-        name="DecayFactor"
-        command="SetDecayFactor"
+      <IntVectorProperty
+        name="SpikeThreshold"
+        command="SetSpikeThreshold"
         number_of_elements="1"
         animateable="1"
-        default_values="25" >
-        <DoubleRangeDomain name="range" min="0" />
-        <Documentation>
-          Large gives a slow decay, small a fast one
-        </Documentation>
-      </DoubleVectorProperty>
+        default_values="50" >
+      </IntVectorProperty>
+<!--
 
       <StringVectorProperty
          name="ArrayNamePrefix"

@@ -43,7 +43,10 @@ public:
   void SetSpikeData(vtkIdType N, signed char Ids[]);
   void SetSpikeData(vtkIdType N, vtkClientServerStreamDataArg<signed char> &temp0);
 
-  int BuildGIdIndeMap(vtkPointSet *inData);
+  vtkSetMacro(SpikeThreshold, int);
+  vtkGetMacro(SpikeThreshold, int);
+
+  int BuildGIdIndexMap(vtkPointSet *inData);
   int ProcessSpikeData(vtkPointSet *outdata);
 
   int RequestData(
@@ -51,11 +54,12 @@ public:
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector);
   
-  typedef std::tuple<uint32_t, float> spike_info_type;
+  typedef std::tuple<uint32_t, float>  spike_info_type;
   typedef std::vector<spike_info_type> spike_list_type;
+  typedef std::vector<vtkIdType>       pointIdList;
   spike_list_type spikelist;
 
-  typedef std::unordered_map<uint32_t, vtkIdType> gid_index_map_type;
+  typedef std::unordered_map<uint32_t, pointIdList> gid_index_map_type;
   int                 NeedToRegenerateMap;
   gid_index_map_type  gid_index_map;
   vtkTimeStamp        gid_index_map_time;
@@ -64,7 +68,7 @@ public:
 
   int UpdatePiece;
   int UpdateNumPieces;
-
+  int SpikeThreshold;
 protected:
    vtkNeuronSpikeFilter();
   ~vtkNeuronSpikeFilter();

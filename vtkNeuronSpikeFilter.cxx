@@ -56,24 +56,7 @@ vtkNeuronSpikeFilter::vtkNeuronSpikeFilter()
 {
   this->NeedToRegenerateMap = 0;
   this->last_spikevalue = vtkSmartPointer<vtkFloatArray>::New();
-
-/*
-  this->DecayFactor               = 100.0;
-  this->HighFrequencyResponse     = 0;
-  this->HighFrequencyDelta        = 20.0;
-  this->ArrayNamePrefix           = NULL;
-  this->LastPointData             = vtkSmartPointer<vtkPointData>::New();
-  this->LastUpdateTime            = 0.0;
-  this->FirstIteration            = true;
-  this->OutputAbsoluteValue       = 1;
-  this->ClampAndNormalizeOutput   = 1;
-  this->NormalizedRange[0] = -2;
-  this->NormalizedRange[1] =  2;
-
-  this->SetNumberOfInputPorts(1);
-  this->SetNumberOfOutputPorts(1);
-  this->PointDataArraySelection   = vtkSmartPointer<vtkDataArraySelection>::New();
-*/
+  this->SpikeThreshold = 50;
 }
 //----------------------------------------------------------------------------
 vtkNeuronSpikeFilter::~vtkNeuronSpikeFilter()
@@ -89,22 +72,23 @@ void vtkNeuronSpikeFilter::ClearSpikeData()
 //----------------------------------------------------------------------------
 void vtkNeuronSpikeFilter::SetSpikeData(vtkIdType N, signed char Ids[])
 {
-  vtkWarningMacro("SetSpikeData - Type 1 " << N);
+//  vtkWarningMacro("SetSpikeData - Type 1 " << N);
 }
 
 //----------------------------------------------------------------------------
 void vtkNeuronSpikeFilter::SetSpikeData(vtkIdType N, vtkClientServerStreamDataArg<signed char> &temp0)
 {
-  vtkWarningMacro("SetSpikeData - Type 2 " << N);
+//  vtkWarningMacro("SetSpikeData - Type 2 " << N);
   //
   spike_info_type *begin = (spike_info_type *) (temp0.operator signed char *());
+  this->spikelist.reserve(N);
   this->spikelist.assign(begin, begin + N);
 
   this->Modified();
   this->SpikeListModifiedTime.Modified();
 }
 //----------------------------------------------------------------------------
-int vtkNeuronSpikeFilter::BuildGIdIndeMap(vtkPointSet *inData)
+int vtkNeuronSpikeFilter::BuildGIdIndexMap(vtkPointSet *inData)
 {
   vtkPointData *pd = inData->GetPointData();
   if (!pd) {
@@ -122,9 +106,34 @@ int vtkNeuronSpikeFilter::BuildGIdIndeMap(vtkPointSet *inData)
   this->gid_index_map.clear();
   this->gid_index_map.reserve(N);
   //
+  std::map<uint32_t, int> totals;
   for (vtkIdType i=0; i<N; ++i) {
+    std::map<uint32_t, int>::iterator it;
     uint32_t Gid = neuronGId->GetValue(i);
-    this->gid_index_map[Gid] = i;
+    //
+    it = totals.find(Gid);
+    if (it==totals.end()) {
+      totals[Gid] = 1;
+    }
+    else {
+      (*it).second++;
+    }
+  }
+  //
+  for (vtkIdType i=0; i<N; ++i) {
+    gid_index_map_type::iterator it;
+    uint32_t Gid = neuronGId->GetValue(i);
+    //
+    it = this->gid_index_map.find(Gid);
+    if (it==this->gid_index_map.end()) {
+      std::vector<vtkIdType> vec;
+      vec.reserve(totals[Gid]);
+      vec.push_back(i);
+      this->gid_index_map[Gid] = std::move(vec);
+    }
+    else {
+      (*it).second.push_back(i);
+    }
   }
   this->gid_index_map_time.Modified();
   return 1;
@@ -158,8 +167,12 @@ int vtkNeuronSpikeFilter::ProcessSpikeData(vtkPointSet *outdata)
   for (const spike_info_type &it : spikelist) {
     gid_index_map_type::iterator g_it = gid_index_map.find(std::get<0>(it));
     if (g_it != gid_index_map.end()) {
-      vtkIdType index = std::get<1>(*g_it);
-      spike_data[index] = last_spike_data[index] + 1.0;
+      const pointIdList &list = std::get<1>(*g_it);
+      for (pointIdList::const_iterator it=list.begin(); it!=list.end(); ++it) {
+        vtkIdType index = *it;
+        spike_data[index] = last_spike_data[index] + 1.0;
+        if (spike_data[index]>200) spike_data[index]=this->SpikeThreshold;
+      }
     }
   }
   //
@@ -200,7 +213,7 @@ int vtkNeuronSpikeFilter::RequestData(
     (data0->GetMTime( ) > gid_index_map_time);
   //
   if (NeedToRegenerateMap) {
-    this->BuildGIdIndeMap(data0);
+    this->BuildGIdIndexMap(data0);
   }
 
   output0->ShallowCopy(data0);
